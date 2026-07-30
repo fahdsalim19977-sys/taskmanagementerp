@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-arrow-repeat"></i> تحديث حالة التدريب</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="لم تبدأ" {% if task.status == 'لم تبدأ' %}selected{% endif %}>لم تبدأ</option>
+                            <option value="قيد التنفيذ" {% if task.status == 'قيد التنفيذ' %}selected{% endif %}>قيد التنفيذ</option>
+                            <option value="مكتملة" {% if task.status == 'مكتملة' %}selected{% endif %}>مكتملة</option>
+                            <option value="متأخرة" {% if task.status == 'متأخرة' %}selected{% endif %}>متأخرة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نسبة الإنجاز</label>
+                        <input type="number" name="completion_percentage" class="form-control" 
+                               value="{{ task.completion_percentage }}" min="0" max="100">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">المدة الفعلية (ساعات)</label>
+                        <input type="number" name="actual_duration" class="form-control" 
+                               value="{{ task.actual_duration or 0 }}" min="0" step="0.5">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">حفظ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

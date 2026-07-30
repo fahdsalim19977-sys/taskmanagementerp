@@ -1,0 +1,22 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-bell"></i> الإشعارات</h2>
+{% if notifications %}
+<div class="list-group">
+    {% for notif in notifications %}
+    <div class="list-group-item {% if not notif.is_read %}list-group-item-primary{% endif %}">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>{% if notif.task_title %}<strong>{{ notif.message }}</strong><br><small class="text-muted">المهمة: {{ notif.task_title }}</small>{% else %}{{ notif.message }}{% endif %}</div>
+            <div class="text-end"><small class="text-muted">{{ notif.created_at[:16] if notif.created_at else '' }}</small>{% if not notif.is_read %}<button class="btn btn-sm btn-success ms-2" onclick="markRead({{ notif.id }})"><i class="bi bi-check"></i></button>{% else %}<span class="badge bg-secondary">مقروء</span>{% endif %}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info text-center"><i class="bi bi-bell" style="font-size:48px;display:block;"></i><h4>لا توجد إشعارات</h4><p>جميع الإشعارات ستظهر هنا</p></div>
+{% endif %}
+<script>
+function markRead(notifId){fetch(`/mark_notification_read/${notifId}`,{method:'POST',headers:{'Content-Type':'application/json'}}).then(res=>res.json()).then(data=>{if(data.success){location.reload();}});}
+</script>
+{% endblock %}

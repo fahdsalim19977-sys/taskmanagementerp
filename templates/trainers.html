@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> المدربين</h2>
+    <a href="/add_trainer" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> إضافة مدرب
+    </a>
+</div>
+
+<!-- ===== إحصائيات سريعة ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي المدربين</h6>
+                <h3>{{ trainers|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>نشطين</h6>
+                <h3>{{ trainers|selectattr('is_active', 'equalto', 1)|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي العملاء المرتبطين</h6>
+                <h3>{{ trainers|sum(attribute='client_count')|int }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== قائمة المدربين ===== -->
+{% if trainers %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>الاسم</th>
+                <th>الهاتف</th>
+                <th>البريد</th>
+                <th>التخصص</th>
+                <th>عدد العملاء</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trainer in trainers %}
+            <tr>
+                <td>{{ trainer.id }}</td>
+                <td>
+                    <a href="/trainer/{{ trainer.id }}" class="text-decoration-none fw-bold text-primary">
+                        {{ trainer.name }}
+                    </a>
+                </td>
+                <td>{{ trainer.phone or '-' }}</td>
+                <td>{{ trainer.email or '-' }}</td>
+                <td>{{ trainer.specialty or '-' }}</td>
+                <td>
+                    <span class="badge bg-primary">{{ trainer.client_count or 0 }}</span>
+                </td>
+                <td>
+                    {% if trainer.is_active %}
+                    <span class="badge bg-success">نشط</span>
+                    {% else %}
+                    <span class="badge bg-secondary">غير نشط</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/trainer/{{ trainer.id }}" class="btn btn-sm btn-primary" title="تفاصيل">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/edit_trainer/{{ trainer.id }}" class="btn btn-sm btn-info" title="تعديل">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTrainer({{ trainer.id }})" title="حذف">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-person-badge" style="font-size:48px;display:block;"></i>
+    <h4>لا يوجد مدربين</h4>
+    <p>قم بإضافة مدرب جديد</p>
+    <a href="/add_trainer" class="btn btn-primary mt-2">➕ إضافة مدرب</a>
+</div>
+{% endif %}
+
+<script>
+function deleteTrainer(trainerId) {
+    if (confirm('⚠️ هل أنت متأكد من حذف هذا المدرب؟\n\nهذا الإجراء لا يمكن التراجع عنه!')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_trainer/' + trainerId;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

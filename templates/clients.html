@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people"></i> إدارة العملاء</h2>
+    <a href="/add_client" class="btn btn-primary"><i class="bi bi-plus-circle"></i> عميل جديد</a>
+</div>
+
+{% if clients %}
+<div class="table-responsive">
+    <table class="table table-hover table-lg">
+        <thead>
+            <tr>
+                <th style="font-size: 1.1rem;">#</th>
+                <th style="font-size: 1.1rem;">اسم العميل</th>
+                <th style="font-size: 1.1rem;">المدرب المسؤول</th>
+                <th style="font-size: 1.1rem;">الشركة</th>
+                <th style="font-size: 1.1rem;">الهاتف</th>
+                <th style="font-size: 1.1rem;">البريد</th>
+                <th style="font-size: 1.1rem;">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr style="font-size: 1.05rem;">
+                <td>{{ client.id }}</td>
+                <td>
+                    <a href="/client_tasks/{{ client.id }}" class="text-decoration-none" style="font-size: 1.1rem;">
+                        <strong>{{ client.name }}</strong>
+                    </a>
+                </td>
+                <td>
+                    {% if client.trainer_names %}
+                        {% set trainers_list = client.trainer_names.split(', ') %}
+                        {% for name in trainers_list %}
+                            <span class="badge bg-info" style="margin: 2px; font-size: 0.95rem;">{{ name }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 1.05rem;">{{ client.company_name or '-' }}</td>
+                <td style="font-size: 1.05rem;">{{ client.phone or '-' }}</td>
+                <td style="font-size: 1.05rem;">{{ client.email or '-' }}</td>
+                <td>
+                    <div class="btn-group btn-group-lg" role="group">
+                        <a href="/client_tasks/{{ client.id }}" class="btn btn-primary" title="المهام">
+                            <i class="bi bi-list-task fs-5"></i>
+                        </a>
+                        <a href="/client_modules/{{ client.id }}" class="btn btn-info" title="المديولات">
+                            <i class="bi bi-grid fs-5"></i>
+                        </a>
+                        <a href="/client_payments/{{ client.id }}" class="btn btn-success" title="المدفوعات">
+                            <i class="bi bi-coin fs-5"></i>
+                        </a>
+                        <a href="/print_client_full_report/{{ client.id }}" class="btn btn-secondary" title="تقرير شامل" target="_blank">
+                            <i class="bi bi-file-text fs-5"></i>
+                        </a>
+                        <a href="/edit_client/{{ client.id }}" class="btn btn-warning" title="تعديل">
+                            <i class="bi bi-pencil fs-5"></i>
+                        </a>
+                        {% if session.user_role == 'مدير' %}
+                        <button class="btn btn-danger" onclick="confirmDelete({{ client.id }}, '{{ client.name }}')" title="حذف">
+                            <i class="bi bi-trash fs-5"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-people" style="font-size:48px;display:block;"></i>
+    <h4>لا يوجد عملاء</h4>
+    <p>ابدأ بإضافة عميل جديد</p>
+    <a href="/add_client" class="btn btn-primary mt-2">➕ إضافة عميل</a>
+</div>
+{% endif %}
+
+<script>
+function confirmDelete(clientId, clientName) {
+    if (confirm('⚠️ هل أنت متأكد من حذف العميل: "' + clientName + '"?\n\nهذا الإجراء لا يمكن التراجع عنه!')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_client/' + clientId;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<style>
+/* ===== تكبير الخطوط ===== */
+.table-lg thead th {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    padding: 14px 12px !important;
+}
+
+.table-lg tbody td {
+    font-size: 1.05rem !important;
+    padding: 14px 12px !important;
+    vertical-align: middle !important;
+}
+
+.table-lg tbody td a {
+    font-size: 1.1rem !important;
+}
+
+/* ===== تكبير البادجات ===== */
+.table-lg .badge {
+    font-size: 0.95rem !important;
+    padding: 6px 14px !important;
+}
+
+/* ===== تكبير الأزرار ===== */
+.btn-group-lg .btn {
+    padding: 10px 16px !important;
+    font-size: 1rem !important;
+    border-radius: 8px !important;
+}
+
+.btn-group-lg .btn .fs-5 {
+    font-size: 1.3rem !important;
+}
+
+/* ===== تأثيرات hover ===== */
+.btn-group-lg .btn:hover {
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+/* ===== تنسيق الأزرار ===== */
+.btn-group-lg .btn-primary {
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+    border: none;
+}
+
+.btn-group-lg .btn-info {
+    background: linear-gradient(135deg, #00838f, #00acc1);
+    border: none;
+    color: white;
+}
+
+.btn-group-lg .btn-success {
+    background: linear-gradient(135deg, #1e7e34, #28a745);
+    border: none;
+}
+
+.btn-group-lg .btn-secondary {
+    background: linear-gradient(135deg, #424242, #616161);
+    border: none;
+}
+
+.btn-group-lg .btn-warning {
+    background: linear-gradient(135deg, #e6a800, #f9a825);
+    border: none;
+    color: #1a1a2e;
+}
+
+.btn-group-lg .btn-danger {
+    background: linear-gradient(135deg, #b71c1c, #dc3545);
+    border: none;
+}
+
+/* ===== الفاصل بين الأزرار ===== */
+.btn-group-lg .btn:not(:first-child) {
+    margin-right: 4px !important;
+}
+
+/* ===== التجاوب ===== */
+@media (max-width: 768px) {
+    .table-lg thead th {
+        font-size: 0.95rem !important;
+        padding: 10px 8px !important;
+    }
+    .table-lg tbody td {
+        font-size: 0.9rem !important;
+        padding: 10px 8px !important;
+    }
+    .btn-group-lg .btn {
+        padding: 6px 10px !important;
+        font-size: 0.9rem !important;
+    }
+    .btn-group-lg .btn .fs-5 {
+        font-size: 1rem !important;
+    }
+}
+</style>
+{% endblock %}

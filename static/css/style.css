@@ -1,0 +1,392 @@
+/* ============================================================
+   🎨 STYLE.CSS - نظام إدارة المهام
+   ============================================================ */
+
+:root {
+    --nq-primary: #003366;
+    --nq-primary-light: #00509E;
+    --nq-primary-dark: #001F3F;
+    --nq-accent: #C9A96E;
+    --nq-accent-light: #D4B87A;
+    --nq-white: #FFFFFF;
+    --nq-bg: #F0F2F5;
+    --nq-text: #1A1A2E;
+    --nq-text-muted: #6C757D;
+    --nq-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --nq-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.15);
+    --nq-radius: 14px;
+    --nq-radius-sm: 10px;
+    --nq-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== الوضع الليلي ===== */
+[data-theme="dark"] {
+    --nq-bg: #12121A;
+    --nq-white: #1E1E2E;
+    --nq-text: #E0E0E0;
+    --nq-text-muted: #A0A0A0;
+    --nq-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --nq-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== الأساسيات ===== */
+* {
+    font-family: 'Tajawal', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--nq-bg);
+    color: var(--nq-text);
+    transition: var(--nq-transition);
+    min-height: 100vh;
+}
+
+/* ===== الشريط العلوي (Navbar) ===== */
+.navbar-custom {
+    background: linear-gradient(135deg, var(--nq-primary), var(--nq-primary-dark)) !important;
+    box-shadow: 0 4px 20px rgba(0, 51, 102, 0.3);
+    padding: 0.7rem 0;
+}
+
+.navbar-custom .navbar-brand {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--nq-white) !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-custom .navbar-brand img {
+    height: 38px;
+    width: auto;
+}
+
+.navbar-custom .nav-link {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: var(--nq-radius-sm);
+    transition: var(--nq-transition);
+    font-size: 0.95rem;
+}
+
+.navbar-custom .nav-link:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.navbar-custom .nav-link.active {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.navbar-custom .nav-link i {
+    margin-left: 6px;
+}
+
+/* ===== البطاقات ===== */
+.card {
+    background: var(--nq-white);
+    border: none;
+    border-radius: var(--nq-radius);
+    box-shadow: var(--nq-shadow);
+    transition: var(--nq-transition);
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: var(--nq-shadow-hover);
+    transform: translateY(-4px);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .card-header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* ===== بطاقات الإحصائيات ===== */
+.stat-card {
+    border-radius: var(--nq-radius);
+    padding: 1.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: var(--nq-transition);
+    cursor: pointer;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-icon {
+    position: absolute;
+    left: 1.5rem;
+    bottom: 1.5rem;
+    font-size: 3.5rem;
+    opacity: 0.12;
+}
+
+.stat-card .stat-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0.25rem 0;
+}
+
+.stat-card .stat-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    font-weight: 500;
+}
+
+.stat-card .stat-sub {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* ===== الأزرار ===== */
+.btn {
+    border-radius: var(--nq-radius-sm);
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: var(--nq-transition);
+    border: none;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--nq-primary), var(--nq-primary-light));
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #c62828, #e53935);
+    color: white;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f57f17, #f9a825);
+    color: white;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #00838f, #00acc1);
+    color: white;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #424242, #616161);
+    color: white;
+}
+
+/* ===== الجداول ===== */
+.table thead th {
+    background: var(--nq-primary);
+    color: white;
+    font-weight: 600;
+    padding: 0.8rem 1rem;
+    border: none;
+}
+
+.table tbody tr {
+    transition: var(--nq-transition);
+}
+
+.table tbody tr:hover {
+    background: rgba(0, 51, 102, 0.05);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.table tbody td {
+    padding: 0.8rem 1rem;
+    vertical-align: middle;
+}
+
+/* ===== التذييل ===== */
+.footer {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    background: var(--nq-white);
+    border-radius: var(--nq-radius);
+    box-shadow: var(--nq-shadow);
+    text-align: center;
+    color: var(--nq-text-muted);
+}
+
+/* ===== الشارات ===== */
+.badge {
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* ===== أزرار اللغة والوضع ===== */
+.lang-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--nq-radius-sm);
+    transition: var(--nq-transition);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.lang-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.lang-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.theme-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--nq-radius-sm);
+    transition: var(--nq-transition);
+    font-size: 1.1rem;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    transform: rotate(20deg);
+}
+
+/* ===== الإشعارات ===== */
+.notification-badge {
+    position: relative;
+}
+
+.notification-badge .badge-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ===== أنيميشن ===== */
+.fade-in {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+
+/* ===== تأثيرات البطاقات القابلة للنقر ===== */
+a .stat-card,
+a .card {
+    transition: all 0.3s ease;
+}
+
+a .stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+a .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: var(--nq-primary);
+}
+
+/* ===== المودالات ===== */
+.modal {
+    z-index: 9999 !important;
+}
+
+.modal-backdrop {
+    z-index: 9998 !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.modal-dialog {
+    z-index: 10000 !important;
+}
+
+.modal-content {
+    z-index: 10001 !important;
+    border-radius: var(--nq-radius) !important;
+}
+
+/* ===== التجاوب ===== */
+@media (max-width: 768px) {
+    .stat-card .stat-number {
+        font-size: 1.6rem;
+    }
+    .navbar-custom .navbar-brand {
+        font-size: 1.1rem;
+    }
+    .navbar-custom .navbar-brand img {
+        height: 30px;
+    }
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+@media print {
+    .btn,
+    .navbar,
+    .footer {
+        display: none !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    body {
+        background: white !important;
+    }
+}

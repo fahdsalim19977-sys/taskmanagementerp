@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> {% if get_lang() == 'en' %}Reports{% else %}التقارير{% endif %}</h2>
+    <div>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> {% if get_lang() == 'en' %}Advanced Print{% else %}طباعة متقدمة{% endif %}
+        </button>
+        <a href="/export_full_report" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> {% if get_lang() == 'en' %}Full Report PDF{% else %}تقرير شامل PDF{% endif %}
+        </a>
+        <a href="/export_excel" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> {% if get_lang() == 'en' %}Export Excel{% else %}تصدير Excel{% endif %}
+        </a>
+        <a href="/export_pdf" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> {% if get_lang() == 'en' %}Export PDF{% else %}تصدير PDF{% endif %}
+        </a>
+    </div>
+</div>
+
+<!-- ===== بطاقات الإحصائيات الرئيسية ===== -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Total Tasks{% else %}إجمالي التدريبات{% endif %}</h6>
+                        <h2 class="mb-0">{{ total_tasks or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-list-task fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Completed{% else %}مكتملة{% endif %}</h6>
+                        <h2 class="mb-0">{{ completed_count or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}</h6>
+                        <h2 class="mb-0">{{ in_progress_count or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Overdue{% else %}متأخرة{% endif %}</h6>
+                        <h2 class="mb-0">{{ overdue_count or 0 }}</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== تقارير مفصلة ===== -->
+<div class="row g-4">
+    <!-- ===== تقرير التدريبات ===== -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-list-task"></i> {% if get_lang() == 'en' %}Training Report{% else %}تقرير التدريبات{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-list-task" style="font-size: 3rem; color: #1a237e;"></i>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Total Trainings{% else %}إجمالي التدريبات{% endif %}</span>
+                        <span class="badge bg-primary rounded-pill">{{ total_tasks or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Completed{% else %}مكتملة{% endif %}</span>
+                        <span class="badge bg-success rounded-pill">{{ completed_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}</span>
+                        <span class="badge bg-warning rounded-pill">{{ in_progress_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Overdue{% else %}متأخرة{% endif %}</span>
+                        <span class="badge bg-danger rounded-pill">{{ overdue_count or 0 }}</span>
+                    </li>
+                </ul>
+                <div class="mt-3">
+                    <a href="/tasks" class="btn btn-primary w-100">
+                        <i class="bi bi-eye"></i> {% if get_lang() == 'en' %}View All Trainings{% else %}عرض جميع التدريبات{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== تقرير المدفوعات ===== -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-coin"></i> {% if get_lang() == 'en' %}Payments Report{% else %}تقرير المدفوعات{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-coin" style="font-size: 3rem; color: #28a745;"></i>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Total Payments{% else %}إجمالي المدفوعات{% endif %}</span>
+                        <span class="badge bg-primary rounded-pill">{{ total_payments_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Total Amount{% else %}إجمالي المبلغ{% endif %}</span>
+                        <span class="badge bg-success rounded-pill">{{ total_payments_amount or 0 }} ج.م</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Paid{% else %}مدفوع{% endif %}</span>
+                        <span class="badge bg-success rounded-pill">{{ paid_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Pending{% else %}معلق{% endif %}</span>
+                        <span class="badge bg-warning rounded-pill">{{ pending_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Overdue{% else %}متأخر{% endif %}</span>
+                        <span class="badge bg-danger rounded-pill">{{ overdue_payments_count or 0 }}</span>
+                    </li>
+                </ul>
+                <div class="mt-3">
+                    <a href="/all_payments" class="btn btn-success w-100">
+                        <i class="bi bi-eye"></i> {% if get_lang() == 'en' %}View All Payments{% else %}عرض جميع المدفوعات{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== تقرير الإيرادات ===== -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> {% if get_lang() == 'en' %}Revenue Report{% else %}تقرير الإيرادات{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-graph-up-arrow" style="font-size: 3rem; color: #17a2b8;"></i>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Total Revenue{% else %}إجمالي الإيرادات{% endif %}</span>
+                        <span class="badge bg-info rounded-pill">{{ total_revenue or 0 }} ج.م</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}This Month{% else %}هذا الشهر{% endif %}</span>
+                        <span class="badge bg-primary rounded-pill">{{ monthly_revenue or 0 }} ج.م</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</span>
+                        <span class="badge bg-success rounded-pill">{{ weekly_revenue or 0 }} ج.م</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{% if get_lang() == 'en' %}Today{% else %}اليوم{% endif %}</span>
+                        <span class="badge bg-warning rounded-pill">{{ daily_revenue or 0 }} ج.م</span>
+                    </li>
+                </ul>
+                <div class="mt-3">
+                    <a href="/revenue_report" class="btn btn-info w-100">
+                        <i class="bi bi-eye"></i> {% if get_lang() == 'en' %}View Revenue Report{% else %}عرض تقرير الإيرادات{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ===== تنسيقات الطباعة المتقدمة ===== */
+@media print {
+    body {
+        background: white !important;
+        padding: 20px !important;
+    }
+    .btn, .navbar, .footer, .no-print {
+        display: none !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .card-header {
+        background: #1a237e !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .card.bg-primary, .card.bg-success, .card.bg-warning, .card.bg-danger {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .badge {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .container {
+        max-width: 100% !important;
+    }
+    h2 {
+        color: #1a237e !important;
+    }
+    .row {
+        display: block !important;
+    }
+    .col-md-3, .col-md-4 {
+        width: 100% !important;
+        float: none !important;
+        margin-bottom: 15px !important;
+    }
+    .stat-card {
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+    }
+}
+
+/* ===== تأثيرات البطاقات ===== */
+.card {
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+.list-group-item {
+    border-color: rgba(0,0,0,0.05);
+}
+
+/* ===== تنسيق الطباعة ===== */
+.print-header {
+    display: none;
+}
+@media print {
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #1a237e;
+        padding-bottom: 10px;
+    }
+    .print-header h2 {
+        color: #1a237e;
+        font-weight: 700;
+    }
+    .print-header p {
+        color: #666;
+    }
+}
+</style>
+
+<!-- ===== رأس الطباعة ===== -->
+<div class="print-header no-print">
+    <h2>{% if get_lang() == 'en' %}Comprehensive Report{% else %}تقرير شامل{% endif %}</h2>
+    <p>{{ settings.name if settings else '' }} | {% if get_lang() == 'en' %}Date{% else %}التاريخ{% endif %}: {{ datetime.now().strftime('%Y-%m-%d %H:%M') }}</p>
+</div>
+
+<script>
+// ===== طباعة متقدمة =====
+document.addEventListener('DOMContentLoaded', function() {
+    // إضافة زر طباعة في حالة عدم ظهوره
+    var printBtn = document.querySelector('button[onclick="window.print()"]');
+    if (printBtn) {
+        printBtn.addEventListener('click', function(e) {
+            // إضافة رأس الطباعة قبل الطباعة
+            var header = document.querySelector('.print-header');
+            if (header) {
+                header.classList.remove('no-print');
+            }
+            // إعادة إضافة class بعد الطباعة
+            setTimeout(function() {
+                if (header) {
+                    header.classList.add('no-print');
+                }
+            }, 1000);
+        });
+    }
+});
+</script>
+{% endblock %}

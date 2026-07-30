@@ -1,0 +1,234 @@
+﻿{% set lang = get_lang() %}
+<!DOCTYPE html>
+<html dir="{% if lang == 'ar' %}rtl{% else %}ltr{% endif %}" lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ settings.name if settings else t('app_name') }}</title>
+
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * { font-family: 'Tajawal', sans-serif; }
+        body {
+            background: #f0f2f5;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        /* ===== Navbar ===== */
+        .navbar-custom {
+            background: linear-gradient(135deg, #1a237e, #0d47a1);
+            box-shadow: 0 4px 20px rgba(26, 35, 126, 0.3);
+            padding: 0.7rem 0;
+        }
+        .navbar-custom .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .navbar-custom .navbar-brand img {
+            height: 38px;
+            width: auto;
+        }
+        .navbar-custom .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .navbar-custom .nav-link:hover {
+            color: #fff !important;
+            background: rgba(255,255,255,0.15);
+        }
+        .navbar-custom .nav-link.active {
+            color: #fff !important;
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* ===== قائمة المستخدم ===== */
+        .dropdown-menu {
+            background: white !important;
+            border: none !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+            padding: 8px 0 !important;
+            min-width: 200px !important;
+            z-index: 99999 !important;
+        }
+        .dropdown-item {
+            padding: 8px 20px !important;
+            color: #1a1a2e !important;
+            transition: all 0.3s ease !important;
+            font-size: 14px !important;
+        }
+        .dropdown-item:hover {
+            background: rgba(26, 35, 126, 0.08) !important;
+        }
+        .dropdown-item.text-danger:hover {
+            background: rgba(220, 53, 69, 0.1) !important;
+        }
+        .dropdown-divider {
+            margin: 4px 0 !important;
+        }
+        .dropdown-item-text {
+            color: #1a1a2e !important;
+            font-weight: 500;
+            padding: 8px 20px !important;
+        }
+        .nav-item.dropdown {
+            position: relative !important;
+        }
+        .dropdown-menu-end {
+            left: auto !important;
+            right: 0 !important;
+        }
+
+        /* ===== الإشعارات ===== */
+        .notification-badge { position: relative; }
+        .notification-badge .badge-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 1px 7px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* ===== التجاوب ===== */
+        @media (max-width: 768px) {
+            .navbar-custom .navbar-brand { font-size: 1.1rem; }
+            .navbar-custom .navbar-brand img { height: 30px; }
+            .dropdown-menu {
+                min-width: 150px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== Navbar ===== -->
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                {% if settings and settings.logo_path %}
+                <img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.name }}">
+                {% else %}
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+                {% endif %}
+                {{ settings.name if settings else t('app_name') }}
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if session.user_id %}
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house"></i> {{ t('dashboard') }}</a></li>
+<li class="nav-item">
+    <a class="nav-link {% if request.path == '/trainers' %}active{% endif %}" href="/trainers">
+        <i class="bi bi-person-badge"></i> المدربين
+    </a>
+</li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks"><i class="bi bi-list-task"></i> التدريبات</a></li>
+                   
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/clients' %}active{% endif %}" href="/clients"><i class="bi bi-people"></i> العملاء</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/all_modules' %}active{% endif %}" href="/all_modules"><i class="bi bi-grid"></i> المديولات</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/all_payments' %}active{% endif %}" href="/all_payments"><i class="bi bi-coin"></i> المدفوعات</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/meetings' %}active{% endif %}" href="/meetings"><i class="bi bi-calendar-event"></i> المواعيد</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports"><i class="bi bi-bar-chart"></i> التقارير</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/revenue_report' %}active{% endif %}" href="/revenue_report"><i class="bi bi-graph-up-arrow"></i> الإيرادات</a></li>
+                    {% if session.user_role == 'مدير' %}
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/users' %}active{% endif %}" href="/users"><i class="bi bi-person-gear"></i> المستخدمين</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/company_settings' %}active{% endif %}" href="/company_settings"><i class="bi bi-building"></i> الإعدادات</a></li>
+                    {% endif %}
+                </ul>
+
+                <ul class="navbar-nav">
+                    <li class="nav-item notification-badge">
+                        <a class="nav-link" href="/notifications"><i class="bi bi-bell"></i><span class="badge-count" id="notifCount">0</span></a>
+                    </li>
+                    <li class="nav-item"><a href="/set_lang/ar" class="nav-link">🇸🇦</a></li>
+                    <li class="nav-item"><a href="/set_lang/en" class="nav-link">🇬🇧</a></li>
+
+                    <!-- ===== قائمة المستخدم ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i> {{ session.user_name }}
+                            <span class="badge bg-light text-dark ms-1">{{ session.user_role }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> {{ session.username }}</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/change_password"><i class="bi bi-key text-warning"></i> تغيير كلمة المرور</a></li>
+                            <li><a class="dropdown-item text-danger" href="/logout"><i class="bi bi-box-arrow-right"></i> تسجيل خروج</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== المحتوى ===== -->
+    <main class="container py-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ===== التذييل ===== -->
+    <div class="footer text-center py-3" style="background: white; margin-top: 3rem; border-top: 1px solid #eee;">
+        <small class="text-muted">
+            <i class="bi bi-building"></i> {{ settings.name if settings else t('app_name') }}
+            {% if settings and settings.phone %} | <i class="bi bi-telephone"></i> {{ settings.phone }}{% endif %}
+            {% if settings and settings.address %} | <i class="bi bi-geo-alt"></i> {{ settings.address }}{% endif %}
+            <br>© {{ datetime.now().year if datetime else 2026 }} جميع الحقوق محفوظة
+        </small>
+    </div>
+
+    <!-- ===== Scripts ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ===== jQuery (للـ Select2) ===== -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- ===== Bootstrap Multiselect ===== -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/1.1.1/css/bootstrap-multiselect.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/1.1.1/js/bootstrap-multiselect.min.js"></script>
+    <script>
+        // الإشعارات
+        fetch('/api/notifications/count')
+            .then(res => res.json())
+            .then(data => {
+                const badge = document.getElementById('notifCount');
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            })
+            .catch(() => {});
+    </script>
+</body>
+</html>

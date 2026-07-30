@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل المدرب</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ trainer.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ trainer.phone or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">البريد الإلكتروني</label>
+                            <input type="email" name="email" class="form-control" value="{{ trainer.email or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">التخصص</label>
+                            <input type="text" name="specialty" class="form-control" value="{{ trainer.specialty or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ trainer.notes or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الحالة</label>
+                        <select name="is_active" class="form-select">
+                            <option value="1" {% if trainer.is_active %}selected{% endif %}>نشط</option>
+                            <option value="0" {% if not trainer.is_active %}selected{% endif %}>غير نشط</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

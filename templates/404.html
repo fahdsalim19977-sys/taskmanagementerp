@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - الصفحة غير موجودة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Tajawal', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1a237e, #0d47a1);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .error-card {
+            background: white;
+            border-radius: 25px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .error-card .icon {
+            font-size: 80px;
+            color: #1a237e;
+            margin-bottom: 20px;
+        }
+        .error-card h1 {
+            font-size: 72px;
+            font-weight: 800;
+            color: #1a237e;
+            margin: 0;
+        }
+        .error-card h3 {
+            color: #333;
+            margin: 10px 0;
+        }
+        .error-card p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .error-card .btn {
+            border-radius: 12px;
+            padding: 10px 30px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1a237e, #0d47a1);
+            border: none;
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(26,35,126,0.3);
+        }
+        .btn-outline-secondary {
+            border: 2px solid #1a237e;
+            color: #1a237e;
+        }
+        .btn-outline-secondary:hover {
+            background: #1a237e;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="icon"><i class="bi bi-box-arrow-right"></i></div>
+        <h1>404</h1>
+        <h3>الصفحة غير موجودة</h3>
+        <p>عذراً، الصفحة التي تبحث عنها غير موجودة أو تم نقلها.</p>
+        <div>
+            <a href="/" class="btn btn-primary"><i class="bi bi-house"></i> الرئيسية</a>
+            <a href="/tasks" class="btn btn-outline-secondary"><i class="bi bi-list-task"></i> المهام</a>
+        </div>
+    </div>
+</body>
+</html>

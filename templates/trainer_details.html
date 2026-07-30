@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> تفاصيل المدرب</h2>
+    <div>
+        <a href="/edit_trainer/{{ trainer.id }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> تعديل
+        </a>
+        <a href="/trainers" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- ===== بطاقة معلومات المدرب ===== -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person"></i> معلومات المدرب</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" 
+                         style="width: 100px; height: 100px; font-size: 40px; font-weight: bold;">
+                        {{ trainer.name[0] }}
+                    </div>
+                    <h4 class="mt-2">{{ trainer.name }}</h4>
+                    {% if trainer.is_active %}
+                    <span class="badge bg-success">نشط</span>
+                    {% else %}
+                    <span class="badge bg-secondary">غير نشط</span>
+                    {% endif %}
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted d-block">الهاتف</small>
+                        <strong>{{ trainer.phone or '-' }}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">البريد</small>
+                        <strong>{{ trainer.email or '-' }}</strong>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted d-block">التخصص</small>
+                    <strong>{{ trainer.specialty or '-' }}</strong>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted d-block">عدد العملاء</small>
+                    <strong><span class="badge bg-primary">{{ trainer.client_count or 0 }}</span></strong>
+                </div>
+                {% if trainer.notes %}
+                <div class="mt-2">
+                    <small class="text-muted d-block">ملاحظات</small>
+                    <p class="border p-2 rounded bg-light">{{ trainer.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== قائمة العملاء ===== -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people"></i> العملاء المرتبطين ({{ clients|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if clients %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم العميل</th>
+                                <th>الشركة</th>
+                                <th>الهاتف</th>
+                                <th>البريد</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for client in clients %}
+                            <tr>
+                                <td>{{ client.id }}</td>
+                                <td>
+                                    <a href="/client_tasks/{{ client.id }}" class="text-decoration-none fw-bold">
+                                        {{ client.name }}
+                                    </a>
+                                </td>
+                                <td>{{ client.company_name or '-' }}</td>
+                                <td>{{ client.phone or '-' }}</td>
+                                <td>{{ client.email or '-' }}</td>
+                                <td>
+                                    <a href="/client_tasks/{{ client.id }}" class="btn btn-sm btn-primary" title="المهام">
+                                        <i class="bi bi-list-task"></i>
+                                    </a>
+                                    <a href="/client_payments/{{ client.id }}" class="btn btn-sm btn-success" title="المدفوعات">
+                                        <i class="bi bi-coin"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-people" style="font-size:48px;display:block;"></i>
+                    <h4>لا يوجد عملاء مرتبطين</h4>
+                    <p>لم يتم ربط أي عميل بهذا المدرب بعد</p>
+                    <a href="/clients" class="btn btn-primary mt-2">➡️ الذهاب للعملاء</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+</style>
+{% endblock %}

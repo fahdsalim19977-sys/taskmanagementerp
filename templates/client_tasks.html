@@ -1,0 +1,188 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-person"></i> مهام العميل: {{ client.name }}</h2>
+        {% if client.company_name %}
+        <h5 class="text-muted">{{ client.company_name }}</h5>
+        {% endif %}
+        <p class="text-muted">
+            <i class="bi bi-telephone"></i> {{ client.phone or 'لا يوجد هاتف' }} | 
+            <i class="bi bi-envelope"></i> {{ client.email or 'لا يوجد بريد' }} |
+            <i class="bi bi-geo-alt"></i> {{ client.address or 'لا يوجد عنوان' }}
+        </p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> طباعة
+        </button>
+<a href="/print_client_tasks/{{ client.id }}" class="btn btn-primary" target="_blank">
+    <i class="bi bi-printer"></i> طباعة متقدمة
+</a>
+        <a href="/export_client_excel/{{ client.id }}" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> تصدير Excel
+        </a>
+        <a href="/export_client_pdf/{{ client.id }}" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> تصدير PDF
+        </a>
+        <a href="/add_task" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> مهمة جديدة
+        </a>
+        <a href="/tasks" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- بطاقات الإحصائيات -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card bg-primary text-white"><div class="card-body text-center"><h5>الإجمالي</h5><h3>{{ stats.total }}</h3></div></div></div>
+    <div class="col-md-2"><div class="card bg-success text-white"><div class="card-body text-center"><h5>مكتملة</h5><h3>{{ stats.completed }}</h3></div></div></div>
+    <div class="col-md-2"><div class="card bg-warning text-white"><div class="card-body text-center"><h5>قيد التنفيذ</h5><h3>{{ stats.in_progress }}</h3></div></div></div>
+    <div class="col-md-2"><div class="card bg-danger text-white"><div class="card-body text-center"><h5>متأخرة</h5><h3>{{ stats.overdue }}</h3></div></div></div>
+    <div class="col-md-2"><div class="card bg-secondary text-white"><div class="card-body text-center"><h5>لم تبدأ</h5><h3>{{ stats.not_started }}</h3></div></div></div>
+    <div class="col-md-2">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5>نسبة الإنجاز</h5>
+                <h3>{% if stats.total > 0 %}{{ (stats.completed / stats.total * 100)|round(1) }}{% else %}0{% endif %}%</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if avg_duration %}
+<div class="alert alert-info">
+    <i class="bi bi-clock-history"></i> متوسط وقت الإنجاز: {{ avg_duration|round(1) }} ساعة
+</div>
+{% endif %}
+
+<!-- زر تجميع المهام -->
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#groupModal">
+        <i class="bi bi-folder-plus"></i> تجميع المهام في مجموعة
+    </button>
+    {% if tasks %}
+    <span class="text-muted ms-2">عدد المهام: {{ tasks|length }}</span>
+    {% endif %}
+</div>
+
+{% if tasks %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>المهمة</th>
+                <th>المجموعة</th>
+                <th>المسؤول</th>
+                <th>الحالة</th>
+                <th>الإنجاز</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>المدة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.id }}</td>
+                <td>
+                    <a href="/task/{{ task.id }}" class="text-decoration-none">
+                        <strong>{{ task.title }}</strong>
+                    </a>
+                    {% if task.description %}
+                    <br><small class="text-muted">{{ task.description[:60] }}{% if task.description|length > 60 %}...{% endif %}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if task.task_group %}
+                    <span class="badge bg-info">{{ task.task_group }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">بدون مجموعة</span>
+                    {% endif %}
+                </td>
+                <td>{{ task.assigned_name }}</td>
+                <td>
+                    <span class="badge 
+                        {% if task.status == 'مكتملة' %}bg-success
+                        {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
+                        {% elif task.status == 'متأخرة' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {{ task.status }}
+                    </span>
+                </td>
+                <td style="min-width:80px;">
+                    <div class="progress">
+                        <div class="progress-bar {% if task.completion_percentage == 100 %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width:{{ task.completion_percentage }}%;">
+                            {{ task.completion_percentage }}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% set due_date_str = task.due_date %}
+                    {% set today_str = today.strftime('%Y-%m-%d') %}
+                    {% if due_date_str < today_str and task.status != 'مكتملة' %}
+                    <span class="text-danger"><i class="bi bi-clock"></i> {{ task.due_date }}</span>
+                    {% else %}
+                    {{ task.due_date }}
+                    {% endif %}
+                </td>
+                <td>
+                    <small>متوقعة: {{ task.estimated_duration or 0 }}h<br>
+                    فعلية: {{ task.actual_duration or 0 }}h</small>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-inbox" style="font-size:48px;display:block;"></i>
+    <h4>لا توجد مهام لهذا العميل</h4>
+    <p>قم بإضافة مهمة جديدة للعميل {{ client.name }}</p>
+    <a href="/add_task" class="btn btn-primary mt-2">➕ إضافة مهمة</a>
+</div>
+{% endif %}
+
+<!-- مودال تجميع المهام -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/group_tasks">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-folder-plus"></i> تجميع مهام العميل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="client_id" value="{{ client.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">اسم المجموعة <span class="text-danger">*</span></label>
+                        <input type="text" name="group_name" class="form-control" required 
+                               placeholder="مثال: مشروع تطوير الموقع - المرحلة 1">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        سيتم تجميع جميع مهام هذا العميل التي ليس لها مجموعة تحت هذا الاسم
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-folder-plus"></i> تجميع</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .navbar, .footer, .no-print { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    body { background: white !important; }
+}
+</style>
+{% endblock %}

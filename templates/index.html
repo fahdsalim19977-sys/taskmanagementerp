@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- ===== عنوان الصفحة ===== -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> {% if get_lang() == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</h2>
+    <span class="text-muted">{% if get_lang() == 'en' %}Welcome back, {{ session.user_name }}{% else %}مرحباً بعودتك، {{ session.user_name }}{% endif %}</span>
+</div>
+
+<!-- ===== بطاقات الإحصائيات الرئيسية (قابلة للنقر) ===== -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <a href="/tasks" class="text-decoration-none">
+            <div class="stat-card" style="background: linear-gradient(135deg, #1a237e, #0d47a1); cursor: pointer;">
+                <div class="stat-icon"><i class="bi bi-list-task"></i></div>
+                <div class="stat-label">{% if get_lang() == 'en' %}Total Tasks{% else %}إجمالي التدريبات{% endif %}</div>
+                <div class="stat-number">{{ total_tasks }}</div>
+                <div class="stat-sub">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/tasks" class="text-decoration-none">
+            <div class="stat-card" style="background: linear-gradient(135deg, #1e7e34, #28a745); cursor: pointer;">
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-label">{% if get_lang() == 'en' %}Completed{% else %}مكتملة{% endif %}</div>
+                <div class="stat-number">{{ completed_tasks }}</div>
+                <div class="stat-sub">{% if get_lang() == 'en' %}Completion: {% else %}نسبة الإنجاز: {% endif %}{% if total_tasks > 0 %}{{ (completed_tasks / total_tasks * 100)|round(1) }}{% else %}0{% endif %}%</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/tasks" class="text-decoration-none">
+            <div class="stat-card" style="background: linear-gradient(135deg, #b8860b, #daa520); cursor: pointer;">
+                <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                <div class="stat-label">{% if get_lang() == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}</div>
+                <div class="stat-number">{{ in_progress }}</div>
+                <div class="stat-sub">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/tasks" class="text-decoration-none">
+            <div class="stat-card" style="background: linear-gradient(135deg, #8b0000, #dc3545); cursor: pointer;">
+                <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-label">{% if get_lang() == 'en' %}Overdue{% else %}متأخرة{% endif %}</div>
+                <div class="stat-number">{{ overdue_tasks }}</div>
+                <div class="stat-sub">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- ===== إحصائيات إضافية (مواعيد - إيرادات - مدفوعات) ===== -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <a href="/meetings" class="text-decoration-none">
+            <div class="card text-center" style="cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <h6><i class="bi bi-calendar-event text-warning"></i> {% if get_lang() == 'en' %}Meetings{% else %}المواعيد{% endif %}</h6>
+                    <h3 class="fw-bold">{{ upcoming_meetings|default(0) }}</h3>
+                    <small class="text-muted">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/revenue_report" class="text-decoration-none">
+            <div class="card text-center" style="cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <h6><i class="bi bi-graph-up-arrow text-info"></i> {% if get_lang() == 'en' %}Revenue{% else %}الإيرادات{% endif %}</h6>
+                    <h3 class="fw-bold">{{ total_revenue or 0 }} ج.م</h3>
+                    <small class="text-muted">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/all_payments" class="text-decoration-none">
+            <div class="card text-center" style="cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <h6><i class="bi bi-coin text-success"></i> {% if get_lang() == 'en' %}Total Payments{% else %}إجمالي المدفوعات{% endif %}</h6>
+                    <h3 class="fw-bold">{{ total_payments or 0 }}</h3>
+                    <small class="text-muted">{% if get_lang() == 'en' %}Click to view{% else %}اضغط للعرض{% endif %}</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- ===== المهام المتأخرة ===== -->
+<div class="row g-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-exclamation-circle"></i> {% if get_lang() == 'en' %}⚠️ Overdue Tasks{% else %}⚠️ مهام متأخرة{% endif %}
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if overdue_list %}
+                    {% for task in overdue_list %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <a href="/task/{{ task.id }}" class="text-decoration-none text-dark">
+                                <strong>{{ task.title }}</strong>
+                            </a>
+                            <span class="badge bg-secondary ms-2">{{ task.client_name }}</span>
+                            <br><small class="text-muted">{{ task.assigned_name }}</small>
+                        </div>
+                        <a href="/task/{{ task.id }}" class="btn btn-sm btn-outline-danger">
+                            {% if get_lang() == 'en' %}View{% else %}عرض{% endif %}
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
+                    <p class="text-muted mt-2">{% if get_lang() == 'en' %}🎉 No overdue tasks!{% else %}🎉 لا توجد مهام متأخرة!{% endif %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-card {
+    border-radius: 14px;
+    padding: 1.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.stat-card .stat-icon {
+    position: absolute;
+    left: 1.5rem;
+    bottom: 1.5rem;
+    font-size: 3.5rem;
+    opacity: 0.12;
+}
+.stat-card .stat-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0.25rem 0;
+}
+.stat-card .stat-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    font-weight: 500;
+}
+.stat-card .stat-sub {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+.card {
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+a .card:hover {
+    border-color: #1a237e;
+}
+</style>
+{% endblock %}

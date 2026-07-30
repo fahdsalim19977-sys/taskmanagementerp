@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-task"></i> {% if get_lang() == 'en' %}Training List{% else %}قائمة التدريبات{% endif %}</h2>
+    <div>
+        {% if session.user_role != 'مراقب' %}
+        <a href="/add_task" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> {% if get_lang() == 'en' %}New Training{% else %}تدريب جديد{% endif %}
+</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== خانة البحث ===== -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="/tasks/search" class="row g-3">
+            <div class="col-md-10">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" 
+                           placeholder="ابحث باسم العميل..." 
+                           value="{{ search_term or '' }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> بحث
+                </button>
+            </div>
+        </form>
+        {% if search_term %}
+        <div class="mt-2">
+            <small class="text-muted">
+                نتائج البحث عن: <strong>"{{ search_term }}"</strong>
+                <a href="/tasks" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="bi bi-x-circle"></i> إلغاء
+                </a>
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== قائمة التدريبات ===== -->
+{% if tasks %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>عنوان التدريب</th>
+                <th>اسم العميل</th>
+                <th>المسؤول</th>
+                <th>الحالة</th>
+                <th>نسبة الإنجاز</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>المدة</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr id="task-row-{{ task.id }}">
+                <td>{{ task.id }}</td>
+                <td>
+                    <a href="/task/{{ task.id }}" class="text-decoration-none fw-bold">
+                        {{ task.title }}
+                    </a>
+                    {% if task.description %}
+                    <br><small class="text-muted">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</small>
+                    {% endif %}
+                    {% if task.task_group %}
+                    <br><span class="badge bg-info">{{ task.task_group }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/client_tasks/{{ task.client_id }}" class="text-decoration-none">
+                        {{ task.client_name }}
+                    </a>
+                </td>
+                <td>{{ task.assigned_name }}</td>
+                <td>
+                    <span class="badge 
+                        {% if task.status == 'مكتملة' %}bg-success
+                        {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
+                        {% elif task.status == 'متأخرة' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {{ task.status }}
+                    </span>
+                </td>
+                <td>
+                    <div class="progress" style="min-width:80px;">
+                        <div class="progress-bar {% if task.completion_percentage == 100 %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width:{{ task.completion_percentage }}%;">
+                            {{ task.completion_percentage }}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% set due_date_str = task.due_date %}
+                    {% set today_str = today.strftime('%Y-%m-%d') %}
+                    {% if due_date_str < today_str and task.status != 'مكتملة' %}
+                    <span class="text-danger"><i class="bi bi-clock"></i> {{ task.due_date }}</span>
+                    {% else %}
+                    {{ task.due_date }}
+                    {% endif %}
+                </td>
+                <td>
+                    <small>
+                        المتوقعة: {{ task.estimated_duration or 0 }} ساعة<br>
+                        الفعلية: {{ task.actual_duration or 0 }} ساعة
+                    </small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/edit_task/{{ task.id }}" class="btn btn-warning" title="تعديل">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="/update_task_status_form/{{ task.id }}" class="btn btn-primary" title="تحديث الحالة">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </a>
+                        <a href="/add_note_form/{{ task.id }}" class="btn btn-info" title="ملاحظة">
+                            <i class="bi bi-chat"></i>
+                        </a>
+                        {% if session.user_role != 'مراقب' %}
+                        <button class="btn btn-danger" onclick="deleteTask({{ task.id }})" title="حذف">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== إحصائيات ===== -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-3">
+                <h6 class="text-muted">إجمالي التدريبات</h6>
+                <h4>{{ tasks|length }}</h4>
+            </div>
+            <div class="col-3">
+                <h6 class="text-success">مكتملة</h6>
+                <h4 class="text-success">{{ tasks|selectattr('status', 'equalto', 'مكتملة')|list|length }}</h4>
+            </div>
+            <div class="col-3">
+                <h6 class="text-warning">قيد التنفيذ</h6>
+                <h4 class="text-warning">{{ tasks|selectattr('status', 'equalto', 'قيد التنفيذ')|list|length }}</h4>
+            </div>
+            <div class="col-3">
+                <h6 class="text-danger">متأخرة</h6>
+                <h4 class="text-danger">{{ tasks|selectattr('status', 'equalto', 'متأخرة')|list|length }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-inbox" style="font-size:48px;display:block;"></i>
+    <h4>{% if search_term %}لا توجد تدريبات للعميل "{{ search_term }}"{% else %}لا توجد تدريبات{% endif %}</h4>
+    <p>{% if search_term %}جرب البحث باسم آخر{% else %}ابدأ بإضافة أول تدريب!{% endif %}</p>
+    {% if session.user_role != 'مراقب' and not search_term %}
+    <a href="/add_task" class="btn btn-primary mt-2">➕ إضافة تدريب جديد</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+// ===== حذف التدريب =====
+function deleteTask(taskId) {
+    if (confirm('⚠️ هل أنت متأكد من حذف هذا التدريب؟\n\nهذا الإجراء لا يمكن التراجع عنه!')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_task/' + taskId;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<style>
+.btn-group {
+    gap: 3px;
+}
+.btn-group .btn {
+    border-radius: 8px !important;
+}
+</style>
+{% endblock %}

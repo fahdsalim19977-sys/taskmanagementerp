@@ -1,0 +1,55 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar-event"></i> {{ meeting.title }}</h2>
+    <div>
+        <form method="POST" action="/update_meeting_status/{{ meeting.id }}" class="d-inline">
+            <select name="status" class="form-select d-inline" style="width:auto;display:inline-block;" onchange="this.form.submit()">
+                <option value="مجدول" {% if meeting.status == 'مجدول' %}selected{% endif %}>مجدول</option>
+                <option value="تم" {% if meeting.status == 'تم' %}selected{% endif %}>تم</option>
+                <option value="ملغي" {% if meeting.status == 'ملغي' %}selected{% endif %}>ملغي</option>
+            </select>
+        </form>
+        <a href="/meetings" class="btn btn-secondary">رجوع</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">تفاصيل الموعد</div>
+            <div class="card-body">
+                <p><strong><i class="bi bi-person"></i> العميل:</strong> {{ meeting.client_name }}</p>
+                <p><strong><i class="bi bi-telephone"></i> هاتف العميل:</strong> {{ meeting.client_phone or '-' }}</p>
+                <p><strong><i class="bi bi-envelope"></i> بريد العميل:</strong> {{ meeting.client_email or '-' }}</p>
+                <p><strong><i class="bi bi-clock"></i> التاريخ:</strong> {{ meeting.meeting_date }}</p>
+                <p><strong><i class="bi bi-hourglass-split"></i> المدة:</strong> {{ meeting.duration }} دقيقة</p>
+                {% if meeting.location %}<p><strong><i class="bi bi-geo-alt"></i> المكان:</strong> {{ meeting.location }}</p>{% endif %}
+                {% if meeting.meeting_link %}<p><strong><i class="bi bi-link"></i> الرابط:</strong> <a href="{{ meeting.meeting_link }}" target="_blank">{{ meeting.meeting_link }}</a></p>{% endif %}
+                <p><strong><i class="bi bi-person-gear"></i> أضيف بواسطة:</strong> {{ meeting.created_by_name }}</p>
+                <p><strong><i class="bi bi-tag"></i> الحالة:</strong> <span class="badge {% if meeting.status == 'مجدول' %}bg-primary{% elif meeting.status == 'تم' %}bg-success{% else %}bg-danger{% endif %}">{{ meeting.status }}</span></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">المهام المرتبطة</div>
+            <div class="card-body">
+                {% if tasks %}
+                <ul class="list-group">
+                    {% for task in tasks %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ task.title }}</span>
+                        <span class="badge {% if task.status == 'مكتملة' %}bg-success{% elif task.status == 'قيد التنفيذ' %}bg-warning{% elif task.status == 'متأخرة' %}bg-danger{% else %}bg-secondary{% endif %}">{{ task.status }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">لا توجد مهام مرتبطة بهذا الموعد</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-grid"></i> {{ t('all_modules') }}</h2>
+    <div>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> {{ t('print') }}
+        </button>
+        <a href="/clients" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> {{ t('clients') }}
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6>{{ t('modules') }}</h6>
+                <h3>{{ modules|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>{{ t('active') }}</h6>
+                <h3>{{ modules|selectattr('status', 'equalto', 'نشط')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>{{ t('in_development') }}</h6>
+                <h3>{{ modules|selectattr('status', 'equalto', 'قيد التطوير')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h6>{{ t('completed_module') }}</h6>
+                <h3>{{ modules|selectattr('status', 'equalto', 'مكتمل')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if modules %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ t('module_name') }}</th>
+                <th>{{ t('client_name') }}</th>
+                <th>{{ t('client_company') }}</th>
+                <th>{{ t('module_price') }}</th>
+                <th>{{ t('module_status') }}</th>
+                <th>{{ t('start_date') }}</th>
+                <th>{{ t('end_date') }}</th>
+                <th>{{ t('actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for module in modules %}
+            <tr>
+                <td>{{ module.id }}</td>
+                <td><strong>{{ module.name }}</strong></td>
+                <td>
+                    <a href="/client_modules/{{ module.client_id }}" class="text-decoration-none">
+                        {{ module.client_name }}
+                    </a>
+                </td>
+                <td>{{ module.company_name or '-' }}</td>
+                <td>{{ module.price }} {{ t('currency') }}</td>
+                <td>
+                    <span class="badge 
+                        {% if module.status == 'نشط' %}bg-success
+                        {% elif module.status == 'قيد التطوير' %}bg-warning text-dark
+                        {% elif module.status == 'مكتمل' %}bg-info
+                        {% else %}bg-secondary{% endif %}">
+                        {% if get_lang() == 'en' %}
+                            {% if module.status == 'نشط' %}Active
+                            {% elif module.status == 'قيد التطوير' %}In Development
+                            {% elif module.status == 'مكتمل' %}Completed
+                            {% else %}Stopped{% endif %}
+                        {% else %}
+                            {{ module.status }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td>{{ module.start_date or '-' }}</td>
+                <td>{{ module.end_date or '-' }}</td>
+                <td>
+                    <a href="/edit_module/{{ module.id }}" class="btn btn-sm btn-info">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="/client_modules/{{ module.client_id }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-grid" style="font-size:48px;display:block;"></i>
+    <h4>{{ t('no_modules') }}</h4>
+    <p>{{ t('add_new_module') }}</p>
+    <a href="/clients" class="btn btn-primary mt-2">{{ t('clients') }}</a>
+</div>
+{% endif %}
+
+<style>
+@media print {
+    .btn, .navbar, .footer { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    body { background: white !important; }
+}
+</style>
+{% endblock %}

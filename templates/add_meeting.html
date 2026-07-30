@@ -1,0 +1,25 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white"><h4 class="mb-0"><i class="bi bi-calendar-plus"></i> إضافة موعد جديد</h4></div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3"><label class="form-label">العميل <span class="text-danger">*</span></label><select name="client_id" class="form-select" required><option value="">-- اختر العميل --</option>{% for client in clients %}<option value="{{ client.id }}">{{ client.name }}</option>{% endfor %}</select></div>
+                    <div class="mb-3"><label class="form-label">عنوان الموعد <span class="text-danger">*</span></label><input type="text" name="title" class="form-control" required placeholder="مثال: اجتماع مع شركة النيل"></div>
+                    <div class="mb-3"><label class="form-label">الوصف</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">التاريخ والوقت <span class="text-danger">*</span></label><input type="datetime-local" name="meeting_date" class="form-control" required></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">المدة (دقائق)</label><input type="number" name="duration" class="form-control" value="60" min="15"></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">المكان</label><input type="text" name="location" class="form-control" placeholder="مثال: غرفة الاجتماعات 1"></div>
+                    <div class="mb-3"><label class="form-label">رابط الاجتماع (Google Meet / Zoom)</label><input type="url" name="meeting_link" class="form-control" placeholder="https://meet.google.com/..."></div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-circle"></i> إضافة الموعد</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

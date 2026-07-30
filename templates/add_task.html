@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> {% if get_lang() == 'en' %}Add New Training{% else %}إضافة تدريب جديد{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Client{% else %}العميل{% endif %} <span class="text-danger">*</span></label>
+                            <select name="client_id" class="form-select" required>
+                                <option value="">{% if get_lang() == 'en' %}Select Client{% else %}اختر العميل{% endif %}</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Trainer Responsible{% else %}المدرب المسؤول{% endif %} <span class="text-danger">*</span></label>
+                            <select name="assigned_to" class="form-select" required>
+                                <option value="">{% if get_lang() == 'en' %}Select Trainer{% else %}اختر المدرب{% endif %}</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{% if get_lang() == 'en' %}Training Title{% else %}عنوان التدريب{% endif %} <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required placeholder="{% if get_lang() == 'en' %}Enter training title{% else %}أدخل عنوان التدريب{% endif %}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{% if get_lang() == 'en' %}Description{% else %}الوصف{% endif %}</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="{% if get_lang() == 'en' %}Training description...{% else %}وصف التدريب...{% endif %}"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Training Date{% else %}تاريخ التدريب{% endif %} <span class="text-danger">*</span></label>
+                            <input type="date" name="due_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Priority{% else %}الأولوية{% endif %}</label>
+                            <select name="priority" class="form-select">
+                                <option value="منخفضة">🟢 {% if get_lang() == 'en' %}Low{% else %}منخفضة{% endif %}</option>
+                                <option value="متوسطة" selected>🟡 {% if get_lang() == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
+                                <option value="عالية">🔴 {% if get_lang() == 'en' %}High{% else %}عالية{% endif %}</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Meeting{% else %}موعد{% endif %}</label>
+                            <select name="meeting_id" class="form-select">
+                                <option value="">{% if get_lang() == 'en' %}No Meeting{% else %}بدون موعد{% endif %}</option>
+                                {% for meeting in meetings %}
+                                <option value="{{ meeting.id }}">{{ meeting.title }} - {{ meeting.client_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% if get_lang() == 'en' %}Training Group{% else %}مجموعة التدريب{% endif %}</label>
+                            <input type="text" name="task_group" class="form-control" placeholder="{% if get_lang() == 'en' %}Group name (optional){% else %}اسم المجموعة (اختياري){% endif %}">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> {% if get_lang() == 'en' %}Add Training{% else %}إضافة تدريب{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

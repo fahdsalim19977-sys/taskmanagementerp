@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-gear"></i> {{ t('users') }}</h2>
+    <a href="/add_user" class="btn btn-primary"><i class="bi bi-person-plus"></i> {{ t('add_user') }}</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ t('username') }}</th>
+                <th>{{ t('user_name') }}</th>
+                <th>{{ t('client_email') }}</th>
+                <th>{{ t('role') }}</th>
+                <th>{{ t('status') }}</th>
+                <th>{{ t('created_at') }}</th>
+                <th>{{ t('edit') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td><code>{{ user.username }}</code></td>
+                <td><strong>{{ user.name }}</strong></td>
+                <td>{{ user.email }}</td>
+                <td>
+                    <span class="badge {% if user.role == 'مدير' %}bg-danger{% elif user.role == 'موظف' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                        {% if get_lang() == 'en' %}
+                            {% if user.role == 'مدير' %}Admin{% elif user.role == 'موظف' %}Employee{% else %}Viewer{% endif %}
+                        {% else %}
+                            {{ user.role }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td>
+                    {% if user.is_active %}
+                    <span class="badge bg-success">{% if get_lang() == 'en' %}Active{% else %}نشط{% endif %}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{% if get_lang() == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.created_at[:10] if user.created_at else '-' }}</td>
+                <td>
+                    {% if session.user_role == 'مدير' and user.id != session.user_id %}
+                    <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.name }}')" title="{{ t('delete') }}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function confirmDeleteUser(userId, userName) {
+    if (confirm('⚠️ {{ t('are_you_sure') }} {{ t('delete_user') }}: "' + userName + '"?\n\n{{ t('action_cannot_be_undone') }}')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete_user/' + userId;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

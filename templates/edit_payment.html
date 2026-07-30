@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل الدفعة</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                            <input type="number" name="amount" class="form-control" value="{{ payment.amount }}" required step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                            <input type="date" name="payment_date" class="form-control" value="{{ payment.payment_date }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الاستحقاق</label>
+                            <input type="date" name="due_date" class="form-control" value="{{ payment.due_date or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">طريقة الدفع</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="نقدي" {% if payment.payment_method == 'نقدي' %}selected{% endif %}>نقدي</option>
+                                <option value="تحويل بنكي" {% if payment.payment_method == 'تحويل بنكي' %}selected{% endif %}>تحويل بنكي</option>
+                                <option value="شيك" {% if payment.payment_method == 'شيك' %}selected{% endif %}>شيك</option>
+                                <option value="بطاقة ائتمان" {% if payment.payment_method == 'بطاقة ائتمان' %}selected{% endif %}>بطاقة ائتمان</option>
+                                <option value="أخرى" {% if payment.payment_method == 'أخرى' %}selected{% endif %}>أخرى</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="مدفوع" {% if payment.status == 'مدفوع' %}selected{% endif %}>مدفوع</option>
+                                <option value="معلق" {% if payment.status == 'معلق' %}selected{% endif %}>معلق</option>
+                                <option value="متأخر" {% if payment.status == 'متأخر' %}selected{% endif %}>متأخر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم الفاتورة</label>
+                            <input type="text" name="invoice_number" class="form-control" value="{{ payment.invoice_number or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ payment.notes or '' }}</textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
