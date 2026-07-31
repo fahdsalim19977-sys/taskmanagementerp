@@ -25,6 +25,7 @@ import sqlite3
 # ===== إعدادات IIS =====
 if os.name == 'nt':
     sys.path.insert(0, os.path.dirname(__file__))
+    
 
 # ============================================================
 # إنشاء التطبيق
@@ -118,6 +119,7 @@ def utility_processor():
         't': t,
         'get_lang': get_lang,
         'datetime': datetime
+        'settings': settings
     }
 
 # ============================================================
