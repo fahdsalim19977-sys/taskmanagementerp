@@ -1,93 +1,33 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-building"></i> {{ t('settings') }}</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ t('company_name_ar') }} <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" value="{{ settings.name }}" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ t('company_name_en') }}</label>
-                            <input type="text" name="name_en" class="form-control" value="{{ settings.name_en or '' }}">
-                            <small class="text-muted">{% if get_lang() == 'ar' %}الاسم بالانجليزي للواجهة الإنجليزية{% else %}English name for English interface{% endif %}</small>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ t('client_phone') }}</label>
-                        <input type="tel" name="phone" class="form-control" value="{{ settings.phone or '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ t('client_address') }}</label>
-                        <input type="text" name="address" class="form-control" value="{{ settings.address or '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ t('client_email') }}</label>
-                        <input type="email" name="email" class="form-control" value="{{ settings.email or '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ t('website') }}</label>
-                        <input type="url" name="website" class="form-control" value="{{ settings.website or '' }}">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-save"></i> {{ t('save') }}
-                    </button>
-                </form>
-            </div>
-        </div>
+<!-- ===== استعادة البيانات ===== -->
 <div class="card mt-4">
-    <div class="card-header bg-warning">
-        <h5 class="mb-0"><i class="bi bi-database"></i> النسخ الاحتياطي</h5>
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> استعادة البيانات من النسخة الاحتياطية</h5>
     </div>
-    <div class="card-body text-center">
-        <a href="/backup_database" class="btn btn-warning btn-lg">
-            <i class="bi bi-download"></i> عمل نسخة احتياطية
-        </a>
-        <a href="/download_backup" class="btn btn-success btn-lg">
-            <i class="bi bi-file-earmark-zip"></i> تحميل النسخة
-        </a>
-        <small class="d-block mt-2 text-muted">يتم إنشاء نسخة احتياطية من قاعدة البيانات</small>
-    </div>
-</div>
-        <!-- ===== قسم رفع الشعار ===== -->
-        <div class="card mt-4">
-            <div class="card-header bg-info text-white">
-                <h5><i class="bi bi-image"></i> {{ t('company_logo') }}</h5>
-            </div>
-            <div class="card-body text-center">
-                {% if settings and settings.logo_path %}
-                <img src="{{ url_for('static', filename=settings.logo_path) }}" 
-                     alt="{{ t('company_logo') }}" 
-                     style="max-height:150px;max-width:100%;border-radius:10px;border:2px solid #ddd;padding:10px;">
-                <br><small class="text-muted">{{ t('current_logo') }}</small>
-                {% else %}
-                <div class="alert alert-secondary">
-                    <i class="bi bi-image" style="font-size:48px;display:block;"></i>
-                    <p>{{ t('no_logo') }}</p>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>تحذير:</strong> استعادة البيانات ستحل محل البيانات الحالية بالكامل. تأكد من عمل نسخة احتياطية قبل الاستعادة.
+        </div>
+        
+        <form method="POST" action="/restore_backup" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <input type="file" name="backup_file" class="form-control" accept=".db,.sql,.zip" required>
+                    <small class="text-muted">الصيغ المدعومة: .db، .sql، .zip</small>
                 </div>
-                {% endif %}
-                <form method="POST" action="/upload_logo" enctype="multipart/form-data" class="mt-3">
-                    <div class="row justify-content-center">
-                        <div class="col-md-6">
-                            <input type="file" name="logo" class="form-control" accept="image/*" required>
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-upload"></i> {{ t('upload') }}
-                            </button>
-                        </div>
-                    </div>
-                    <small class="text-muted">PNG, JPG, SVG - 200x200</small>
-                </form>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-danger w-100" onclick="return confirm('⚠️ هل أنت متأكد من استعادة البيانات؟ سيتم استبدال جميع البيانات الحالية!')">
+                        <i class="bi bi-upload"></i> استعادة البيانات
+                    </button>
+                </div>
             </div>
+        </form>
+        
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i>
+                يمكنك استعادة البيانات من ملفات النسخ الاحتياطي التي تم تحميلها مسبقاً.
+            </small>
         </div>
     </div>
 </div>
-{% endblock %}
