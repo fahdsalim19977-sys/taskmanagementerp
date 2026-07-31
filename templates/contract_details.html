@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> تفاصيل العقد</h2>
+    <div>
+        <a href="/edit_contract/{{ contract.id }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> تعديل
+        </a>
+        <a href="/contracts" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">معلومات العقد</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>رقم العقد:</strong> {{ contract.contract_number }}</p>
+                <p><strong>العنوان:</strong> {{ contract.title }}</p>
+                <p><strong>الوصف:</strong> {{ contract.description or '-' }}</p>
+                <p><strong>الحالة:</strong>
+                    <span class="badge 
+                        {% if contract.status == 'نشط' %}bg-success
+                        {% elif contract.status == 'معلق' %}bg-warning text-dark
+                        {% elif contract.status == 'منتهي' %}bg-secondary
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.status }}
+                    </span>
+                </p>
+                <p><strong>القيمة:</strong> {{ contract.contract_value }} ج.م</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">معلومات العميل</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>الاسم:</strong> {{ contract.client_name }}</p>
+                <p><strong>الشركة:</strong> {{ contract.company_name or '-' }}</p>
+                <p><strong>الهاتف:</strong> {{ contract.client_phone or '-' }}</p>
+                <p><strong>البريد:</strong> {{ contract.client_email or '-' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">التواريخ</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>تاريخ البداية:</strong> {{ contract.start_date }}</p>
+                <p><strong>تاريخ النهاية:</strong> {{ contract.end_date }}</p>
+                <p><strong>المدة:</strong> 
+                    {% set days = (contract.end_date|string|replace('-', '')|int - contract.start_date|string|replace('-', '')|int)|abs %}
+                    {{ days }} يوم
+                </p>
+                <p><strong>أضيف بواسطة:</strong> {{ contract.created_by_name }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">ملاحظات</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ contract.notes or 'لا توجد ملاحظات' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

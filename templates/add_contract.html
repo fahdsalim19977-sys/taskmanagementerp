@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة عقد جديد</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">العميل <span class="text-danger">*</span></label>
+                            <select name="client_id" class="form-select" required>
+                                <option value="">-- اختر العميل --</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.name }} ({{ client.company_name or 'بدون شركة' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
+                            <input type="text" name="contract_number" class="form-control" required placeholder="مثال: CONT-001">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">عنوان العقد <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
+                            <input type="date" name="end_date" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">قيمة العقد (ج.م)</label>
+                            <input type="number" name="contract_value" class="form-control" value="0" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="نشط">نشط</option>
+                                <option value="معلق">معلق</option>
+                                <option value="منتهي">منتهي</option>
+                                <option value="ملغي">ملغي</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> إضافة العقد
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
