@@ -2171,11 +2171,10 @@ def auto_backup():
 
 # ===== استدعاء النسخ الاحتياطي عند بدء التشغيل =====
 # auto_backup()
+
 # ============================================================
 # استعادة البيانات من النسخة الاحتياطية
 # ============================================================
-
-import zipfile
 
 @app.route('/restore_backup', methods=['POST'])
 def restore_backup():
@@ -2204,14 +2203,12 @@ def restore_backup():
         
         # استعادة البيانات
         if file.filename.endswith('.db'):
-            # استعادة مباشرة من ملف SQLite
             import shutil
             db_path = '/app/data/tasks.db'
             shutil.copy2(temp_path, db_path)
             flash('✅ تم استعادة البيانات بنجاح من ملف .db', 'success')
             
         elif file.filename.endswith('.sql'):
-            # استعادة من ملف SQL
             import sqlite3
             db_path = '/app/data/tasks.db'
             conn = sqlite3.connect(db_path)
@@ -2223,7 +2220,6 @@ def restore_backup():
             flash('✅ تم استعادة البيانات بنجاح من ملف .sql', 'success')
             
         elif file.filename.endswith('.zip'):
-            # استعادة من ملف ZIP
             import zipfile
             import shutil
             extract_dir = '/tmp/restore_extract'
@@ -2232,7 +2228,6 @@ def restore_backup():
             with zipfile.ZipFile(temp_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
             
-            # البحث عن ملف .db في المجلد المستخرج
             db_files = [f for f in os.listdir(extract_dir) if f.endswith('.db')]
             if db_files:
                 db_path = '/app/data/tasks.db'
@@ -2241,10 +2236,7 @@ def restore_backup():
             else:
                 flash('❌ لم يتم العثور على ملف قاعدة بيانات في الملف المضغوط', 'danger')
         
-        # حذف الملف المؤقت
         os.remove(temp_path)
-        
-        # إعادة تشغيل التطبيق
         log_activity(session['user_id'], 'استعادة بيانات', 'تم استعادة البيانات من النسخة الاحتياطية')
         
     except Exception as e:
