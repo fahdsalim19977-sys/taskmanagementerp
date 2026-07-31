@@ -300,3 +300,25 @@ def init_db():
     conn.commit()
     print(f"✅ تم تهيئة قاعدة البيانات في: {DB_PATH}")
     conn.close()
+
+    # ===== جدول عقود العملاء =====
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS client_contracts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        contract_number TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        contract_value REAL DEFAULT 0,
+        status TEXT CHECK(status IN ("نشط", "منتهي", "ملغي", "معلق")) DEFAULT "نشط",
+        file_path TEXT,
+        notes TEXT,
+        created_by INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+''')
