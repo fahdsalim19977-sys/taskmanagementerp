@@ -21,6 +21,17 @@ def hash_password(password):
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
+
+    # ===== استخدام Persistent Storage =====
+DB_PATH = '/app/data/tasks.db'
+DB_NAME = DB_PATH
+
+def get_db():
+    # تأكد من وجود المجلد
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
     
     # ===== جميع الجداول =====
     cursor.execute('''
