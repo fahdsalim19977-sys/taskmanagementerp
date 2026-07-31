@@ -47,6 +47,179 @@ def t(key):
     return get_text(key, get_lang())
 
 # ============================================================
+# 📄 إدارة عقود العملاء
+# ============================================================
+
+@app.route('/contracts')
+def contracts():
+    """عرض جميع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contracts_list = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    return render_template('contracts.html', contracts=contracts_list)
+
+@app.route('/add_contract', methods=['GET', 'POST'])
+def add_contract():
+    """إضافة عقد جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        # التحقق من عدم تكرار رقم العقد
+        check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('add_contract.html', clients=clients)
+        
+        conn.execute('''
+            INSERT INTO client_contracts 
+            (client_id, contract_number, title, description, start_date, end_date, 
+             contract_value, status, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, session['user_id']))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('add_contract.html', clients=clients)
+
+@app.route('/edit_contract/<int:contract_id>', methods=['GET', 'POST'])
+def edit_contract(contract_id):
+    """تعديل عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        # التحقق من عدم تكرار رقم العقد (باستثناء العقد الحالي)
+        check = conn.execute('''
+            SELECT * FROM client_contracts 
+            WHERE contract_number = ? AND id != ?
+        ''', (contract_number, contract_id)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('edit_contract.html', contract=contract, clients=clients)
+        
+        conn.execute('''
+            UPDATE client_contracts SET 
+                client_id = ?, contract_number = ?, title = ?, description = ?,
+                start_date = ?, end_date = ?, contract_value = ?, status = ?, notes = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, contract_id))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'تحديث عقد', f'حدث عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('edit_contract.html', contract=contract, clients=clients)
+
+@app.route('/delete_contract/<int:contract_id>', methods=['POST'])
+def delete_contract(contract_id):
+    """حذف عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.execute('DELETE FROM client_contracts WHERE id = ?', (contract_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف العقد بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
+    return redirect(url_for('contracts'))
+
+@app.route('/contract/<int:contract_id>')
+def contract_details(contract_id):
+    """عرض تفاصيل العقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('contract_details.html', contract=contract)
+
+
+# ============================================================
 # دوال مساعدة
 # ============================================================
 def send_email(to_email, subject, body, attachment=None):
@@ -2243,6 +2416,177 @@ def restore_backup():
         flash(f'❌ خطأ أثناء استعادة البيانات: {str(e)}', 'danger')
     
     return redirect(url_for('company_settings'))
+# ============================================================
+# 📄 إدارة عقود العملاء
+# ============================================================
+
+@app.route('/contracts')
+def contracts():
+    """عرض جميع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contracts_list = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    return render_template('contracts.html', contracts=contracts_list)
+
+@app.route('/add_contract', methods=['GET', 'POST'])
+def add_contract():
+    """إضافة عقد جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        # التحقق من عدم تكرار رقم العقد
+        check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('add_contract.html', clients=clients)
+        
+        conn.execute('''
+            INSERT INTO client_contracts 
+            (client_id, contract_number, title, description, start_date, end_date, 
+             contract_value, status, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, session['user_id']))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('add_contract.html', clients=clients)
+
+@app.route('/edit_contract/<int:contract_id>', methods=['GET', 'POST'])
+def edit_contract(contract_id):
+    """تعديل عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        # التحقق من عدم تكرار رقم العقد (باستثناء العقد الحالي)
+        check = conn.execute('''
+            SELECT * FROM client_contracts 
+            WHERE contract_number = ? AND id != ?
+        ''', (contract_number, contract_id)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('edit_contract.html', contract=contract, clients=clients)
+        
+        conn.execute('''
+            UPDATE client_contracts SET 
+                client_id = ?, contract_number = ?, title = ?, description = ?,
+                start_date = ?, end_date = ?, contract_value = ?, status = ?, notes = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, contract_id))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'تحديث عقد', f'حدث عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('edit_contract.html', contract=contract, clients=clients)
+
+@app.route('/delete_contract/<int:contract_id>', methods=['POST'])
+def delete_contract(contract_id):
+    """حذف عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.execute('DELETE FROM client_contracts WHERE id = ?', (contract_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف العقد بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
+    return redirect(url_for('contracts'))
+
+@app.route('/contract/<int:contract_id>')
+def contract_details(contract_id):
+    """عرض تفاصيل العقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('contract_details.html', contract=contract)
 
 # ============================================================
 # تشغيل التطبيق
