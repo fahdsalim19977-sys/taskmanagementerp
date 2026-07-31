@@ -115,10 +115,11 @@ def set_lang(lang):
 
 @app.context_processor
 def utility_processor():
+    settings = get_company_settings()
     return {
         't': t,
         'get_lang': get_lang,
-        'datetime': datetime
+        'datetime': datetime,
         'settings': settings
     }
 
