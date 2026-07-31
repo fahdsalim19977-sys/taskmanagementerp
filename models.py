@@ -12,7 +12,6 @@ if not os.path.exists('/app/data'):
     DB_PATH = 'tasks.db'
 
 def get_db():
-    # تأكد من وجود المجلد
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -25,7 +24,7 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
     
-    # ===== جدول إعدادات الشركة =====
+    # ===== جميع الجداول =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS company_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +39,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المستخدمين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +52,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المدربين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS trainers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +65,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول العملاء =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +78,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول ربط العملاء بالمدربين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_trainers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +89,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المهام (التدريبات) =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,7 +112,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول ملاحظات المهام =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS task_updates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,7 +125,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول الإشعارات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -146,7 +138,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول سجل النشاط =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS activity_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,7 +150,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المواعيد =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS meetings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +169,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول تذكيرات المواعيد =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS meeting_reminders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -190,7 +179,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المديولات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -206,7 +194,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المدفوعات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,7 +214,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول دفعات المدفوعات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS payment_installments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -242,7 +228,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول محاولات تسجيل الدخول =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS login_attempts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -253,7 +238,28 @@ def init_db():
         )
     ''')
     
-    # ===== إعدادات الشركة =====
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS client_contracts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            contract_number TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            contract_value REAL DEFAULT 0,
+            status TEXT CHECK(status IN ("نشط", "منتهي", "ملغي", "معلق")) DEFAULT "نشط",
+            file_path TEXT,
+            notes TEXT,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+    ''')
+    
+    # ===== البيانات الافتراضية =====
     cursor.execute("SELECT * FROM company_settings")
     if not cursor.fetchone():
         cursor.execute('''
@@ -261,20 +267,19 @@ def init_db():
             VALUES (?, ?, ?, ?, ?, ?)
         ''', ('شركة التقنية المتقدمة', 'Advanced Technology Company', '+966 50 123 4567', 'الرياض، المملكة العربية السعودية', 'info@techcompany.com', 'www.techcompany.com'))
     
-    # ===== إضافة المستخدمين =====
-    cursor.execute("SELECT * FROM users WHERE username = 'Fahd01'")
-    if not cursor.fetchone():
-        cursor.execute('''
-            INSERT INTO users (username, name, email, password, role)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ('Fahd01', 'فهد المدير', 'fahd@company.com', hash_password('1234'), 'مدير'))
-    
     cursor.execute("SELECT * FROM users WHERE username = 'Adminerp'")
     if not cursor.fetchone():
         cursor.execute('''
             INSERT INTO users (username, name, email, password, role)
             VALUES (?, ?, ?, ?, ?)
         ''', ('Adminerp', 'مدير النظام', 'adminerp@company.com', hash_password('1234'), 'مدير'))
+    
+    cursor.execute("SELECT * FROM users WHERE username = 'Fahd01'")
+    if not cursor.fetchone():
+        cursor.execute('''
+            INSERT INTO users (username, name, email, password, role)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ('Fahd01', 'فهد المدير', 'fahd@company.com', hash_password('1234'), 'مدير'))
     
     cursor.execute("SELECT * FROM users WHERE username = 'employee1'")
     if not cursor.fetchone():
@@ -285,7 +290,6 @@ def init_db():
             ('viewer1', 'خالد مراقب', 'khalid@company.com', ?, 'مراقب')
         ''', (hash_password('1234'), hash_password('1234')))
     
-    # ===== إضافة مدربين تجريبيين (لو مفيش) =====
     cursor.execute("SELECT COUNT(*) as count FROM trainers")
     if cursor.fetchone()[0] == 0:
         cursor.execute('''
@@ -295,30 +299,10 @@ def init_db():
             ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة'),
             ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير')
         ''')
-        print("✅ تم إضافة مدربين تجريبيين")
     
     conn.commit()
     print(f"✅ تم تهيئة قاعدة البيانات في: {DB_PATH}")
     conn.close()
 
-    # ===== جدول عقود العملاء =====
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS client_contracts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        contract_number TEXT UNIQUE NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        contract_value REAL DEFAULT 0,
-        status TEXT CHECK(status IN ("نشط", "منتهي", "ملغي", "معلق")) DEFAULT "نشط",
-        file_path TEXT,
-        notes TEXT,
-        created_by INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES users(id)
-    )
-''')
+# ===== استدعاء التهيئة =====
+init_db()
