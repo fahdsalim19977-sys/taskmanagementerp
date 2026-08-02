@@ -23,7 +23,6 @@ import json
 import sqlite3
 import shutil
 import zipfile
-from models import verify_password
 
 # ===== إعدادات IIS =====
 if os.name == 'nt':
@@ -191,8 +190,11 @@ def login():
         password = request.form.get('password', '')
         
         conn = get_db()
-        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-if user and verify_password(user['password'], password) and user['is_active'] == 1:
+        user = conn.execute('''
+            SELECT * FROM users 
+            WHERE username = ? AND password = ? AND is_active = 1
+        ''', (username, hash_password(password))).fetchone()
+        conn.close()
         
         if user:
             session['user_id'] = user['id']
