@@ -23,6 +23,7 @@ import json
 import sqlite3
 import shutil
 import zipfile
+import traceback
 
 # ===== إعدادات IIS =====
 if os.name == 'nt':
@@ -1491,30 +1492,48 @@ def contract_payments_report(contract_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    conn = get_db()
-    
-    contract = conn.execute('''
-        SELECT client_contracts.*, clients.name as client_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        WHERE client_contracts.id = ?
-    ''', (contract_id,)).fetchone()
-    
-    if not contract:
-        flash('❌ العقد غير موجود', 'danger')
+    try:
+        conn = get_db()
+        
+        # جلب معلومات العقد
+        contract = conn.execute('''
+            SELECT client_contracts.*, clients.name as client_name
+            FROM client_contracts
+            JOIN clients ON client_contracts.client_id = clients.id
+            WHERE client_contracts.id = ?
+        ''', (contract_id,)).fetchone()
+        
+        if not contract:
+            flash('❌ العقد غير موجود', 'danger')
+            conn.close()
+            return redirect(url_for('contracts_report'))
+        
+        # جلب دفعات العقد
+        payments = conn.execute('''
+            SELECT * FROM contract_payments 
+            WHERE contract_id = ?
+            ORDER BY installment_number ASC
+        ''', (contract_id,)).fetchall()
+        
         conn.close()
+        
+        # حساب الإحصائيات
+        total_paid = sum(p['amount'] for p in payments if p['status'] == 'مدفوعة')
+        total_due = sum(p['amount'] for p in payments if p['status'] == 'مستحقة')
+        total_overdue = sum(p['amount'] for p in payments if p['status'] == 'متأخرة')
+        
+        return render_template('contract_payments_report.html', 
+                             contract=contract, 
+                             payments=payments,
+                             total_paid=total_paid,
+                             total_due=total_due,
+                             total_overdue=total_overdue)
+    except Exception as e:
+        print(f"❌ خطأ في contract_payments_report: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'❌ حدث خطأ: {str(e)}', 'danger')
         return redirect(url_for('contracts_report'))
-    
-    payments = conn.execute('''
-        SELECT * FROM contract_payments 
-        WHERE contract_id = ?
-        ORDER BY installment_number ASC
-    ''', (contract_id,)).fetchall()
-    conn.close()
-    
-    return render_template('contract_payments_report.html', 
-                         contract=contract, 
-                         payments=payments)
 
 # ============================================================
 # تصدير تقرير العقود Excel
@@ -1645,6 +1664,24 @@ def export_contracts_report_pdf():
     return send_file(buffer, as_attachment=True,
                     download_name=f'تقرير_العقود_{datetime.now().strftime("%Y%m%d")}.pdf',
                     mimetype='application/pdf')
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """معالج الأخطاء العام لعرض التفاصيل"""
+    print("=" * 60)
+    print("❌ خطأ غير متوقع:")
+    print("=" * 60)
+    traceback.print_exc()
+    print("=" * 60)
+    return f"""
+    <h1>❌ Internal Server Error</h1>
+    <h3>تفاصيل الخطأ:</h3>
+    <pre style="background:#f4f4f4;padding:15px;border-radius:5px;overflow:auto;max-height:400px;">
+    {traceback.format_exc()}
+    </pre>
+    <p><a href="/">العودة للرئيسية</a></p>
+    """, 500
+
 
 # ============================================================
 # تشغيل التطبيق
