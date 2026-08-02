@@ -20,14 +20,25 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
-                            <input type="text" name="contract_number" class="form-control" required placeholder="مثال: CONT-001">
+                            <label class="form-label">نوع العقد</label>
+                            <select name="contract_type_id" class="form-select">
+                                <option value="">-- اختر نوع العقد --</option>
+                                {% for type in contract_types %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">عنوان العقد <span class="text-danger">*</span></label>
-                        <input type="text" name="title" class="form-control" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
+                            <input type="text" name="contract_number" class="form-control" required placeholder="مثال: CONT-001">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">عنوان العقد <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" required>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -66,55 +77,55 @@
                         <label class="form-label">ملاحظات</label>
                         <textarea name="notes" class="form-control" rows="2"></textarea>
                     </div>
-<!-- ===== قسم جدولة الدفعات ===== -->
-<div class="card mt-3 mb-3 border border-success">
-    <div class="card-header bg-success text-white">
-        <h5 class="mb-0"><i class="bi bi-calendar-event"></i> جدولة الدفعات</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">المبلغ الإجمالي للعقد (ج.م)</label>
-                <input type="number" name="total_amount" id="totalAmount" class="form-control" value="0" step="0.01" onchange="updateInstallments()">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">عدد الدفعات</label>
-                <input type="number" name="installment_count" id="installmentCount" class="form-control" value="1" min="1" max="12" onchange="updateInstallments()">
-            </div>
-        </div>
 
-        <!-- ===== جدول الدفعات ===== -->
-        <div class="mt-3" id="installmentsContainer">
-            <label class="form-label fw-bold">تفاصيل الدفعات</label>
-            <div class="table-responsive">
-                <table class="table table-bordered table-sm" id="installmentsTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>المبلغ (ج.م)</th>
-                            <th>تاريخ الاستحقاق</th>
-                            <th>ملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="installmentsBody">
-                        <tr>
-                            <td>1</td>
-                            <td>
-                                <input type="number" name="installment_amount_1" class="form-control form-control-sm" value="0" step="0.01">
-                            </td>
-                            <td>
-                                <input type="date" name="installment_due_date_1" class="form-control form-control-sm">
-                            </td>
-                            <td>
-                                <input type="text" name="installment_notes_1" class="form-control form-control-sm" placeholder="اختياري">
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+                    <!-- ===== قسم جدولة الدفعات ===== -->
+                    <div class="card mt-3 mb-3 border border-success">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-calendar-event"></i> جدولة الدفعات</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">المبلغ الإجمالي للعقد (ج.م)</label>
+                                    <input type="number" name="total_amount" id="totalAmount" class="form-control" value="0" step="0.01" onchange="updateInstallments()">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">عدد الدفعات</label>
+                                    <input type="number" name="installment_count" id="installmentCount" class="form-control" value="1" min="1" max="12" onchange="updateInstallments()">
+                                </div>
+                            </div>
+
+                            <div class="mt-3" id="installmentsContainer">
+                                <label class="form-label fw-bold">تفاصيل الدفعات</label>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm" id="installmentsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>المبلغ (ج.م)</th>
+                                                <th>تاريخ الاستحقاق</th>
+                                                <th>ملاحظات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="installmentsBody">
+                                            <tr>
+                                                <td>1</td>
+                                                <td>
+                                                    <input type="number" name="installment_amount_1" class="form-control form-control-sm" value="0" step="0.01">
+                                                </td>
+                                                <td>
+                                                    <input type="date" name="installment_due_date_1" class="form-control form-control-sm">
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="installment_notes_1" class="form-control form-control-sm" placeholder="اختياري">
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- ===== قسم رفع المرفقات ===== -->
                     <div class="card mt-3 mb-3 border border-primary">
@@ -148,6 +159,7 @@
         </div>
     </div>
 </div>
+
 <script>
 function updateInstallments() {
     const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
@@ -181,7 +193,6 @@ function updateInstallments() {
     tbody.innerHTML = html;
 }
 
-// تحديث عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     updateInstallments();
 });

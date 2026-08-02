@@ -21,6 +21,7 @@
             </div>
             <div class="card-body">
                 <p><strong>رقم العقد:</strong> {{ contract.contract_number }}</p>
+                <p><strong>نوع العقد:</strong> {{ contract.contract_type_name or '-' }}</p>
                 <p><strong>العنوان:</strong> {{ contract.title }}</p>
                 <p><strong>الوصف:</strong> {{ contract.description or '-' }}</p>
                 <p><strong>الحالة:</strong>
@@ -33,81 +34,15 @@
                     </span>
                 </p>
                 <p><strong>القيمة:</strong> {{ contract.contract_value }} ج.م</p>
+                <p><strong>حالة الدفع:</strong>
+                    <span class="badge 
+                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                        {% elif contract.payment_status == 'مدفوع جزئياً' %}bg-warning text-dark
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.payment_status }}
+                    </span>
+                </p>
             </div>
-<!-- ===== جدول الدفعات ===== -->
-<div class="card mt-4">
-    <div class="card-header bg-success text-white">
-        <h5 class="mb-0"><i class="bi bi-coin"></i> دفعات العقد</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-3 mb-3">
-            <div class="col-md-4">
-                <div class="alert alert-info">
-                    <strong>إجمالي المبلغ:</strong> {{ contract.total_amount or contract.contract_value }} ج.م
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="alert alert-success">
-                    <strong>المدفوع:</strong> {{ contract.paid_amount or 0 }} ج.م
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="alert alert-warning">
-                    <strong>المتبقي:</strong> {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ج.م
-                </div>
-            </div>
-        </div>
-        
-        {% if contract_payments %}
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>المبلغ</th>
-                        <th>تاريخ الاستحقاق</th>
-                        <th>تاريخ الدفع</th>
-                        <th>الحالة</th>
-                        <th>ملاحظات</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payment in contract_payments %}
-                    <tr>
-                        <td>{{ payment.installment_number }}</td>
-                        <td><strong>{{ payment.amount }} ج.م</strong></td>
-                        <td>{{ payment.due_date }}</td>
-                        <td>{{ payment.payment_date or '-' }}</td>
-                        <td>
-                            <span class="badge 
-                                {% if payment.status == 'مدفوعة' %}bg-success
-                                {% elif payment.status == 'متأخرة' %}bg-danger
-                                {% else %}bg-warning text-dark{% endif %}">
-                                {{ payment.status }}
-                            </span>
-                        </td>
-                        <td>{{ payment.notes or '-' }}</td>
-                        <td>
-                            <form action="/mark_payment_paid/{{ payment.id }}" method="POST" style="display:inline-block;">
-                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('تأكيد استلام هذه الدفعة؟')">
-                                    <i class="bi bi-check-circle"></i> استلام
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-coin" style="font-size:32px;display:block;"></i>
-            <p>لا توجد دفعات مسجلة لهذا العقد</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
         </div>
     </div>
     <div class="col-md-6">
@@ -154,13 +89,132 @@
     </div>
 </div>
 
-<!-- ===== قسم المرفقات ===== -->
+<!-- ===== دفعات العقد ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-coin"></i> دفعات العقد</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="alert alert-info">
+                    <strong>إجمالي المبلغ:</strong> {{ contract.total_amount or contract.contract_value }} ج.م
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="alert alert-success">
+                    <strong>المدفوع:</strong> {{ contract.paid_amount or 0 }} ج.م
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="alert alert-warning">
+                    <strong>المتبقي:</strong> {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ج.م
+                </div>
+            </div>
+        </div>
+        
+        {% if contract_payments %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المبلغ</th>
+                        <th>المدفوع</th>
+                        <th>تاريخ الاستحقاق</th>
+                        <th>تاريخ الدفع</th>
+                        <th>الحالة</th>
+                        <th>ملاحظات</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in contract_payments %}
+                    <tr>
+                        <td>{{ payment.installment_number }}</td>
+                        <td><strong>{{ payment.amount }} ج.م</strong></td>
+                        <td>{{ payment.paid_amount or 0 }} ج.م</td>
+                        <td>{{ payment.due_date }}</td>
+                        <td>{{ payment.payment_date or '-' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if payment.status == 'مدفوعة' %}bg-success
+                                {% elif payment.status == 'مدفوعة جزئياً' %}bg-info
+                                {% elif payment.status == 'متأخرة' %}bg-danger
+                                {% else %}bg-warning text-dark{% endif %}">
+                                {{ payment.status }}
+                            </span>
+                        </td>
+                        <td>{{ payment.notes or '-' }}</td>
+                        <td>
+                            {% if payment.status != 'مدفوعة' %}
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal{{ payment.id }}">
+                                <i class="bi bi-cash"></i> سداد
+                            </button>
+                            {% else %}
+                            <span class="text-success"><i class="bi bi-check-circle"></i> مكتملة</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- ===== مودال سداد الدفعة ===== -->
+                    <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
+                                    <div class="modal-header bg-success text-white">
+                                        <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">رقم الدفعة</label>
+                                            <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">قيمة الدفعة</label>
+                                            <input type="text" class="form-control" value="{{ payment.amount }} ج.م" disabled>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">المبلغ المدفوع</label>
+                                            <input type="number" name="paid_amount" class="form-control" 
+                                                   value="{{ payment.amount }}" step="0.01" max="{{ payment.amount }}" required>
+                                            <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز قيمة الدفعة)</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">تاريخ الدفع</label>
+                                            <input type="text" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" disabled>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-check-circle"></i> تأكيد السداد
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-coin" style="font-size:32px;display:block;"></i>
+            <p>لا توجد دفعات مسجلة لهذا العقد</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== المرفقات ===== -->
 <div class="card mt-4">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0">📎 المرفقات ({{ contract_attachments|length }})</h5>
     </div>
     <div class="card-body">
-        <!-- نموذج رفع ملف إضافي -->
         <form action="/add_contract_attachment/{{ contract.id }}" 
               method="POST" 
               enctype="multipart/form-data" 
@@ -180,7 +234,6 @@
             </div>
         </form>
 
-        <!-- قائمة المرفقات -->
         {% if contract_attachments %}
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
@@ -227,7 +280,6 @@
         <div class="alert alert-info text-center">
             <i class="bi bi-paperclip" style="font-size:32px;display:block;"></i>
             <p>لا توجد مرفقات لهذا العقد</p>
-            <small class="text-muted">قم برفع ملف باستخدام النموذج أعلاه</small>
         </div>
         {% endif %}
     </div>

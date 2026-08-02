@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-tags"></i> أنواع العقود</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTypeModal">
+        <i class="bi bi-plus-circle"></i> إضافة نوع جديد
+    </button>
+</div>
+
+<!-- ===== قائمة الأنواع ===== -->
+<div class="card">
+    <div class="card-body">
+        {% if types %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الاسم</th>
+                        <th>الوصف</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الإضافة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type in types %}
+                    <tr>
+                        <td>{{ type.id }}</td>
+                        <td><strong>{{ type.name }}</strong></td>
+                        <td>{{ type.description or '-' }}</td>
+                        <td>
+                            {% if type.is_active %}
+                            <span class="badge bg-success">نشط</span>
+                            {% else %}
+                            <span class="badge bg-secondary">غير نشط</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ type.created_at[:10] }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editTypeModal{{ type.id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form action="/delete_contract_type/{{ type.id }}" method="POST" style="display:inline-block;">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('تأكيد الحذف؟')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    
+                    <!-- ===== مودال تعديل ===== -->
+                    <div class="modal fade" id="editTypeModal{{ type.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="/edit_contract_type/{{ type.id }}" method="POST">
+                                    <div class="modal-header bg-info text-white">
+                                        <h5 class="modal-title">تعديل نوع العقد</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                            <input type="text" name="name" class="form-control" value="{{ type.name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">الوصف</label>
+                                            <textarea name="description" class="form-control" rows="2">{{ type.description or '' }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">الحالة</label>
+                                            <select name="is_active" class="form-select">
+                                                <option value="1" {% if type.is_active %}selected{% endif %}>نشط</option>
+                                                <option value="0" {% if not type.is_active %}selected{% endif %}>غير نشط</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                        <button type="submit" class="btn btn-primary">حفظ</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-tags" style="font-size:48px;display:block;"></i>
+            <h4>لا توجد أنواع عقود</h4>
+            <p>قم بإضافة نوع عقد جديد</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== مودال إضافة نوع جديد ===== -->
+<div class="modal fade" id="addTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/add_contract_type" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> إضافة نوع عقد جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="مثال: عقد خدمة">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="وصف نوع العقد"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
