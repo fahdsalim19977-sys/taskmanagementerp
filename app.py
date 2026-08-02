@@ -337,20 +337,11 @@ cursor = conn.cursor()
 cursor.execute('''
             INSERT INTO clients (name, phone, email, address, company_name, notes)
             VALUES (?, ?, ?, ?, ?, ?)
-        '''), (name, phone, email, address, company_name, notes))
-result = cursor.fetchall()
+        ''', (name, phone, email, address, company_name, notes))
+conn.commit()  # لا تنسى commit للتغييرات
+result = cursor.fetchall()  # أو cursor.lastrowid للحصول على ID
 conn.close()
 
-        
-        
-        conn = get_db()
-cursor = conn.cursor()
-cursor.execute('''
-            INSERT INTO clients (name, phone, email, address, company_name, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        '''), (name, phone, email, address, company_name, notes))
-result = cursor.fetchall()
-conn.close()
         
         flash('✅ تم إضافة العميل بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة عميل', f'أضاف {name}')
