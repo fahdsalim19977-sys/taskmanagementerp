@@ -1172,8 +1172,268 @@ def mark_payment_paid(payment_id):
     return redirect(request.referrer or url_for('contracts'))
 
 # ============================================================
-# (باقي المسارات الأخرى من ملفك الأصلي)
+# مهام العميل
 # ============================================================
+@app.route('/client_tasks/<int:client_id>')
+def client_tasks(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    tasks = conn.execute('''
+        SELECT tasks.*, users.name as assigned_name
+        FROM tasks
+        JOIN users ON tasks.assigned_to = users.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    
+    stats = {
+        'total': len(tasks),
+        'completed': sum(1 for t in tasks if t['status'] == 'مكتملة'),
+        'in_progress': sum(1 for t in tasks if t['status'] == 'قيد التنفيذ'),
+        'overdue': sum(1 for t in tasks if t['status'] == 'متأخرة'),
+        'not_started': sum(1 for t in tasks if t['status'] == 'لم تبدأ'),
+    }
+    
+    avg_duration = conn.execute('''
+        SELECT AVG(actual_duration) as avg_duration 
+        FROM tasks 
+        WHERE client_id = ? AND status = "مكتملة" AND actual_duration > 0
+    ''', (client_id,)).fetchone()['avg_duration']
+    conn.close()
+    
+    return render_template('client_tasks.html', 
+                         client=client, 
+                         tasks=tasks, 
+                         stats=stats, 
+                         avg_duration=avg_duration, 
+                         today=datetime.now().date())
+
+# ============================================================
+# مديولات العميل
+# ============================================================
+@app.route('/client_modules/<int:client_id>')
+def client_modules(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    modules = conn.execute('''
+        SELECT * FROM client_modules 
+        WHERE client_id = ? 
+        ORDER BY created_at DESC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    return render_template('client_modules.html', client=client, modules=modules)
+
+# ============================================================
+# مدفوعات العميل
+# ============================================================
+@app.route('/client_payments/<int:client_id>')
+def client_payments(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+        WHERE client_id = ?
+    ''', (client_id,)).fetchone()
+    conn.close()
+    
+    return render_template('client_payments.html', 
+                         client=client, 
+                         payments=payments,
+                         stats=stats)
+
+# ============================================================
+# تقرير شامل للعميل
+# ============================================================
+@app.route('/print_client_full_report/<int:client_id>')
+def print_client_full_report(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    modules = conn.execute('''
+        SELECT * FROM client_modules 
+        WHERE client_id = ? 
+        ORDER BY created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+        WHERE client_id = ?
+    ''', (client_id,)).fetchone()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_client_full_report.html',
+                         client=client,
+                         modules=modules,
+                         payments=payments,
+                         stats=stats,
+                         settings=settings,
+                         today=datetime.now().date())
+
+# ============================================================
+# إضافة دفعة جديدة (شاملة)
+# ============================================================
+@app.route('/add_payment_global', methods=['GET', 'POST'])
+def add_payment_global():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    modules = conn.execute('SELECT id, name FROM client_modules ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        module_id = request.form.get('module_id') or None
+        amount = request.form['amount']
+        payment_date = request.form['payment_date']
+        due_date = request.form.get('due_date')
+        payment_method = request.form['payment_method']
+        status = request.form['status']
+        invoice_number = request.form.get('invoice_number', '')
+        notes = request.form.get('notes', '')
+        is_installment = request.form.get('is_installment', '0')
+        installment_count = request.form.get('installment_count', 1)
+        
+        client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+        if not client:
+            flash('❌ العميل غير موجود', 'danger')
+            conn.close()
+            return redirect(url_for('add_payment_global'))
+        
+        cursor = conn.execute('''
+            INSERT INTO client_payments 
+            (client_id, module_id, amount, payment_date, due_date, 
+             payment_method, status, invoice_number, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, module_id, amount, payment_date, due_date, 
+              payment_method, status, invoice_number, notes, session['user_id']))
+        payment_id = cursor.lastrowid
+        
+        if is_installment == '1' and int(installment_count) > 1:
+            installment_amount = float(amount) / int(installment_count)
+            for i in range(int(installment_count)):
+                conn.execute('''
+                    INSERT INTO payment_installments 
+                    (payment_id, installment_number, amount, due_date)
+                    VALUES (?, ?, ?, date(?, "+" || ? || " days"))
+                ''', (payment_id, i+1, installment_amount, payment_date, (i+1)*30))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة الدفعة بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة دفعة', f'أضاف دفعة بقيمة {amount} للعميل {client["name"]}')
+        return redirect(url_for('all_payments'))
+    
+    conn.close()
+    return render_template('add_payment_global.html', clients=clients, modules=modules)
+
+# ============================================================
+# طباعة مهام العميل
+# ============================================================
+@app.route('/print_client_tasks/<int:client_id>')
+def print_client_tasks(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    tasks = conn.execute('''
+        SELECT tasks.*, users.name as assigned_name
+        FROM tasks
+        JOIN users ON tasks.assigned_to = users.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    completed_tasks = [t for t in tasks if t['status'] == 'مكتملة']
+    in_progress_tasks = [t for t in tasks if t['status'] == 'قيد التنفيذ']
+    overdue_tasks = [t for t in tasks if t['status'] == 'متأخرة']
+    not_started_tasks = [t for t in tasks if t['status'] == 'لم تبدأ']
+    
+    return render_template('print_client_tasks.html',
+                         client=client,
+                         tasks=tasks,
+                         completed_tasks=completed_tasks,
+                         in_progress_tasks=in_progress_tasks,
+                         overdue_tasks=overdue_tasks,
+                         not_started_tasks=not_started_tasks,
+                         settings=settings,
+                         today=datetime.now().date())
 
 # ============================================================
 # تشغيل التطبيق
