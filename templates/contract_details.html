@@ -76,6 +76,84 @@
             <div class="card-body">
                 <p>{{ contract.notes or 'لا توجد ملاحظات' }}</p>
             </div>
+<!-- ===== قسم المرفقات ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">📎 المرفقات</h5>
+    </div>
+    <div class="card-body">
+        <!-- نموذج رفع ملف -->
+        <form action="{{ url_for('add_contract_attachment', contract_id=contract.id) }}" 
+              method="POST" 
+              enctype="multipart/form-data" 
+              class="mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">اختر ملف</label>
+                    <input type="file" name="attachment" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">وصف المرفق</label>
+                    <input type="text" name="description" class="form-control" placeholder="مثال: نسخة موقعة">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-upload"></i> رفع
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- قائمة المرفقات -->
+        {% if contract_attachments %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الملف</th>
+                        <th>الوصف</th>
+                        <th>الحجم</th>
+                        <th>رُفع بواسطة</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in contract_attachments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ att.file_name }}</td>
+                        <td>{{ att.description or '-' }}</td>
+                        <td>{{ (att.file_size / 1024) | round(1) }} ك.ب</td>
+                        <td>{{ att.uploaded_by_name }}</td>
+                        <td>{{ att.created_at[:16] }}</td>
+                        <td>
+                            <a href="{{ url_for('download_contract_attachment', attachment_id=att.id) }}" 
+                               class="btn btn-sm btn-info">
+                                <i class="fas fa-download"></i> تحميل
+                            </a>
+                            <form action="{{ url_for('delete_contract_attachment', attachment_id=att.id) }}" 
+                                  method="POST" 
+                                  style="display:inline-block;"
+                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا المرفق؟')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> لا توجد مرفقات لهذا العقد حتى الآن.
+        </div>
+        {% endif %}
+    </div>
+</div>
         </div>
     </div>
 </div>
