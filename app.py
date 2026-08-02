@@ -239,12 +239,536 @@ def logout():
         session.clear()
         return redirect(url_for('login'))
 
+## ============================================================
+# إدارة المستخدمين
 # ============================================================
-# (جميع المسارات الأخرى من ملفك الأصلي)
-# ============================================================
-# ... (ضع هنا جميع المسارات الأخرى مثل users, clients, tasks, etc.)
-# ... (باستثناء العقود لأننا سنضعها أدناه)
+@app.route('/users')
+def users():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
+    conn = get_db()
+    users_list = conn.execute('SELECT * FROM users ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return render_template('users.html', users=users_list)
 
+@app.route('/add_user', methods=['GET', 'POST'])
+def add_user():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        username = request.form['username']
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+        conn = get_db()
+        try:
+            conn.execute('INSERT INTO users (username, name, email, password, role) VALUES (?, ?, ?, ?, ?)', 
+                        (username, name, email, hash_password(password), role))
+            conn.commit()
+            flash('✅ تم إضافة المستخدم بنجاح', 'success')
+            log_activity(session['user_id'], 'إضافة مستخدم', f'أضاف {username}')
+        except sqlite3.IntegrityError:
+            flash('❌ اسم المستخدم أو البريد موجود مسبقاً', 'danger')
+        conn.close()
+        return redirect(url_for('users'))
+    return render_template('add_user.html')
+
+@app.route('/delete_user/<int:user_id>', methods=['POST'])
+def delete_user(user_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session['user_role'] != 'مدير':
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('users'))
+    if user_id == session['user_id']:
+        flash('❌ لا يمكنك حذف حسابك الخاص', 'danger')
+        return redirect(url_for('users'))
+    conn = get_db()
+    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    if not user:
+        flash('❌ المستخدم غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('users'))
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    flash('✅ تم حذف المستخدم بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف مستخدم', f'حذف {user["username"]}')
+    return redirect(url_for('users'))
+
+# ============================================================
+# إدارة العملاء
+# ============================================================
+@app.route('/clients')
+def clients():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    clients_list = conn.execute('''
+        SELECT clients.*, 
+               GROUP_CONCAT(trainers.name, ', ') as trainer_names
+        FROM clients
+        LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
+        LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
+        GROUP BY clients.id
+        ORDER BY clients.name
+    ''').fetchall()
+    conn.close()
+    return render_template('clients.html', clients=clients_list)
+
+@app.route('/add_client', methods=['GET', 'POST'])
+def add_client():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    trainers = get_trainers()
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        phone = request.form.get('phone', '')
+        email = request.form.get('email', '')
+        address = request.form.get('address', '')
+        company_name = request.form.get('company_name', '')
+        notes = request.form.get('notes', '')
+        trainer_ids = request.form.getlist('trainer_ids')
+        
+        conn = get_db()
+        
+        cursor = conn.execute('''
+            INSERT INTO clients (name, phone, email, address, company_name, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, phone, email, address, company_name, notes))
+        client_id = cursor.lastrowid
+        
+        for trainer_id in trainer_ids:
+            if trainer_id:
+                conn.execute('''
+                    INSERT INTO client_trainers (client_id, trainer_id)
+                    VALUES (?, ?)
+                ''', (client_id, trainer_id))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة العميل بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة عميل', f'أضاف {name}')
+        return redirect(url_for('clients'))
+    
+    return render_template('add_client.html', trainers=trainers)
+
+@app.route('/edit_client/<int:client_id>', methods=['GET', 'POST'])
+def edit_client(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    current_trainers = conn.execute('''
+        SELECT trainer_id FROM client_trainers WHERE client_id = ?
+    ''', (client_id,)).fetchall()
+    current_trainer_ids = [t['trainer_id'] for t in current_trainers]
+    
+    trainers = get_trainers()
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        phone = request.form.get('phone', '')
+        email = request.form.get('email', '')
+        address = request.form.get('address', '')
+        company_name = request.form.get('company_name', '')
+        notes = request.form.get('notes', '')
+        trainer_ids = request.form.getlist('trainer_ids')
+        
+        conn.execute('''
+            UPDATE clients SET 
+                name = ?, phone = ?, email = ?, address = ?, 
+                company_name = ?, notes = ?
+            WHERE id = ?
+        ''', (name, phone, email, address, company_name, notes, client_id))
+        
+        conn.execute('DELETE FROM client_trainers WHERE client_id = ?', (client_id,))
+        for trainer_id in trainer_ids:
+            if trainer_id:
+                conn.execute('''
+                    INSERT INTO client_trainers (client_id, trainer_id)
+                    VALUES (?, ?)
+                ''', (client_id, trainer_id))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث العميل بنجاح', 'success')
+        log_activity(session['user_id'], 'تحديث عميل', f'حدث {name}')
+        return redirect(url_for('clients'))
+    
+    conn.close()
+    return render_template('edit_client.html', 
+                         client=client, 
+                         trainers=trainers, 
+                         current_trainer_ids=current_trainer_ids)
+
+@app.route('/delete_client/<int:client_id>', methods=['POST'])
+def delete_client(client_id):
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('clients'))
+    
+    conn = get_db()
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    conn.execute('DELETE FROM clients WHERE id = ?', (client_id,))
+    conn.execute('DELETE FROM client_trainers WHERE client_id = ?', (client_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف العميل بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف عميل', f'حذف عميل رقم {client_id}')
+    return redirect(url_for('clients'))
+
+# ============================================================
+# إدارة المهام (التدريبات)
+# ============================================================
+@app.route('/tasks')
+def tasks():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    user_role = session['user_role']
+    if user_role == 'موظف':
+        task_list = conn.execute('''
+            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            FROM tasks 
+            JOIN clients ON tasks.client_id = clients.id 
+            JOIN users ON tasks.assigned_to = users.id 
+            WHERE tasks.assigned_to = ?
+            ORDER BY tasks.due_date ASC
+        ''', (session['user_id'],)).fetchall()
+    else:
+        task_list = conn.execute('''
+            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            FROM tasks 
+            JOIN clients ON tasks.client_id = clients.id 
+            JOIN users ON tasks.assigned_to = users.id 
+            ORDER BY tasks.due_date ASC
+        ''').fetchall()
+    conn.close()
+    return render_template('tasks.html', tasks=task_list, today=datetime.now().date())
+
+@app.route('/add_task', methods=['GET', 'POST'])
+def add_task():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session['user_role'] == 'مراقب':
+        flash('⛔ ليس لديك صلاحية لإضافة مهام', 'danger')
+        return redirect(url_for('tasks'))
+    
+    conn = get_db()
+    clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
+    users = conn.execute('SELECT * FROM users WHERE role != "مراقب" ORDER BY name').fetchall()
+    meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
+    conn.close()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        assigned_to = request.form['assigned_to']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        due_date = request.form['due_date']
+        priority = request.form['priority']
+        estimated_duration = request.form.get('estimated_duration', 0)
+        meeting_id = request.form.get('meeting_id') or None
+        task_group = request.form.get('task_group', '')
+        
+        conn = get_db()
+        cursor = conn.execute('''
+            INSERT INTO tasks (client_id, assigned_to, title, description, due_date, priority, 
+                             estimated_duration, meeting_id, task_group)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, assigned_to, title, description, due_date, priority, 
+              estimated_duration, meeting_id, task_group))
+        task_id = cursor.lastrowid
+        conn.commit()
+        
+        message = f'📋 تم تكليفك بمهمة جديدة: {title}'
+        conn.execute('INSERT INTO notifications (user_id, task_id, message) VALUES (?, ?, ?)', 
+                    (assigned_to, task_id, message))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة المهمة بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة مهمة', f'أضاف {title}')
+        return redirect(url_for('tasks'))
+    
+    return render_template('add_task.html', clients=clients, users=users, meetings=meetings)
+
+# ============================================================
+# المدربين
+# ============================================================
+@app.route('/trainers')
+def trainers():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    trainers_list = conn.execute('''
+        SELECT trainers.*, 
+               COUNT(client_trainers.client_id) as client_count
+        FROM trainers
+        LEFT JOIN client_trainers ON trainers.id = client_trainers.trainer_id
+        GROUP BY trainers.id
+        ORDER BY trainers.name
+    ''').fetchall()
+    conn.close()
+    return render_template('trainers.html', trainers=trainers_list)
+
+@app.route('/add_trainer', methods=['GET', 'POST'])
+def add_trainer():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        phone = request.form.get('phone', '')
+        email = request.form.get('email', '')
+        specialty = request.form.get('specialty', '')
+        notes = request.form.get('notes', '')
+        
+        conn = get_db()
+        conn.execute('''
+            INSERT INTO trainers (name, phone, email, specialty, notes)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (name, phone, email, specialty, notes))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة المدرب بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة مدرب', f'أضاف {name}')
+        return redirect(url_for('trainers'))
+    
+    return render_template('add_trainer.html')
+
+# ============================================================
+# المدفوعات
+# ============================================================
+@app.route('/all_payments')
+def all_payments():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    search_term = request.args.get('q', '').strip()
+    conn = get_db()
+    
+    if search_term:
+        payments = conn.execute('''
+            SELECT client_payments.*, 
+                   clients.name as client_name, 
+                   clients.company_name,
+                   client_modules.name as module_name,
+                   users.name as created_by_name,
+                   GROUP_CONCAT(trainers.name, ', ') as trainer_names
+            FROM client_payments
+            LEFT JOIN clients ON client_payments.client_id = clients.id
+            LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+            LEFT JOIN users ON client_payments.created_by = users.id
+            LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
+            LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
+            WHERE clients.name LIKE ? OR clients.company_name LIKE ?
+            GROUP BY client_payments.id
+            ORDER BY client_payments.created_at DESC
+        ''', (f'%{search_term}%', f'%{search_term}%')).fetchall()
+    else:
+        payments = conn.execute('''
+            SELECT client_payments.*, 
+                   clients.name as client_name, 
+                   clients.company_name,
+                   client_modules.name as module_name,
+                   users.name as created_by_name,
+                   GROUP_CONCAT(trainers.name, ', ') as trainer_names
+            FROM client_payments
+            LEFT JOIN clients ON client_payments.client_id = clients.id
+            LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+            LEFT JOIN users ON client_payments.created_by = users.id
+            LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
+            LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
+            GROUP BY client_payments.id
+            ORDER BY client_payments.created_at DESC
+        ''').fetchall()
+    
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+    ''').fetchone()
+    conn.close()
+    
+    return render_template('all_payments.html', 
+                         payments=payments, 
+                         stats=stats,
+                         search_term=search_term)
+
+# ============================================================
+# المديولات
+# ============================================================
+@app.route('/all_modules')
+def all_modules():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    modules = conn.execute('''
+        SELECT client_modules.*, 
+               clients.name as client_name,
+               clients.company_name
+        FROM client_modules
+        LEFT JOIN clients ON client_modules.client_id = clients.id
+        ORDER BY client_modules.created_at DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('all_modules.html', modules=modules)
+
+# ============================================================
+# التقارير
+# ============================================================
+@app.route('/reports')
+def reports():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
+    completed_count = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
+    in_progress_count = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count']
+    overdue_count = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
+    
+    total_payments_count = conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count']
+    total_payments_amount = conn.execute('SELECT SUM(amount) as total FROM client_payments').fetchone()['total'] or 0
+    paid_count = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "مدفوع"').fetchone()['count']
+    pending_count = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "معلق"').fetchone()['count']
+    overdue_payments_count = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "متأخر"').fetchone()['count']
+    
+    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
+    monthly_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-30 days")').fetchone()['total'] or 0
+    weekly_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-7 days")').fetchone()['total'] or 0
+    daily_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-1 day")').fetchone()['total'] or 0
+    
+    conn.close()
+    return render_template('reports.html',
+                         total_tasks=total_tasks,
+                         completed_count=completed_count,
+                         in_progress_count=in_progress_count,
+                         overdue_count=overdue_count,
+                         total_payments_count=total_payments_count,
+                         total_payments_amount=total_payments_amount,
+                         paid_count=paid_count,
+                         pending_count=pending_count,
+                         overdue_payments_count=overdue_payments_count,
+                         total_revenue=total_revenue,
+                         monthly_revenue=monthly_revenue,
+                         weekly_revenue=weekly_revenue,
+                         daily_revenue=daily_revenue)
+
+# ============================================================
+# المواعيد
+# ============================================================
+@app.route('/meetings')
+def meetings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    upcoming = conn.execute('''
+        SELECT meetings.*, clients.name as client_name, users.name as created_by_name
+        FROM meetings
+        JOIN clients ON meetings.client_id = clients.id
+        JOIN users ON meetings.created_by = users.id
+        WHERE meetings.meeting_date >= datetime("now") AND meetings.status = "مجدول"
+        ORDER BY meetings.meeting_date ASC
+    ''').fetchall()
+    
+    past = conn.execute('''
+        SELECT meetings.*, clients.name as client_name, users.name as created_by_name
+        FROM meetings
+        JOIN clients ON meetings.client_id = clients.id
+        JOIN users ON meetings.created_by = users.id
+        WHERE meetings.meeting_date < datetime("now") OR meetings.status != "مجدول"
+        ORDER BY meetings.meeting_date DESC
+        LIMIT 20
+    ''').fetchall()
+    conn.close()
+    return render_template('meetings.html', upcoming=upcoming, past=past)
+
+# ============================================================
+# الإشعارات
+# ============================================================
+@app.route('/notifications')
+def notifications():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    notifs = conn.execute('''
+        SELECT notifications.*, tasks.title as task_title
+        FROM notifications
+        LEFT JOIN tasks ON notifications.task_id = tasks.id
+        WHERE notifications.user_id = ?
+        ORDER BY notifications.created_at DESC
+    ''', (session['user_id'],)).fetchall()
+    conn.close()
+    return render_template('notifications.html', notifications=notifs)
+
+# ============================================================
+# إعدادات الشركة
+# ============================================================
+@app.route('/company_settings', methods=['GET', 'POST'])
+def company_settings():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
+    
+    conn = get_db()
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        name_en = request.form['name_en']
+        phone = request.form['phone']
+        address = request.form['address']
+        email = request.form['email']
+        website = request.form['website']
+        
+        conn.execute('''
+            UPDATE company_settings SET 
+                name = ?, name_en = ?, phone = ?, address = ?, email = ?, website = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (name, name_en, phone, address, email, website, settings['id']))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث إعدادات الشركة بنجاح', 'success')
+        log_activity(session['user_id'], 'تحديث إعدادات الشركة', '')
+        return redirect(url_for('company_settings'))
+    
+    conn.close()
+    return render_template('company_settings.html', settings=settings)
 # ============================================================
 # عقود العملاء (بالإصدار الجديد مع الدفعات)
 # ============================================================
