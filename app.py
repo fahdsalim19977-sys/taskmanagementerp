@@ -1534,6 +1534,32 @@ def contract_payments_report(contract_id):
         traceback.print_exc()
         flash(f'❌ حدث خطأ: {str(e)}', 'danger')
         return redirect(url_for('contracts_report'))
+# ============================================================
+# حذف دفعة
+# ============================================================
+@app.route('/delete_payment/<int:payment_id>', methods=['POST'])
+def delete_payment(payment_id):
+    """حذف دفعة"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    # التحقق من وجود الدفعة
+    payment = conn.execute('SELECT * FROM client_payments WHERE id = ?', (payment_id,)).fetchone()
+    if not payment:
+        flash('❌ الدفعة غير موجودة', 'danger')
+        conn.close()
+        return redirect(url_for('all_payments'))
+    
+    # حذف الدفعة
+    conn.execute('DELETE FROM client_payments WHERE id = ?', (payment_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف الدفعة بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف دفعة', f'حذف دفعة رقم {payment_id}')
+    return redirect(request.referrer or url_for('all_payments'))
 
 # ============================================================
 # تصدير تقرير العقود Excel
