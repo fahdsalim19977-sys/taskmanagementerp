@@ -7,25 +7,18 @@ from datetime import datetime
 import hashlib
 from config import Config
 
-# ===== حل مشكلة libpq =====
-try:
-    import psycopg2
-except ImportError:
-    # محاولة إضافة المسار
-    sys.path.append('/app/.venv/lib/python3.13/site-packages')
-
 # ============================================================
 # الاتصال بقاعدة البيانات
 # ============================================================
 
 def get_db():
-    """الاتصال بقاعدة البيانات PostgreSQL"""
     try:
-        conn = psycopg2.connect(Config.DATABASE_URL)
+        db_url = Config.DATABASE_URL
+        conn = psycopg2.connect(db_url)
         conn.cursor_factory = RealDictCursor
         return conn
     except Exception as e:
-        print(f"❌ خطأ في الاتصال بقاعدة البيانات: {str(e)}")
+        print(f"❌ خطأ: {str(e)}")
         return None
 
 def hash_password(password):
@@ -39,7 +32,8 @@ def init_db():
     
     cursor = conn.cursor()
     
-    # ===== جميع الجداول (PostgreSQL) =====
+    # ===== 1. الجداول الأساسية (بدون FOREIGN KEY) =====
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS company_settings (
             id SERIAL PRIMARY KEY,
@@ -104,6 +98,37 @@ def init_db():
         )
     ''')
     
+    # ===== 2. جدول المواعيد (meetings) =====
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meetings (
+            id SERIAL PRIMARY KEY,
+            client_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            meeting_date TIMESTAMP NOT NULL,
+            duration INTEGER DEFAULT 60,
+            location TEXT,
+            meeting_link TEXT,
+            status TEXT CHECK(status IN ('مجدول', 'تم', 'ملغي')) DEFAULT 'مجدول',
+            reminder_sent INTEGER DEFAULT 0,
+            created_by INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (client_id) REFERENCES clients(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meeting_reminders (
+            id SERIAL PRIMARY KEY,
+            meeting_id INTEGER NOT NULL,
+            reminder_time TIMESTAMP NOT NULL,
+            sent INTEGER DEFAULT 0,
+            FOREIGN KEY (meeting_id) REFERENCES meetings(id)
+        )
+    ''')
+    
+    # ===== 3. جدول المهام (tasks) =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
             id SERIAL PRIMARY KEY,
@@ -127,6 +152,7 @@ def init_db():
         )
     ''')
     
+    # ===== 4. باقي الجداول =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS task_updates (
             id SERIAL PRIMARY KEY,
@@ -162,35 +188,6 @@ def init_db():
             ip_address TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meetings (
-            id SERIAL PRIMARY KEY,
-            client_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT,
-            meeting_date TIMESTAMP NOT NULL,
-            duration INTEGER DEFAULT 60,
-            location TEXT,
-            meeting_link TEXT,
-            status TEXT CHECK(status IN ('مجدول', 'تم', 'ملغي')) DEFAULT 'مجدول',
-            reminder_sent INTEGER DEFAULT 0,
-            created_by INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (client_id) REFERENCES clients(id),
-            FOREIGN KEY (created_by) REFERENCES users(id)
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meeting_reminders (
-            id SERIAL PRIMARY KEY,
-            meeting_id INTEGER NOT NULL,
-            reminder_time TIMESTAMP NOT NULL,
-            sent INTEGER DEFAULT 0,
-            FOREIGN KEY (meeting_id) REFERENCES meetings(id)
         )
     ''')
     
