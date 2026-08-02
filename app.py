@@ -21,6 +21,9 @@ from email.mime.application import MIMEApplication
 import pandas as pd
 import json
 import sqlite3
+import shutil
+from datetime import datetime
+
 
 # ===== إعدادات IIS =====
 if os.name == 'nt':
@@ -114,10 +117,12 @@ def set_lang(lang):
 
 @app.context_processor
 def utility_processor():
+    settings = get_company_settings()
     return {
         't': t,
         'get_lang': get_lang,
-        'datetime': datetime
+        'datetime': datetime,
+        'settings': settings
     }
 
 # ============================================================
@@ -2082,6 +2087,90 @@ def change_password():
         return redirect(url_for('index'))
     
     return render_template('change_password.html')
+# ============================================================
+# نسخ احتياطي تلقائي
+# ============================================================
+
+def auto_backup():
+    """عمل نسخة احتياطية من قاعدة البيانات"""
+    try:
+        db_path = '/app/data/tasks.db'
+        backup_dir = '/app/data/backups/'
+        
+        # تأكد من وجود مجلد النسخ الاحتياطية
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # اسم الملف بالتاريخ
+        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        # نسخ الملف
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+            
+            # حذف النسخ القديمة (احتفظ بآخر 30 نسخة)
+            backups = sorted(os.listdir(backup_dir))
+            if len(backups) > 30:
+                for old in backups[:-30]:
+                    os.remove(os.path.join(backup_dir, old))
+            
+            print(f"✅ تم إنشاء نسخة احتياطية: {backup_name}")
+            return True
+    except Exception as e:
+        print(f"❌ خطأ في النسخ الاحتياطي: {str(e)}")
+        return False
+
+# ===== استدعاء النسخ الاحتياطي عند بدء التشغيل =====
+# auto_backup()
+
+# ============================================================
+# النسخ الاحتياطي
+# ============================================================
+
+@app.route('/backup_database')
+def backup_database():
+    """عمل نسخة احتياطية من قاعدة البيانات"""
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
+    
+    try:
+        db_path = '/app/data/tasks.db'
+        backup_dir = '/app/data/backups/'
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+            flash(f'✅ تم إنشاء النسخة الاحتياطية بنجاح: {backup_name}', 'success')
+        else:
+            flash('❌ قاعدة البيانات غير موجودة', 'danger')
+    except Exception as e:
+        flash(f'❌ خطأ: {str(e)}', 'danger')
+    
+    return redirect(url_for('company_settings'))
+
+@app.route('/download_backup')
+def download_backup():
+    """تحميل أحدث نسخة احتياطية"""
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
+    
+    backup_dir = '/app/data/backups/'
+    if not os.path.exists(backup_dir):
+        flash('❌ لا توجد نسخ احتياطية', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    backups = sorted(os.listdir(backup_dir), reverse=True)
+    if not backups:
+        flash('❌ لا توجد نسخ احتياطية', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    latest = os.path.join(backup_dir, backups[0])
+    return send_file(latest, as_attachment=True, download_name=backups[0])
 
 # ============================================================
 # تشغيل التطبيق
