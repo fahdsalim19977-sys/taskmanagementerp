@@ -529,25 +529,14 @@ def delete_contract(contract_id):
     log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
     return redirect(url_for('contracts'))
 
-@app.route('/contract/<int:contract_id>')
-def contract_details(contract_id):
+@app.route('/contract/<int:contract_id>/attachments')
+def contract_attachments(contract_id):
+    """عرض جميع مرفقات العقد"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
-    contract = conn.execute('''
-        SELECT client_contracts.*, 
-               clients.name as client_name,
-               clients.company_name,
-               clients.phone as client_phone,
-               clients.email as client_email,
-               users.name as created_by_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        JOIN users ON client_contracts.created_by = users.id
-        WHERE client_contracts.id = ?
-    ''', (contract_id,)).fetchone()
-    
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
@@ -562,9 +551,9 @@ def contract_details(contract_id):
     ''', (contract_id,)).fetchall()
     conn.close()
     
-    return render_template('contract_details.html', 
-                         contract=contract,
-                         contract_attachments=attachments)
+    return render_template('contract_attachments.html', 
+                         contract=contract, 
+                         attachments=attachments)
 
 # ===== مرفقات العقود =====
 
