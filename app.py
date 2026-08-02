@@ -1462,14 +1462,12 @@ def add_contract():
         total_amount = request.form.get('total_amount', 0)
         attachment_description = request.form.get('attachment_description', '')
         
-        # التحقق من رقم العقد
         check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
         if check:
             flash('❌ رقم العقد موجود مسبقاً', 'danger')
             conn.close()
             return render_template('add_contract.html', clients=clients, contract_types=contract_types)
         
-        # إضافة العقد
         cursor = conn.execute('''
             INSERT INTO client_contracts 
             (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
@@ -1479,14 +1477,12 @@ def add_contract():
               contract_value, total_amount, status, notes, session['user_id']))
         contract_id = cursor.lastrowid
         
-        # ===== إنشاء الدفعات =====
+        # إنشاء الدفعات
         installment_count = int(request.form.get('installment_count', 0))
-        
         for i in range(1, installment_count + 1):
             amount = request.form.get(f'installment_amount_{i}', 0)
             due_date = request.form.get(f'installment_due_date_{i}', '')
             note = request.form.get(f'installment_notes_{i}', '')
-            
             if due_date and float(amount) > 0:
                 conn.execute('''
                     INSERT INTO contract_payments 
@@ -1494,10 +1490,9 @@ def add_contract():
                     VALUES (?, ?, ?, 0, ?, ?, 'مستحقة')
                 ''', (contract_id, i, amount, due_date, note))
         
-        # ===== معالجة المرفقات =====
+        # معالجة المرفقات
         files = request.files.getlist('attachments')
         uploaded_count = 0
-        
         for file in files:
             if file and file.filename:
                 filename = secure_filename(file.filename)
@@ -1506,12 +1501,10 @@ def add_contract():
                     filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
                 else:
                     filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                
                 attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
                 os.makedirs(attachments_folder, exist_ok=True)
                 file_path = os.path.join(attachments_folder, filename)
                 file.save(file_path)
-                
                 file_size = os.path.getsize(file_path)
                 conn.execute('''
                     INSERT INTO contract_attachments 
@@ -1523,7 +1516,6 @@ def add_contract():
         
         conn.commit()
         conn.close()
-        
         flash(f'✅ تم إضافة العقد بنجاح مع {uploaded_count} مرفق و {installment_count} دفعة', 'success')
         log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
         return redirect(url_for('contracts'))
@@ -1652,177 +1644,6 @@ def contract_details(contract_id):
                          contract=contract,
                          contract_attachments=attachments,
                          contract_payments=payments)
-
-# ===== مرفقات العقود =====
-
-@app.route('/add_contract_attachment/<int:contract_id>', methods=['POST'])
-def add_contract_attachment(contract_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-    if not contract:
-        flash('❌ العقد غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    if 'attachment' not in request.files:
-        flash('❌ لم يتم اختيار ملف', 'danger')
-        conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
-    
-    file = request.files['attachment']
-    if file.filename == '':
-        flash('❌ لم يتم اختيار ملف', 'danger')
-        conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
-    
-    description = request.form.get('description', '')
-    
-    filename = secure_filename(file.filename)
-    name_parts = filename.rsplit('.', 1)
-    if len(name_parts) > 1:
-        filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
-    else:
-        filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
-    attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
-    os.makedirs(attachments_folder, exist_ok=True)
-    file_path = os.path.join(attachments_folder, filename)
-    file.save(file_path)
-    
-    file_size = os.path.getsize(file_path)
-    conn.execute('''
-        INSERT INTO contract_attachments 
-        (contract_id, file_name, file_path, file_size, file_type, uploaded_by, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (contract_id, filename, file_path, file_size, file.content_type, 
-          session['user_id'], description))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم رفع المرفق بنجاح', 'success')
-    log_activity(session['user_id'], 'رفع مرفق عقد', f'رفع {filename} للعقد {contract["contract_number"]}')
-    return redirect(url_for('contract_details', contract_id=contract_id))
-
-@app.route('/download_contract_attachment/<int:attachment_id>')
-def download_contract_attachment(attachment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
-    if not attachment:
-        flash('❌ المرفق غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    conn.close()
-    
-    if os.path.exists(attachment['file_path']):
-        return send_file(attachment['file_path'], 
-                       as_attachment=True, 
-                       download_name=attachment['file_name'])
-    else:
-        flash('❌ الملف غير موجود على السيرفر', 'danger')
-        return redirect(request.referrer or url_for('contracts'))
-
-@app.route('/delete_contract_attachment/<int:attachment_id>', methods=['POST'])
-def delete_contract_attachment(attachment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
-    if not attachment:
-        flash('❌ المرفق غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    if os.path.exists(attachment['file_path']):
-        try:
-            os.remove(attachment['file_path'])
-        except Exception as e:
-            print(f"Error deleting file: {e}")
-    
-    conn.execute('DELETE FROM contract_attachments WHERE id = ?', (attachment_id,))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم حذف المرفق بنجاح', 'success')
-    log_activity(session['user_id'], 'حذف مرفق عقد', f'حذف {attachment["file_name"]}')
-    return redirect(request.referrer or url_for('contracts'))
-
-@app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
-def mark_payment_paid(payment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    
-    payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
-    if not payment:
-        flash('❌ الدفعة غير موجودة', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    paid_amount = request.form.get('paid_amount', payment['amount'])
-    try:
-        paid_amount = float(paid_amount)
-    except:
-        paid_amount = payment['amount']
-    
-    if paid_amount > payment['amount']:
-        flash('❌ المبلغ المدفوع لا يمكن أن يتجاوز قيمة الدفعة', 'danger')
-        conn.close()
-        return redirect(request.referrer or url_for('contracts'))
-    
-    if paid_amount >= payment['amount']:
-        status = 'مدفوعة'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    elif paid_amount > 0:
-        status = 'مدفوعة جزئياً'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    else:
-        status = 'مستحقة'
-        payment_date = None
-    
-    conn.execute('''
-        UPDATE contract_payments 
-        SET paid_amount = ?, status = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (paid_amount, status, payment_date, payment_id))
-    
-    contract_id = payment['contract_id']
-    total_paid = conn.execute('''
-        SELECT SUM(paid_amount) as total FROM contract_payments 
-        WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئياً')
-    ''', (contract_id,)).fetchone()['total'] or 0
-    
-    contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-    total = contract['total_amount'] or 0
-    
-    if total_paid >= total:
-        payment_status = 'مدفوع بالكامل'
-    elif total_paid > 0:
-        payment_status = 'مدفوع جزئياً'
-    else:
-        payment_status = 'غير مدفوع'
-    
-    conn.execute('''
-        UPDATE client_contracts 
-        SET paid_amount = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (total_paid, payment_status, contract_id))
-    
-    conn.commit()
-    conn.close()
-    
-    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح', 'success')
-    log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ج.م للدفعة {payment["installment_number"]}')
-    return redirect(request.referrer or url_for('contracts'))
-
 # ============================================================
 # أنواع العقود
 # ============================================================
