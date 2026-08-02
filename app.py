@@ -203,6 +203,14 @@ def utility_processor():
 init_db()
 
 # ============================================================
+# Health Check (لـ Railway)
+# ============================================================
+@app.route('/health')
+def health():
+    """Health check endpoint for Railway"""
+    return jsonify({"status": "ok", "message": "Application is running"}), 200
+
+# ============================================================
 # الصفحة الرئيسية
 # ============================================================
 @app.route('/')
