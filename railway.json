@@ -3,8 +3,9 @@
         "builder": "NIXPACKS"
     },
     "deploy": {
-        "startCommand": "gunicorn app:app",
-        "healthcheckPath": "/",
-        "restartPolicyType": "ON_FAILURE"
+        "startCommand": "gunicorn --bind 0.0.0.0:8080 app:app",
+        "healthcheckPath": "/health",
+        "restartPolicyType": "ON_FAILURE",
+        "timeout": 300
     }
 }
