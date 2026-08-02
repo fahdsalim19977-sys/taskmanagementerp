@@ -11,6 +11,7 @@ from config import Config
 # ============================================================
 
 def get_db():
+    """الاتصال بقاعدة البيانات PostgreSQL"""
     try:
         conn = psycopg2.connect(Config.DATABASE_URL)
         conn.cursor_factory = RealDictCursor
@@ -282,7 +283,7 @@ def init_db():
     ''')
     
     # ============================================================
-    # ✅ البيانات الافتراضية (فقط Adminerp)
+    # ✅ البيانات الافتراضية
     # ============================================================
     
     # ===== إعدادات الشركة =====
@@ -292,6 +293,7 @@ def init_db():
             INSERT INTO company_settings (name, name_en, phone, address, email, website)
             VALUES (%s, %s, %s, %s, %s, %s)
         ''', ('شركة التقنية المتقدمة', 'Advanced Technology Company', '+966 50 123 4567', 'الرياض، المملكة العربية السعودية', 'info@techcompany.com', 'www.techcompany.com'))
+        print("✅ تم إضافة إعدادات الشركة")
     
     # ===== إضافة مستخدم Adminerp فقط =====
     cursor.execute("SELECT * FROM users WHERE username = 'Adminerp'")
@@ -302,8 +304,8 @@ def init_db():
         ''', ('Adminerp', 'مدير النظام', 'adminerp@company.com', hash_password('1234'), 'مدير'))
         print("✅ تم إضافة مستخدم Adminerp")
     
-    # ===== ❌ تم حذف باقي البيانات الافتراضية =====
-    # (المدربين والعملاء تم حذفهم)
+    # ===== ❌ لا توجد بيانات افتراضية أخرى =====
+    # (المدربين والعملاء والمهام سيتم إضافتهم يدوياً)
     
     conn.commit()
     print("✅ تم تهيئة قاعدة البيانات بنجاح!")
