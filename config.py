@@ -3,10 +3,9 @@ import os
 
 class Config:
     SECRET_KEY = 'your_secret_key_here_change_in_production'
-    SECRET_KEY = 'your_secret_key_here_change_in_production'
     
-    # ===== قاعدة البيانات =====
-    DB_NAME = 'tasks.db'  # SQLite
+    # ===== قاعدة بيانات PostgreSQL =====
+    DATABASE_URL = os.environ.get('DATABASE_URL')
     
     # ===== إعدادات أخرى =====
     UPLOAD_FOLDER = 'uploads/'

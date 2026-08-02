@@ -11,20 +11,18 @@ from config import Config
 # ============================================================
 
 def get_db():
-    """الاتصال بقاعدة البيانات PostgreSQL"""
     try:
         conn = psycopg2.connect(Config.DATABASE_URL)
         conn.cursor_factory = RealDictCursor
         return conn
     except Exception as e:
-        print(f"❌ خطأ في الاتصال بقاعدة البيانات: {str(e)}")
+        print(f"❌ خطأ: {str(e)}")
         return None
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def init_db():
-    """تهيئة قاعدة البيانات وإنشاء الجداول"""
     conn = get_db()
     if not conn:
         print("❌ فشل الاتصال بقاعدة البيانات")
@@ -32,7 +30,7 @@ def init_db():
     
     cursor = conn.cursor()
     
-    # ===== جدول إعدادات الشركة =====
+    # ===== جميع الجداول (PostgreSQL) =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS company_settings (
             id SERIAL PRIMARY KEY,
@@ -47,7 +45,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المستخدمين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -61,7 +58,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المدربين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS trainers (
             id SERIAL PRIMARY KEY,
@@ -75,7 +71,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول العملاء =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS clients (
             id SERIAL PRIMARY KEY,
@@ -89,7 +84,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول ربط العملاء بالمدربين =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_trainers (
             id SERIAL PRIMARY KEY,
@@ -101,7 +95,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المهام =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
             id SERIAL PRIMARY KEY,
@@ -125,7 +118,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول ملاحظات المهام =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS task_updates (
             id SERIAL PRIMARY KEY,
@@ -139,7 +131,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول الإشعارات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS notifications (
             id SERIAL PRIMARY KEY,
@@ -153,7 +144,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول سجل النشاط =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS activity_log (
             id SERIAL PRIMARY KEY,
@@ -166,7 +156,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المواعيد =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS meetings (
             id SERIAL PRIMARY KEY,
@@ -186,7 +175,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول تذكيرات المواعيد =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS meeting_reminders (
             id SERIAL PRIMARY KEY,
@@ -197,7 +185,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المديولات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_modules (
             id SERIAL PRIMARY KEY,
@@ -213,7 +200,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول المدفوعات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_payments (
             id SERIAL PRIMARY KEY,
@@ -234,7 +220,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول دفعات المدفوعات =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS payment_installments (
             id SERIAL PRIMARY KEY,
@@ -249,7 +234,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول محاولات تسجيل الدخول =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS login_attempts (
             id SERIAL PRIMARY KEY,
@@ -260,7 +244,6 @@ def init_db():
         )
     ''')
     
-    # ===== جدول العقود =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_contracts (
             id SERIAL PRIMARY KEY,
@@ -283,29 +266,22 @@ def init_db():
     ''')
     
     # ============================================================
-    # ✅ البيانات الافتراضية
+    # البيانات الافتراضية
     # ============================================================
     
-    # ===== إعدادات الشركة =====
     cursor.execute("SELECT * FROM company_settings")
     if not cursor.fetchone():
         cursor.execute('''
             INSERT INTO company_settings (name, name_en, phone, address, email, website)
             VALUES (%s, %s, %s, %s, %s, %s)
         ''', ('شركة التقنية المتقدمة', 'Advanced Technology Company', '+966 50 123 4567', 'الرياض، المملكة العربية السعودية', 'info@techcompany.com', 'www.techcompany.com'))
-        print("✅ تم إضافة إعدادات الشركة")
     
-    # ===== إضافة مستخدم Adminerp فقط =====
     cursor.execute("SELECT * FROM users WHERE username = 'Adminerp'")
     if not cursor.fetchone():
         cursor.execute('''
             INSERT INTO users (username, name, email, password, role)
             VALUES (%s, %s, %s, %s, %s)
         ''', ('Adminerp', 'مدير النظام', 'adminerp@company.com', hash_password('1234'), 'مدير'))
-        print("✅ تم إضافة مستخدم Adminerp")
-    
-    # ===== ❌ لا توجد بيانات افتراضية أخرى =====
-    # (المدربين والعملاء والمهام سيتم إضافتهم يدوياً)
     
     conn.commit()
     print("✅ تم تهيئة قاعدة البيانات بنجاح!")
