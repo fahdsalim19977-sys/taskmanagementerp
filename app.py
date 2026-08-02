@@ -22,8 +22,7 @@ import pandas as pd
 import json
 import sqlite3
 import shutil
-from datetime import datetime
-
+import zipfile
 
 # ===== إعدادات IIS =====
 if os.name == 'nt':
@@ -842,6 +841,36 @@ def delete_trainer(trainer_id):
     log_activity(session['user_id'], 'حذف مدرب', f'حذف {trainer["name"]}')
     return redirect(url_for('trainers'))
 
+@app.route('/trainer/<int:trainer_id>')
+def trainer_details(trainer_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    trainer = conn.execute('''
+        SELECT trainers.*, 
+               COUNT(client_trainers.client_id) as client_count
+        FROM trainers
+        LEFT JOIN client_trainers ON trainers.id = client_trainers.trainer_id
+        WHERE trainers.id = ?
+        GROUP BY trainers.id
+    ''', (trainer_id,)).fetchone()
+    
+    if not trainer:
+        flash('❌ المدرب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('trainers'))
+    
+    clients = conn.execute('''
+        SELECT clients.* 
+        FROM clients
+        JOIN client_trainers ON clients.id = client_trainers.client_id
+        WHERE client_trainers.trainer_id = ?
+        ORDER BY clients.name
+    ''', (trainer_id,)).fetchall()
+    conn.close()
+    return render_template('trainer_details.html', trainer=trainer, clients=clients)
+
 # ============================================================
 # تقرير شامل للعميل
 # ============================================================
@@ -1432,6 +1461,169 @@ def delete_module(module_id):
     return redirect(url_for('client_modules', client_id=client_id))
 
 # ============================================================
+# عقود العملاء
+# ============================================================
+@app.route('/contracts')
+def contracts():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contracts_list = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('contracts.html', contracts=contracts_list)
+
+@app.route('/add_contract', methods=['GET', 'POST'])
+def add_contract():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('add_contract.html', clients=clients)
+        
+        conn.execute('''
+            INSERT INTO client_contracts 
+            (client_id, contract_number, title, description, start_date, end_date, 
+             contract_value, status, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, session['user_id']))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إضافة العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('add_contract.html', clients=clients)
+
+@app.route('/edit_contract/<int:contract_id>', methods=['GET', 'POST'])
+def edit_contract(contract_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
+    
+    if request.method == 'POST':
+        client_id = request.form['client_id']
+        contract_number = request.form['contract_number']
+        title = request.form['title']
+        description = request.form.get('description', '')
+        start_date = request.form['start_date']
+        end_date = request.form['end_date']
+        contract_value = request.form.get('contract_value', 0)
+        status = request.form['status']
+        notes = request.form.get('notes', '')
+        
+        check = conn.execute('''
+            SELECT * FROM client_contracts 
+            WHERE contract_number = ? AND id != ?
+        ''', (contract_number, contract_id)).fetchone()
+        if check:
+            flash('❌ رقم العقد موجود مسبقاً', 'danger')
+            conn.close()
+            return render_template('edit_contract.html', contract=contract, clients=clients)
+        
+        conn.execute('''
+            UPDATE client_contracts SET 
+                client_id = ?, contract_number = ?, title = ?, description = ?,
+                start_date = ?, end_date = ?, contract_value = ?, status = ?, notes = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (client_id, contract_number, title, description, start_date, end_date, 
+              contract_value, status, notes, contract_id))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث العقد بنجاح', 'success')
+        log_activity(session['user_id'], 'تحديث عقد', f'حدث عقد {contract_number}')
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('edit_contract.html', contract=contract, clients=clients)
+
+@app.route('/delete_contract/<int:contract_id>', methods=['POST'])
+def delete_contract(contract_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.execute('DELETE FROM client_contracts WHERE id = ?', (contract_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف العقد بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
+    return redirect(url_for('contracts'))
+
+@app.route('/contract/<int:contract_id>')
+def contract_details(contract_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    return render_template('contract_details.html', contract=contract)
+
+# ============================================================
 # التقارير
 # ============================================================
 @app.route('/reports')
@@ -1604,456 +1796,115 @@ def upload_logo():
     return redirect(url_for('company_settings'))
 
 # ============================================================
-# تصدير Excel و PDF
+# النسخ الاحتياطي
 # ============================================================
-@app.route('/export_excel')
-def export_excel():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/backup_database')
+def backup_database():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
     
-    conn = get_db()
-    tasks = conn.execute('''
-        SELECT tasks.id, tasks.title, tasks.description, tasks.status, tasks.priority,
-               tasks.due_date, tasks.completion_percentage, tasks.created_at,
-               clients.name as client_name, clients.company_name,
-               users.name as assigned_name, tasks.estimated_duration, tasks.actual_duration
-        FROM tasks 
-        JOIN clients ON tasks.client_id = clients.id 
-        JOIN users ON tasks.assigned_to = users.id 
-        ORDER BY tasks.created_at DESC
-    ''').fetchall()
-    conn.close()
+    try:
+        db_path = '/app/data/tasks.db'
+        backup_dir = '/app/data/backups/'
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+            flash(f'✅ تم إنشاء النسخة الاحتياطية بنجاح: {backup_name}', 'success')
+        else:
+            flash('❌ قاعدة البيانات غير موجودة', 'danger')
+    except Exception as e:
+        flash(f'❌ خطأ: {str(e)}', 'danger')
     
-    data = []
-    for task in tasks:
-        data.append({
-            'رقم المهمة': task['id'],
-            'العنوان': task['title'],
-            'الوصف': task['description'] or '',
-            'العميل': task['client_name'],
-            'الشركة': task['company_name'] or '',
-            'المسؤول': task['assigned_name'],
-            'الحالة': task['status'],
-            'الأولوية': task['priority'],
-            'تاريخ الاستحقاق': task['due_date'],
-            'نسبة الإنجاز': f"{task['completion_percentage']}%",
-            'المدة المتوقعة': f"{task['estimated_duration'] or 0} ساعة",
-            'المدة الفعلية': f"{task['actual_duration'] or 0} ساعة",
-            'تاريخ الإنشاء': task['created_at']
-        })
-    
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='المهام')
-        workbook = writer.book
-        worksheet = writer.sheets['المهام']
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-    
-    output.seek(0)
-    return send_file(output, as_attachment=True, 
-                    download_name=f'تقرير_المهام_{datetime.now().strftime("%Y%m%d")}.xlsx', 
-                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    return redirect(url_for('company_settings'))
 
-@app.route('/export_pdf')
-def export_pdf():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/download_backup')
+def download_backup():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('index'))
     
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=18, textColor=colors.HexColor('#1a237e'))
-    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], alignment=1, fontSize=10, textColor=colors.grey)
+    backup_dir = '/app/data/backups/'
+    if not os.path.exists(backup_dir):
+        flash('❌ لا توجد نسخ احتياطية', 'danger')
+        return redirect(url_for('company_settings'))
     
-    story = []
-    story.append(Paragraph("تقرير إنجاز المهام", title_style))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}", subtitle_style))
-    story.append(Spacer(1, 24))
+    backups = sorted(os.listdir(backup_dir), reverse=True)
+    if not backups:
+        flash('❌ لا توجد نسخ احتياطية', 'danger')
+        return redirect(url_for('company_settings'))
     
-    conn = get_db()
-    tasks = conn.execute('''
-        SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
-        FROM tasks 
-        JOIN clients ON tasks.client_id = clients.id 
-        JOIN users ON tasks.assigned_to = users.id 
-        ORDER BY tasks.due_date ASC
-    ''').fetchall()
-    conn.close()
-    
-    total = len(tasks)
-    completed = sum(1 for t in tasks if t['status'] == 'مكتملة')
-    overdue = sum(1 for t in tasks if t['status'] == 'متأخرة')
-    in_progress = sum(1 for t in tasks if t['status'] == 'قيد التنفيذ')
-    
-    stats_data = [['الإجمالي', 'مكتملة', 'قيد التنفيذ', 'متأخرة'],
-                  [str(total), str(completed), str(in_progress), str(overdue)]]
-    stats_table = Table(stats_data, colWidths=[80, 80, 80, 80])
-    stats_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    story.append(stats_table)
-    story.append(Spacer(1, 24))
-    
-    if tasks:
-        data = [['#', 'المهمة', 'العميل', 'المسؤول', 'الحالة', 'الإنجاز', 'التاريخ']]
-        for task in tasks:
-            data.append([
-                str(task['id']),
-                task['title'][:30] + '...' if len(task['title']) > 30 else task['title'],
-                task['client_name'],
-                task['assigned_name'],
-                task['status'],
-                f"{task['completion_percentage']}%",
-                task['due_date']
-            ])
-        table = Table(data, colWidths=[30, 80, 70, 70, 60, 50, 70])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ]))
-        story.append(table)
-    
-    doc.build(story)
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, 
-                    download_name=f'report_{datetime.now().strftime("%Y%m%d")}.pdf', 
-                    mimetype='application/pdf')
+    latest = os.path.join(backup_dir, backups[0])
+    return send_file(latest, as_attachment=True, download_name=backups[0])
 
-@app.route('/export_full_report')
-def export_full_report():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/restore_backup', methods=['POST'])
+def restore_backup():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('company_settings'))
     
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=18, textColor=colors.HexColor('#1a237e'))
-    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], alignment=1, fontSize=10, textColor=colors.grey)
-    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1a237e'))
+    if 'backup_file' not in request.files:
+        flash('❌ لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('company_settings'))
     
-    story = []
-    story.append(Paragraph("تقرير شامل", title_style))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}", subtitle_style))
-    story.append(Spacer(1, 24))
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('❌ لم يتم اختيار ملف', 'danger')
+        return redirect(url_for('company_settings'))
     
-    conn = get_db()
+    if not file.filename.endswith(('.db', '.sql', '.zip')):
+        flash('❌ صيغة الملف غير مدعومة. استخدم .db أو .sql أو .zip', 'danger')
+        return redirect(url_for('company_settings'))
     
-    # ===== 1. تقرير التدريبات =====
-    story.append(Paragraph("1. تقرير التدريبات", heading_style))
-    story.append(Spacer(1, 12))
+    try:
+        temp_path = os.path.join('/tmp', secure_filename(file.filename))
+        file.save(temp_path)
+        
+        if file.filename.endswith('.db'):
+            db_path = '/app/data/tasks.db'
+            shutil.copy2(temp_path, db_path)
+            flash('✅ تم استعادة البيانات بنجاح من ملف .db', 'success')
+            
+        elif file.filename.endswith('.sql'):
+            db_path = '/app/data/tasks.db'
+            conn = sqlite3.connect(db_path)
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                sql_script = f.read()
+                conn.executescript(sql_script)
+            conn.commit()
+            conn.close()
+            flash('✅ تم استعادة البيانات بنجاح من ملف .sql', 'success')
+            
+        elif file.filename.endswith('.zip'):
+            extract_dir = '/tmp/restore_extract'
+            os.makedirs(extract_dir, exist_ok=True)
+            
+            with zipfile.ZipFile(temp_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+            
+            db_files = [f for f in os.listdir(extract_dir) if f.endswith('.db')]
+            if db_files:
+                db_path = '/app/data/tasks.db'
+                shutil.copy2(os.path.join(extract_dir, db_files[0]), db_path)
+                flash(f'✅ تم استعادة البيانات بنجاح من {db_files[0]}', 'success')
+            else:
+                flash('❌ لم يتم العثور على ملف قاعدة بيانات في الملف المضغوط', 'danger')
+        
+        os.remove(temp_path)
+        log_activity(session['user_id'], 'استعادة بيانات', 'تم استعادة البيانات من النسخة الاحتياطية')
+        
+    except Exception as e:
+        flash(f'❌ خطأ أثناء استعادة البيانات: {str(e)}', 'danger')
     
-    total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
-    completed = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
-    in_progress = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count']
-    overdue = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
-    
-    tasks_data = [
-        ['الإجمالي', 'مكتملة', 'قيد التنفيذ', 'متأخرة'],
-        [str(total_tasks), str(completed), str(in_progress), str(overdue)]
-    ]
-    tasks_table = Table(tasks_data, colWidths=[100, 100, 100, 100])
-    tasks_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    story.append(tasks_table)
-    story.append(Spacer(1, 24))
-    
-    # ===== 2. تقرير المدفوعات =====
-    story.append(Paragraph("2. تقرير المدفوعات", heading_style))
-    story.append(Spacer(1, 12))
-    
-    total_payments = conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count']
-    total_amount = conn.execute('SELECT SUM(amount) as total FROM client_payments').fetchone()['total'] or 0
-    paid = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "مدفوع"').fetchone()['count']
-    pending = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "معلق"').fetchone()['count']
-    overdue_payments = conn.execute('SELECT COUNT(*) as count FROM client_payments WHERE status = "متأخر"').fetchone()['count']
-    
-    payments_data = [
-        ['إجمالي المدفوعات', 'إجمالي المبلغ', 'مدفوع', 'معلق', 'متأخر'],
-        [str(total_payments), f"{total_amount} ج.م", str(paid), str(pending), str(overdue_payments)]
-    ]
-    payments_table = Table(payments_data, colWidths=[80, 80, 80, 80, 80])
-    payments_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#28a745')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    story.append(payments_table)
-    story.append(Spacer(1, 24))
-    
-    # ===== 3. تقرير الإيرادات =====
-    story.append(Paragraph("3. تقرير الإيرادات", heading_style))
-    story.append(Spacer(1, 12))
-    
-    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
-    monthly = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-30 days")').fetchone()['total'] or 0
-    weekly = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-7 days")').fetchone()['total'] or 0
-    daily = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع" AND payment_date >= date("now", "-1 day")').fetchone()['total'] or 0
-    
-    revenue_data = [
-        ['إجمالي الإيرادات', 'هذا الشهر', 'هذا الأسبوع', 'اليوم'],
-        [f"{total_revenue} ج.م", f"{monthly} ج.م", f"{weekly} ج.م", f"{daily} ج.م"]
-    ]
-    revenue_table = Table(revenue_data, colWidths=[100, 100, 100, 100])
-    revenue_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#17a2b8')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    story.append(revenue_table)
-    
-    conn.close()
-    
-    story.append(Spacer(1, 24))
-    story.append(Paragraph("تم إنشاء هذا التقرير بواسطة نظام إدارة المهام", styles['Normal']))
-    
-    doc.build(story)
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, 
-                    download_name=f'تقرير_شامل_{datetime.now().strftime("%Y%m%d")}.pdf', 
-                    mimetype='application/pdf')
+    return redirect(url_for('company_settings'))
 
-@app.route('/export_all_payments_excel')
-def export_all_payments_excel():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    payments = conn.execute('''
-        SELECT client_payments.*, 
-               clients.name as client_name, 
-               clients.company_name,
-               client_modules.name as module_name
-        FROM client_payments
-        JOIN clients ON client_payments.client_id = clients.id
-        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
-        ORDER BY client_payments.created_at DESC
-    ''').fetchall()
-    conn.close()
-    
-    data = []
-    for p in payments:
-        data.append({
-            'رقم الدفعة': p['id'],
-            'العميل': p['client_name'],
-            'الشركة': p['company_name'] or '',
-            'المديول': p['module_name'] or '-',
-            'المبلغ': p['amount'],
-            'تاريخ الدفع': p['payment_date'],
-            'تاريخ الاستحقاق': p['due_date'] or '-',
-            'طريقة الدفع': p['payment_method'],
-            'الحالة': p['status'],
-            'رقم الفاتورة': p['invoice_number'] or '-',
-            'ملاحظات': p['notes'] or ''
-        })
-    
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='المدفوعات')
-        workbook = writer.book
-        worksheet = writer.sheets['المدفوعات']
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-    
-    output.seek(0)
-    return send_file(output, as_attachment=True, 
-                    download_name=f'جميع_المدفوعات_{datetime.now().strftime("%Y%m%d")}.xlsx', 
-                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-@app.route('/export_revenue_excel')
-def export_revenue_excel():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    revenue_by_client = conn.execute('''
-        SELECT clients.name, 
-               SUM(client_payments.amount) as total,
-               COUNT(client_payments.id) as count
-        FROM client_payments
-        JOIN clients ON client_payments.client_id = clients.id
-        WHERE client_payments.status = "مدفوع"
-        GROUP BY clients.id
-        ORDER BY total DESC
-    ''').fetchall()
-    
-    revenue_by_month = conn.execute('''
-        SELECT strftime("%Y-%m", payment_date) as month,
-               SUM(amount) as total
-        FROM client_payments
-        WHERE status = "مدفوع"
-        GROUP BY strftime("%Y-%m", payment_date)
-        ORDER BY month DESC
-    ''').fetchall()
-    
-    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
-    conn.close()
-    
-    data = []
-    data.append({'النوع': 'إجمالي الإيرادات', 'القيمة': f"{total_revenue} ج.م", 'ملاحظة': ''})
-    data.append({'النوع': '', 'القيمة': '', 'ملاحظة': ''})
-    
-    for client in revenue_by_client:
-        data.append({'النوع': f'العميل: {client["name"]}', 'القيمة': f"{client['total']} ج.م", 'ملاحظة': f'{client["count"]} مدفوعات'})
-    
-    data.append({'النوع': '', 'القيمة': '', 'ملاحظة': ''})
-    data.append({'النوع': '--- الإيرادات حسب الشهر ---', 'القيمة': '', 'ملاحظة': ''})
-    
-    for month in revenue_by_month:
-        data.append({'النوع': f'شهر {month["month"]}', 'القيمة': f"{month['total']} ج.م", 'ملاحظة': ''})
-    
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='تقرير الإيرادات')
-        workbook = writer.book
-        worksheet = writer.sheets['تقرير الإيرادات']
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-    
-    output.seek(0)
-    return send_file(output, as_attachment=True, 
-                    download_name=f'تقرير_الإيرادات_{datetime.now().strftime("%Y%m%d")}.xlsx', 
-                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-@app.route('/export_revenue_pdf')
-def export_revenue_pdf():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
-    revenue_by_client = conn.execute('''
-        SELECT clients.name, 
-               SUM(client_payments.amount) as total,
-               COUNT(client_payments.id) as count
-        FROM client_payments
-        JOIN clients ON client_payments.client_id = clients.id
-        WHERE client_payments.status = "مدفوع"
-        GROUP BY clients.id
-        ORDER BY total DESC
-    ''').fetchall()
-    revenue_by_month = conn.execute('''
-        SELECT strftime("%Y-%m", payment_date) as month,
-               SUM(amount) as total
-        FROM client_payments
-        WHERE status = "مدفوع"
-        GROUP BY strftime("%Y-%m", payment_date)
-        ORDER BY month DESC
-    ''').fetchall()
-    conn.close()
-    
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=16)
-    
-    story = []
-    story.append(Paragraph("تقرير الإيرادات", title_style))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
-    story.append(Spacer(1, 24))
-    
-    story.append(Paragraph(f"<b>إجمالي الإيرادات: {total_revenue} ج.م</b>", styles['Normal']))
-    story.append(Spacer(1, 12))
-    
-    story.append(Paragraph("<b>الإيرادات حسب العميل</b>", styles['Heading2']))
-    if revenue_by_client:
-        data = [['#', 'العميل', 'عدد المدفوعات', 'المبلغ']]
-        for i, client in enumerate(revenue_by_client, 1):
-            data.append([str(i), client['name'], str(client['count']), f"{client['total']} ج.م"])
-        table = Table(data, colWidths=[30, 120, 80, 100])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
-        story.append(table)
-    else:
-        story.append(Paragraph("لا توجد إيرادات مسجلة", styles['Normal']))
-    story.append(Spacer(1, 24))
-    
-    story.append(Paragraph("<b>الإيرادات حسب الشهر</b>", styles['Heading2']))
-    if revenue_by_month:
-        data = [['الشهر', 'المبلغ']]
-        for month in revenue_by_month:
-            data.append([month['month'], f"{month['total']} ج.م"])
-        table = Table(data, colWidths=[100, 100])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
-        story.append(table)
-    else:
-        story.append(Paragraph("لا توجد إيرادات مسجلة", styles['Normal']))
-    
-    doc.build(story)
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, 
-                    download_name=f'تقرير_الإيرادات_{datetime.now().strftime("%Y%m%d")}.pdf', 
-                    mimetype='application/pdf')
-
+# ============================================================
+# تغيير كلمة المرور
+# ============================================================
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
     if 'user_id' not in session:
@@ -2087,90 +1938,6 @@ def change_password():
         return redirect(url_for('index'))
     
     return render_template('change_password.html')
-# ============================================================
-# نسخ احتياطي تلقائي
-# ============================================================
-
-def auto_backup():
-    """عمل نسخة احتياطية من قاعدة البيانات"""
-    try:
-        db_path = '/app/data/tasks.db'
-        backup_dir = '/app/data/backups/'
-        
-        # تأكد من وجود مجلد النسخ الاحتياطية
-        os.makedirs(backup_dir, exist_ok=True)
-        
-        # اسم الملف بالتاريخ
-        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        backup_path = os.path.join(backup_dir, backup_name)
-        
-        # نسخ الملف
-        if os.path.exists(db_path):
-            shutil.copy2(db_path, backup_path)
-            
-            # حذف النسخ القديمة (احتفظ بآخر 30 نسخة)
-            backups = sorted(os.listdir(backup_dir))
-            if len(backups) > 30:
-                for old in backups[:-30]:
-                    os.remove(os.path.join(backup_dir, old))
-            
-            print(f"✅ تم إنشاء نسخة احتياطية: {backup_name}")
-            return True
-    except Exception as e:
-        print(f"❌ خطأ في النسخ الاحتياطي: {str(e)}")
-        return False
-
-# ===== استدعاء النسخ الاحتياطي عند بدء التشغيل =====
-# auto_backup()
-
-# ============================================================
-# النسخ الاحتياطي
-# ============================================================
-
-@app.route('/backup_database')
-def backup_database():
-    """عمل نسخة احتياطية من قاعدة البيانات"""
-    if not check_role(['مدير']):
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('index'))
-    
-    try:
-        db_path = '/app/data/tasks.db'
-        backup_dir = '/app/data/backups/'
-        os.makedirs(backup_dir, exist_ok=True)
-        
-        backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        backup_path = os.path.join(backup_dir, backup_name)
-        
-        if os.path.exists(db_path):
-            shutil.copy2(db_path, backup_path)
-            flash(f'✅ تم إنشاء النسخة الاحتياطية بنجاح: {backup_name}', 'success')
-        else:
-            flash('❌ قاعدة البيانات غير موجودة', 'danger')
-    except Exception as e:
-        flash(f'❌ خطأ: {str(e)}', 'danger')
-    
-    return redirect(url_for('company_settings'))
-
-@app.route('/download_backup')
-def download_backup():
-    """تحميل أحدث نسخة احتياطية"""
-    if not check_role(['مدير']):
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('index'))
-    
-    backup_dir = '/app/data/backups/'
-    if not os.path.exists(backup_dir):
-        flash('❌ لا توجد نسخ احتياطية', 'danger')
-        return redirect(url_for('company_settings'))
-    
-    backups = sorted(os.listdir(backup_dir), reverse=True)
-    if not backups:
-        flash('❌ لا توجد نسخ احتياطية', 'danger')
-        return redirect(url_for('company_settings'))
-    
-    latest = os.path.join(backup_dir, backups[0])
-    return send_file(latest, as_attachment=True, download_name=backups[0])
 
 # ============================================================
 # تشغيل التطبيق
@@ -2179,6 +1946,7 @@ if __name__ == '__main__':
     print("🚀 جاري تشغيل السيرفر...")
     print("📍 افتح المتصفح على: http://127.0.0.1:5000")
     print("👤 حسابات تجريبية:")
+    print("   Adminerp / 1234 (مدير)")
     print("   Fahd01 / 1234 (مدير)")
     print("   employee1 / 1234 (موظف)")
     print("   viewer1 / 1234 (مراقب)")
