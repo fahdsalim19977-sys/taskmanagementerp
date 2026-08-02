@@ -4,16 +4,14 @@ import sqlite3
 from datetime import datetime
 import hashlib
 
-# ===== استخدام Persistent Storage =====
-DB_PATH = '/app/data/tasks.db'
-
-# ===== لو على جهاز محلي =====
-if not os.path.exists('/app/data'):
-    DB_PATH = 'tasks.db'
+# ===== استخدام مسار مؤقت =====
+if os.environ.get('RAILWAY_ENVIRONMENT'):
+    DB_NAME = '/tmp/tasks.db'
+else:
+    DB_NAME = 'tasks.db'
 
 def get_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -182,7 +180,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_id INTEGER,
+            client_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             description TEXT,
             price REAL DEFAULT 0,
@@ -238,45 +236,7 @@ def init_db():
         )
     ''')
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS client_contracts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_id INTEGER NOT NULL,
-            contract_number TEXT UNIQUE NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT,
-            start_date DATE NOT NULL,
-            end_date DATE NOT NULL,
-            contract_value REAL DEFAULT 0,
-            status TEXT CHECK(status IN ("نشط", "منتهي", "ملغي", "معلق")) DEFAULT "نشط",
-            file_path TEXT,
-            notes TEXT,
-            created_by INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
-            FOREIGN KEY (created_by) REFERENCES users(id)
-        )
-    ''')
-    
-    # ===== جدول مرفقات العقود =====
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS contract_attachments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            contract_id INTEGER NOT NULL,
-            file_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_size INTEGER DEFAULT 0,
-            file_type TEXT,
-            uploaded_by INTEGER NOT NULL,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (contract_id) REFERENCES client_contracts(id) ON DELETE CASCADE,
-            FOREIGN KEY (uploaded_by) REFERENCES users(id)
-        )
-    ''')
-    
-    # ===== البيانات الافتراضية =====
+    # ===== إعدادات الشركة =====
     cursor.execute("SELECT * FROM company_settings")
     if not cursor.fetchone():
         cursor.execute('''
@@ -284,13 +244,7 @@ def init_db():
             VALUES (?, ?, ?, ?, ?, ?)
         ''', ('شركة التقنية المتقدمة', 'Advanced Technology Company', '+966 50 123 4567', 'الرياض، المملكة العربية السعودية', 'info@techcompany.com', 'www.techcompany.com'))
     
-    cursor.execute("SELECT * FROM users WHERE username = 'Adminerp'")
-    if not cursor.fetchone():
-        cursor.execute('''
-            INSERT INTO users (username, name, email, password, role)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ('Adminerp', 'مدير النظام', 'adminerp@company.com', hash_password('1234'), 'مدير'))
-    
+    # ===== المستخدمين =====
     cursor.execute("SELECT * FROM users WHERE username = 'Fahd01'")
     if not cursor.fetchone():
         cursor.execute('''
@@ -307,19 +261,6 @@ def init_db():
             ('viewer1', 'خالد مراقب', 'khalid@company.com', ?, 'مراقب')
         ''', (hash_password('1234'), hash_password('1234')))
     
-    cursor.execute("SELECT COUNT(*) as count FROM trainers")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute('''
-            INSERT INTO trainers (name, phone, email, specialty, notes)
-            VALUES 
-            ('أحمد سليمان', '0551234567', 'ahmed@trainer.com', 'تدريب تقني', 'مدرب معتمد'),
-            ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة'),
-            ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير')
-        ''')
-    
     conn.commit()
-    print(f"✅ تم تهيئة قاعدة البيانات في: {DB_PATH}")
     conn.close()
-
-# ===== استدعاء التهيئة =====
-init_db()
+    print("✅ تم تهيئة قاعدة البيانات بنجاح!")
