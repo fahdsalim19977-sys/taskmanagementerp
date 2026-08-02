@@ -331,24 +331,26 @@ def add_client():
         company_name = request.form.get('company_name', '')
         notes = request.form.get('notes', '')
         trainer_ids = request.form.getlist('trainer_ids')
-        
-        conn = get_db()
-        
-        cursor = conn.execute('''
+
+conn = get_db()
+cursor = conn.cursor()
+cursor.execute('''
             INSERT INTO clients (name, phone, email, address, company_name, notes)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (name, phone, email, address, company_name, notes))
-        client_id = cursor.lastrowid
+        '''), (name, phone, email, address, company_name, notes))
+result = cursor.fetchall()
+conn.close()
+
         
-        for trainer_id in trainer_ids:
-            if trainer_id:
-                conn.execute('''
-                    INSERT INTO client_trainers (client_id, trainer_id)
-                    VALUES (?, ?)
-                ''', (client_id, trainer_id))
         
-        conn.commit()
-        conn.close()
+        conn = get_db()
+cursor = conn.cursor()
+cursor.execute('''
+            INSERT INTO clients (name, phone, email, address, company_name, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        '''), (name, phone, email, address, company_name, notes))
+result = cursor.fetchall()
+conn.close()
         
         flash('✅ تم إضافة العميل بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة عميل', f'أضاف {name}')
