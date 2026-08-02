@@ -1,31 +1,15 @@
 ﻿# app.py
 import os
 import sys
-import logging
+import traceback
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from models import get_db, init_db, hash_password
 from config import Config
 from translations import get_text
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-import io
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-import pandas as pd
-import json
 import sqlite3
 import shutil
-import zipfile
-
-# ===== إعدادات التسجيل =====
-logging.basicConfig(level=logging.DEBUG)
-print("🚀 بدء تشغيل التطبيق...")
-
-# ===== إعدادات IIS =====
-if os.name == 'nt':
-    sys.path.insert(0, os.path.dirname(__file__))
 
 # ============================================================
 # إنشاء التطبيق
@@ -37,10 +21,28 @@ app.config.from_object(Config)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static', exist_ok=True)
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'contracts'), exist_ok=True)
-print(f"📁 مجلدات التحميل جاهزة: {app.config['UPLOAD_FOLDER']}")
 
 # ============================================================
-# دوال اللغة
+# معالج الأخطاء العام
+# ============================================================
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """معالج الأخطاء العام"""
+    print("=" * 60)
+    print("❌ خطأ غير متوقع:")
+    traceback.print_exc()
+    print("=" * 60)
+    return f"""
+    <h1>❌ Internal Server Error</h1>
+    <h3>تفاصيل الخطأ:</h3>
+    <pre style="background:#f4f4f4;padding:15px;border-radius:5px;overflow:auto;max-height:400px;">
+    {traceback.format_exc()}
+    </pre>
+    <p><a href="/">العودة للرئيسية</a></p>
+    """, 500
+
+# ============================================================
+# دوال مساعدة
 # ============================================================
 def get_lang():
     return session.get('lang', 'ar')
@@ -48,9 +50,6 @@ def get_lang():
 def t(key):
     return get_text(key, get_lang())
 
-# ============================================================
-# دوال مساعدة
-# ============================================================
 def log_activity(user_id, action, details=None):
     try:
         conn = get_db()
@@ -80,25 +79,10 @@ def get_company_settings():
         return None
 
 def get_trainers():
-    """جلب قائمة المدربين النشطين"""
     conn = get_db()
-    trainers = conn.execute('''
-        SELECT id, name FROM trainers 
-        WHERE is_active = 1
-        ORDER BY name
-    ''').fetchall()
+    trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     conn.close()
     return trainers
-
-# ============================================================
-# تبديل اللغة
-# ============================================================
-@app.route('/set_lang/<lang>')
-def set_lang(lang):
-    if lang in ['ar', 'en']:
-        session['lang'] = lang
-        flash(f'✅ تم تغيير اللغة إلى {lang}', 'success')
-    return redirect(request.referrer or url_for('index'))
 
 @app.context_processor
 def utility_processor():
@@ -113,125 +97,57 @@ def utility_processor():
 # ============================================================
 # تهيئة قاعدة البيانات
 # ============================================================
-print("🔄 جاري تهيئة قاعدة البيانات...")
 try:
     init_db()
     print("✅ تم تهيئة قاعدة البيانات بنجاح")
 except Exception as e:
     print(f"❌ خطأ في تهيئة قاعدة البيانات: {e}")
-    import traceback
     traceback.print_exc()
 
 # ============================================================
-# Health Check (لـ Railway)
+# Health Check
 # ============================================================
 @app.route('/health')
 def health():
-    """Health check endpoint for Railway"""
     return jsonify({"status": "ok", "message": "Application is running"}), 200
-
-# ============================================================
-# الصفحة الرئيسية
-# ============================================================
-@app.route('/')
-def index():
-    print("🔍 Index route called")
-    try:
-        if 'user_id' not in session:
-            print("👤 No user in session, redirecting to login")
-            return redirect(url_for('login'))
-        
-        print(f"👤 User: {session.get('user_name')} (ID: {session.get('user_id')})")
-        conn = get_db()
-        total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
-        completed_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
-        overdue_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
-        in_progress = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count']
-        total_clients = conn.execute('SELECT COUNT(*) as count FROM clients').fetchone()['count']
-        total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-        upcoming_meetings = conn.execute('SELECT COUNT(*) as count FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول"').fetchone()['count']
-        total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
-        
-        overdue_list = conn.execute('''
-            SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
-            FROM tasks 
-            JOIN clients ON tasks.client_id = clients.id 
-            JOIN users ON tasks.assigned_to = users.id 
-            WHERE due_date < date("now") AND status != "مكتملة"
-            ORDER BY due_date ASC
-            LIMIT 10
-        ''').fetchall()
-        
-        conn.close()
-        settings = get_company_settings()
-        
-        return render_template('index.html', 
-                             total_tasks=total_tasks,
-                             completed_tasks=completed_tasks,
-                             overdue_tasks=overdue_tasks,
-                             in_progress=in_progress,
-                             total_clients=total_clients,
-                             total_users=total_users,
-                             upcoming_meetings=upcoming_meetings,
-                             total_revenue=total_revenue,
-                             overdue_list=overdue_list,
-                             settings=settings)
-    except Exception as e:
-        print(f"❌ خطأ في Index: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 # ============================================================
 # تسجيل الدخول والخروج
 # ============================================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    print("🔍 Login route called")
-    try:
-        if request.method == 'POST':
-            username = request.form.get('username', '').strip()
-            password = request.form.get('password', '')
-            print(f"👤 محاولة تسجيل دخول: {username}")
-            
-            conn = get_db()
-            user = conn.execute('''
-                SELECT * FROM users 
-                WHERE username = ? AND password = ? AND is_active = 1
-            ''', (username, hash_password(password))).fetchone()
-            conn.close()
-            
-            if user:
-                session['user_id'] = user['id']
-                session['user_name'] = user['name']
-                session['user_role'] = user['role']
-                session['username'] = user['username']
-                session.permanent = True
-                
-                print(f"✅ تسجيل دخول ناجح: {user['name']}")
-                flash(f'مرحباً {user["name"]}! 👋', 'success')
-                
-                if user['role'] == 'مدير':
-                    return redirect(url_for('index'))
-                elif user['role'] == 'موظف':
-                    return redirect(url_for('tasks'))
-                else:
-                    return redirect(url_for('clients'))
-            else:
-                print(f"❌ فشل تسجيل الدخول: {username}")
-                flash('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
-        settings = get_company_settings()
-        return render_template('login.html', settings=settings)
-    except Exception as e:
-        print(f"❌ خطأ في Login: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        conn = get_db()
+        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ? AND is_active = 1', 
+                           (username, hash_password(password))).fetchone()
+        conn.close()
+        
+        if user:
+            session['user_id'] = user['id']
+            session['user_name'] = user['name']
+            session['user_role'] = user['role']
+            session['username'] = user['username']
+            session.permanent = True
+            
+            flash(f'مرحباً {user["name"]}! 👋', 'success')
+            
+            if user['role'] == 'مدير':
+                return redirect(url_for('index'))
+            elif user['role'] == 'موظف':
+                return redirect(url_for('tasks'))
+            else:
+                return redirect(url_for('clients'))
+        else:
+            flash('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
+    
+    settings = get_company_settings()
+    return render_template('login.html', settings=settings)
 
 @app.route('/logout')
 def logout():
-    """تسجيل الخروج"""
     try:
         if 'user_id' in session:
             log_activity(session['user_id'], 'تسجيل خروج', '')
@@ -244,68 +160,50 @@ def logout():
         return redirect(url_for('login'))
 
 # ============================================================
-# باقي المسارات (Tasks, Clients, Contracts, etc.)
+# الصفحة الرئيسية
 # ============================================================
-
-# ===== إدارة المستخدمين =====
-@app.route('/users')
-def users():
-    if not check_role(['مدير']):
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('index'))
-    conn = get_db()
-    users_list = conn.execute('SELECT * FROM users ORDER BY created_at DESC').fetchall()
-    conn.close()
-    return render_template('users.html', users=users_list)
-
-@app.route('/add_user', methods=['GET', 'POST'])
-def add_user():
-    if not check_role(['مدير']):
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('index'))
-    if request.method == 'POST':
-        username = request.form['username']
-        name = request.form['name']
-        email = request.form['email']
-        password = request.form['password']
-        role = request.form['role']
-        conn = get_db()
-        try:
-            conn.execute('INSERT INTO users (username, name, email, password, role) VALUES (?, ?, ?, ?, ?)', 
-                        (username, name, email, hash_password(password), role))
-            conn.commit()
-            flash('✅ تم إضافة المستخدم بنجاح', 'success')
-            log_activity(session['user_id'], 'إضافة مستخدم', f'أضاف {username}')
-        except sqlite3.IntegrityError:
-            flash('❌ اسم المستخدم أو البريد موجود مسبقاً', 'danger')
-        conn.close()
-        return redirect(url_for('users'))
-    return render_template('add_user.html')
-
-@app.route('/delete_user/<int:user_id>', methods=['POST'])
-def delete_user(user_id):
+@app.route('/')
+def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    if session['user_role'] != 'مدير':
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('users'))
-    if user_id == session['user_id']:
-        flash('❌ لا يمكنك حذف حسابك الخاص', 'danger')
-        return redirect(url_for('users'))
+    
     conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    if not user:
-        flash('❌ المستخدم غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('users'))
-    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    conn.commit()
+    total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
+    completed_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
+    overdue_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
+    in_progress = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count']
+    total_clients = conn.execute('SELECT COUNT(*) as count FROM clients').fetchone()['count']
+    total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
+    upcoming_meetings = conn.execute('SELECT COUNT(*) as count FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول"').fetchone()['count']
+    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
+    
+    overdue_list = conn.execute('''
+        SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN users ON tasks.assigned_to = users.id 
+        WHERE due_date < date("now") AND status != "مكتملة"
+        ORDER BY due_date ASC
+        LIMIT 10
+    ''').fetchall()
     conn.close()
-    flash('✅ تم حذف المستخدم بنجاح', 'success')
-    log_activity(session['user_id'], 'حذف مستخدم', f'حذف {user["username"]}')
-    return redirect(url_for('users'))
+    settings = get_company_settings()
+    
+    return render_template('index.html', 
+                         total_tasks=total_tasks,
+                         completed_tasks=completed_tasks,
+                         overdue_tasks=overdue_tasks,
+                         in_progress=in_progress,
+                         total_clients=total_clients,
+                         total_users=total_users,
+                         upcoming_meetings=upcoming_meetings,
+                         total_revenue=total_revenue,
+                         overdue_list=overdue_list,
+                         settings=settings)
 
-# ===== إدارة العملاء =====
+# ============================================================
+# العملاء
+# ============================================================
 @app.route('/clients')
 def clients():
     if 'user_id' not in session:
@@ -324,47 +222,9 @@ def clients():
     conn.close()
     return render_template('clients.html', clients=clients_list)
 
-@app.route('/add_client', methods=['GET', 'POST'])
-def add_client():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    trainers = get_trainers()
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        phone = request.form.get('phone', '')
-        email = request.form.get('email', '')
-        address = request.form.get('address', '')
-        company_name = request.form.get('company_name', '')
-        notes = request.form.get('notes', '')
-        trainer_ids = request.form.getlist('trainer_ids')
-        
-        conn = get_db()
-        
-        cursor = conn.execute('''
-            INSERT INTO clients (name, phone, email, address, company_name, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (name, phone, email, address, company_name, notes))
-        client_id = cursor.lastrowid
-        
-        for trainer_id in trainer_ids:
-            if trainer_id:
-                conn.execute('''
-                    INSERT INTO client_trainers (client_id, trainer_id)
-                    VALUES (?, ?)
-                ''', (client_id, trainer_id))
-        
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم إضافة العميل بنجاح', 'success')
-        log_activity(session['user_id'], 'إضافة عميل', f'أضاف {name}')
-        return redirect(url_for('clients'))
-    
-    return render_template('add_client.html', trainers=trainers)
-
-# ===== عقود العملاء =====
+# ============================================================
+# العقود
+# ============================================================
 @app.route('/contracts')
 def contracts():
     if 'user_id' not in session:
@@ -420,7 +280,7 @@ def add_contract():
         contract_id = cursor.lastrowid
         conn.commit()
         
-        # ===== معالجة المرفقات =====
+        # معالجة المرفقات
         files = request.files.getlist('attachments')
         uploaded_count = 0
         
@@ -482,10 +342,8 @@ def edit_contract(contract_id):
         status = request.form['status']
         notes = request.form.get('notes', '')
         
-        check = conn.execute('''
-            SELECT * FROM client_contracts 
-            WHERE contract_number = ? AND id != ?
-        ''', (contract_number, contract_id)).fetchone()
+        check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ? AND id != ?', 
+                           (contract_number, contract_id)).fetchone()
         if check:
             flash('❌ رقم العقد موجود مسبقاً', 'danger')
             conn.close()
@@ -529,14 +387,25 @@ def delete_contract(contract_id):
     log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
     return redirect(url_for('contracts'))
 
-@app.route('/contract/<int:contract_id>/attachments')
-def contract_attachments(contract_id):
-    """عرض جميع مرفقات العقد"""
+@app.route('/contract/<int:contract_id>')
+def contract_details(contract_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
-    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
@@ -551,9 +420,9 @@ def contract_attachments(contract_id):
     ''', (contract_id,)).fetchall()
     conn.close()
     
-    return render_template('contract_attachments.html', 
-                         contract=contract, 
-                         attachments=attachments)
+    return render_template('contract_details.html', 
+                         contract=contract,
+                         contract_attachments=attachments)
 
 # ===== مرفقات العقود =====
 
@@ -656,18 +525,142 @@ def delete_contract_attachment(attachment_id):
     log_activity(session['user_id'], 'حذف مرفق عقد', f'حذف {attachment["file_name"]}')
     return redirect(request.referrer or url_for('contracts'))
 
-# ===== باقي المسارات (Tasks, Trainers, etc.) =====
-# ... أضف بقية المسارات هنا ...
+@app.route('/contract/<int:contract_id>/attachments')
+def contract_attachments(contract_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    attachments = conn.execute('''
+        SELECT contract_attachments.*, users.name as uploaded_by_name
+        FROM contract_attachments
+        JOIN users ON contract_attachments.uploaded_by = users.id
+        WHERE contract_attachments.contract_id = ?
+        ORDER BY contract_attachments.created_at DESC
+    ''', (contract_id,)).fetchall()
+    conn.close()
+    
+    return render_template('contract_attachments.html', 
+                         contract=contract, 
+                         attachments=attachments)
+
+# ============================================================
+# المهام
+# ============================================================
+@app.route('/tasks')
+def tasks():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task_list = conn.execute('''
+        SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN users ON tasks.assigned_to = users.id 
+        ORDER BY tasks.due_date ASC
+    ''').fetchall()
+    conn.close()
+    return render_template('tasks.html', tasks=task_list, today=datetime.now().date())
+
+# ============================================================
+# المديولات
+# ============================================================
+@app.route('/all_modules')
+def all_modules():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    modules = conn.execute('''
+        SELECT client_modules.*, 
+               clients.name as client_name,
+               clients.company_name
+        FROM client_modules
+        LEFT JOIN clients ON client_modules.client_id = clients.id
+        ORDER BY client_modules.created_at DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('all_modules.html', modules=modules)
+
+# ============================================================
+# المدفوعات
+# ============================================================
+@app.route('/all_payments')
+def all_payments():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               clients.name as client_name, 
+               clients.company_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN clients ON client_payments.client_id = clients.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        ORDER BY client_payments.created_at DESC
+    ''').fetchall()
+    
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+    ''').fetchone()
+    conn.close()
+    
+    return render_template('all_payments.html', payments=payments, stats=stats)
+
+# ============================================================
+# تغيير كلمة المرور
+# ============================================================
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        if new_password != confirm_password:
+            flash('❌ كلمة المرور الجديدة وتأكيدها غير متطابقين', 'danger')
+            return render_template('change_password.html')
+        
+        conn = get_db()
+        user = conn.execute('SELECT * FROM users WHERE id = ? AND password = ?', 
+                           (session['user_id'], hash_password(current_password))).fetchone()
+        
+        if not user:
+            flash('❌ كلمة المرور الحالية غير صحيحة', 'danger')
+            conn.close()
+            return render_template('change_password.html')
+        
+        conn.execute('UPDATE users SET password = ? WHERE id = ?', 
+                    (hash_password(new_password), session['user_id']))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تغيير كلمة المرور بنجاح', 'success')
+        log_activity(session['user_id'], 'تغيير كلمة مرور', '')
+        return redirect(url_for('index'))
+    
+    return render_template('change_password.html')
 
 # ============================================================
 # تشغيل التطبيق
 # ============================================================
 if __name__ == '__main__':
     print("🚀 جاري تشغيل السيرفر...")
-    print("📍 افتح المتصفح على: http://127.0.0.1:5000")
-    print("👤 حسابات تجريبية:")
-    print("   Adminerp / 1234 (مدير)")
-    print("   Fahd01 / 1234 (مدير)")
-    print("   employee1 / 1234 (موظف)")
-    print("   viewer1 / 1234 (مراقب)")
     app.run(debug=True, host='0.0.0.0', port=5000)
