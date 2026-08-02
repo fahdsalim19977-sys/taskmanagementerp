@@ -4,8 +4,7 @@
     },
     "deploy": {
         "startCommand": "gunicorn --bind 0.0.0.0:8080 app:app",
-        "healthcheckPath": "/health",
-        "restartPolicyType": "ON_FAILURE",
-        "timeout": 300
+        "healthcheckPath": "/",
+        "restartPolicyType": "ON_FAILURE"
     }
 }
