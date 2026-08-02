@@ -387,6 +387,154 @@
     {% else %}
     <p class="text-muted text-center">لا توجد مديولات لهذا العميل</p>
     {% endif %}
+<!-- ===== دفعات العقود ===== -->
+<h5 class="section-title"><i class="bi bi-file-earmark-text"></i> دفعات العقود</h5>
+
+{% if contract_payments %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>رقم العقد</th>
+                <th>الدفعة</th>
+                <th>المبلغ</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>تاريخ الدفع</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in contract_payments %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <a href="/contract/{{ payment.contract_id }}" target="_blank">
+                        {{ payment.contract_number }}
+                    </a>
+                </td>
+                <td>{{ payment.installment_number }}</td>
+                <td><strong>{{ payment.amount }} ج.م</strong></td>
+                <td>{{ payment.due_date }}</td>
+                <td>{{ payment.payment_date or '-' }}</td>
+                <td>
+                    <span class="status-badge 
+                        {% if payment.status == 'مدفوعة' %}status-paid
+                        {% elif payment.status == 'متأخرة' %}status-overdue-pay
+                        {% else %}status-pending{% endif %}">
+                        {{ payment.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== إحصائيات الدفعات ===== -->
+<div class="row g-3 mt-3">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>المدفوع</h6>
+                <h3>{{ contract_payments|selectattr('status', 'equalto', 'مدفوعة')|sum(attribute='amount')|round(2) }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>المستحق</h6>
+                <h3>{{ contract_payments|selectattr('status', 'equalto', 'مستحقة')|sum(attribute='amount')|round(2) }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h6>المتأخر</h6>
+                <h3>{{ contract_payments|selectattr('status', 'equalto', 'متأخرة')|sum(attribute='amount')|round(2) }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<p class="text-muted text-center">لا توجد دفعات عقود لهذا العميل</p>
+{% endif %}
+<!-- ===== دفعات العقود ===== -->
+<h5 class="section-title"><i class="bi bi-file-earmark-text"></i> دفعات العقود ({{ contract_payments|length }})</h5>
+
+{% if contract_payments %}
+<div class="table-responsive">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>رقم العقد</th>
+                <th>الدفعة</th>
+                <th>المبلغ</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>تاريخ الدفع</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in contract_payments %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <a href="/contract/{{ payment.contract_id }}" target="_blank">
+                        {{ payment.contract_number }}
+                    </a>
+                </td>
+                <td>{{ payment.installment_number }}</td>
+                <td><strong>{{ payment.amount }} ج.م</strong></td>
+                <td>{{ payment.due_date }}</td>
+                <td>{{ payment.payment_date or '-' }}</td>
+                <td>
+                    <span class="status-badge 
+                        {% if payment.status == 'مدفوعة' %}status-paid
+                        {% elif payment.status == 'متأخرة' %}status-overdue-pay
+                        {% else %}status-pending{% endif %}">
+                        {{ payment.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ===== إحصائيات دفعات العقود ===== -->
+<div class="row g-3 mt-3">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>المدفوع من العقود</h6>
+                <h3>{{ contract_stats.total_paid or 0 }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>المستحق</h6>
+                <h3>{{ contract_stats.total_due or 0 }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h6>المتأخر</h6>
+                <h3>{{ contract_stats.total_overdue or 0 }} ج.م</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<p class="text-muted text-center">لا توجد دفعات عقود لهذا العميل</p>
+{% endif %}
     
     <!-- ===== المدفوعات ===== -->
 <h5 class="section-title"><i class="bi bi-coin"></i> المدفوعات ({{ payments|length }})</h5>
@@ -428,6 +576,7 @@
 {% else %}
 <p class="text-muted text-center">لا توجد مدفوعات لهذا العميل</p>
 {% endif %}
+
     
     <!-- ===== التذييل ===== -->
     <div class="footer-section">

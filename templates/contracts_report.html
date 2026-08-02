@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> تقارير العقود</h2>
+    <div>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> طباعة
+        </button>
+        <a href="/export_contracts_report_excel" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> تصدير Excel
+        </a>
+        <a href="/export_contracts_report_pdf" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> تصدير PDF
+        </a>
+        <a href="/reports" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- ===== إحصائيات سريعة ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي العقود</h6>
+                <h3>{{ contracts|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>مدفوعة بالكامل</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'مدفوع بالكامل')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>مدفوعة جزئياً</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'مدفوع جزئياً')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h6>غير مدفوعة</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'غير مدفوع')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== قائمة العقود مع التفاصيل ===== -->
+{% if contracts %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>رقم العقد</th>
+                <th>العنوان</th>
+                <th>العميل</th>
+                <th>القيمة الإجمالية</th>
+                <th>المدفوع</th>
+                <th>المتبقي</th>
+                <th>حالة الدفع</th>
+                <th>عدد الدفعات</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contract in contracts %}
+            <tr>
+                <td>{{ contract.id }}</td>
+                <td>
+                    <a href="/contract/{{ contract.id }}" class="text-decoration-none fw-bold">
+                        {{ contract.contract_number }}
+                    </a>
+                </td>
+                <td>{{ contract.title }}</td>
+                <td>
+                    <a href="/client_tasks/{{ contract.client_id }}" class="text-decoration-none">
+                        {{ contract.client_name }}
+                    </a>
+                </td>
+                <td>{{ contract.total_amount or contract.contract_value }} ج.م</td>
+                <td>{{ contract.paid_amount or 0 }} ج.م</td>
+                <td>
+                    {% set total = contract.total_amount or contract.contract_value %}
+                    {% set paid = contract.paid_amount or 0 %}
+                    {{ (total - paid)|round(2) }} ج.م
+                </td>
+                <td>
+                    <span class="badge 
+                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                        {% elif contract.payment_status == 'مدفوع جزئياً' %}bg-warning text-dark
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.payment_status }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge bg-info">{{ contract.payments_count or 0 }}</span>
+                </td>
+                <td>
+                    <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/contract_payments_report/{{ contract.id }}" class="btn btn-sm btn-info">
+                        <i class="bi bi-coin"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-file-earmark-text" style="font-size:48px;display:block;"></i>
+    <h4>لا توجد عقود</h4>
+    <p>قم بإضافة عقود لعرض التقارير</p>
+</div>
+{% endif %}
+
+<!-- ===== إجماليات ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-calculator"></i> إجماليات العقود</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h6>إجمالي قيمة العقود</h6>
+                <h4>{{ contracts|sum(attribute='total_amount')|round(2) }} ج.م</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-success">إجمالي المدفوع</h6>
+                <h4 class="text-success">{{ contracts|sum(attribute='paid_amount')|round(2) }} ج.م</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-danger">المتبقي</h6>
+                <h4 class="text-danger">
+                    {% set total = contracts|sum(attribute='total_amount') %}
+                    {% set paid = contracts|sum(attribute='paid_amount') %}
+                    {{ (total - paid)|round(2) }} ج.م
+                </h4>
+            </div>
+            <div class="col-md-3">
+                <h6>نسبة التحصيل</h6>
+                <h4>
+                    {% set total = contracts|sum(attribute='total_amount') %}
+                    {% set paid = contracts|sum(attribute='paid_amount') %}
+                    {% if total > 0 %}
+                        {{ ((paid / total) * 100)|round(1) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
