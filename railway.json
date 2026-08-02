@@ -1,0 +1,15 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pip install -r requirements.txt",
+    "startCommand": "gunicorn -w 2 -b 0.0.0.0:$PORT app:app",
+    "nixpacks": {
+      "apt": {
+        "packages": [
+          "libpq-dev",
+          "gcc"
+        ]
+      }
+    }
+  }
+}

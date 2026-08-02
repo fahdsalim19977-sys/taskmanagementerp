@@ -1,22 +1,31 @@
 ﻿# models.py
 import os
+import sys
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import hashlib
 from config import Config
 
+# ===== حل مشكلة libpq =====
+try:
+    import psycopg2
+except ImportError:
+    # محاولة إضافة المسار
+    sys.path.append('/app/.venv/lib/python3.13/site-packages')
+
 # ============================================================
 # الاتصال بقاعدة البيانات
 # ============================================================
 
 def get_db():
+    """الاتصال بقاعدة البيانات PostgreSQL"""
     try:
         conn = psycopg2.connect(Config.DATABASE_URL)
         conn.cursor_factory = RealDictCursor
         return conn
     except Exception as e:
-        print(f"❌ خطأ: {str(e)}")
+        print(f"❌ خطأ في الاتصال بقاعدة البيانات: {str(e)}")
         return None
 
 def hash_password(password):
