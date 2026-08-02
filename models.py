@@ -299,6 +299,22 @@ def init_db():
             ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة'),
             ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير')
         ''')
+        # ===== جدول مرفقات العقود =====
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS contract_attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contract_id INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER DEFAULT 0,
+        file_type TEXT,
+        uploaded_by INTEGER NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (contract_id) REFERENCES client_contracts(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id)
+    )
+''')
     
     conn.commit()
     print(f"✅ تم تهيئة قاعدة البيانات في: {DB_PATH}")

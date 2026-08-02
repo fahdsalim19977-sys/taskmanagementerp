@@ -37,6 +37,8 @@ app.config.from_object(Config)
 # التأكد من وجود مجلدات
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static', exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'contracts'), exist_ok=True)
+
 
 # ============================================================
 # دوال اللغة
@@ -1463,24 +1465,43 @@ def delete_module(module_id):
 # ============================================================
 # عقود العملاء
 # ============================================================
-@app.route('/contracts')
-def contracts():
+@app.route('/contract/<int:contract_id>')
+def contract_details(contract_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
-    contracts_list = conn.execute('''
+    contract = conn.execute('''
         SELECT client_contracts.*, 
                clients.name as client_name,
                clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
                users.name as created_by_name
         FROM client_contracts
         JOIN clients ON client_contracts.client_id = clients.id
         JOIN users ON client_contracts.created_by = users.id
-        ORDER BY client_contracts.created_at DESC
-    ''').fetchall()
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    # جلب المرفقات
+    attachments = conn.execute('''
+        SELECT contract_attachments.*, users.name as uploaded_by_name
+        FROM contract_attachments
+        JOIN users ON contract_attachments.uploaded_by = users.id
+        WHERE contract_attachments.contract_id = ?
+        ORDER BY contract_attachments.created_at DESC
+    ''', (contract_id,)).fetchall()
     conn.close()
-    return render_template('contracts.html', contracts=contracts_list)
+    
+    return render_template('contract_details.html', 
+                         contract=contract,
+                         contract_attachments=attachments)
 
 @app.route('/add_contract', methods=['GET', 'POST'])
 def add_contract():
@@ -1622,6 +1643,138 @@ def contract_details(contract_id):
     
     conn.close()
     return render_template('contract_details.html', contract=contract)
+
+@app.route('/contract/<int:contract_id>/attachments')
+def contract_attachments(contract_id):
+    """عرض جميع مرفقات العقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    attachments = conn.execute('''
+        SELECT contract_attachments.*, users.name as uploaded_by_name
+        FROM contract_attachments
+        JOIN users ON contract_attachments.uploaded_by = users.id
+        WHERE contract_attachments.contract_id = ?
+        ORDER BY contract_attachments.created_at DESC
+    ''', (contract_id,)).fetchall()
+    conn.close()
+    
+    return render_template('contract_attachments.html', 
+                         contract=contract, 
+                         attachments=attachments)
+@app.route('/add_contract_attachment/<int:contract_id>', methods=['POST'])
+def add_contract_attachment(contract_id):
+    """رفع مرفق جديد للعقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    if 'attachment' not in request.files:
+        flash('❌ لم يتم اختيار ملف', 'danger')
+        conn.close()
+        return redirect(url_for('contract_details', contract_id=contract_id))
+    
+    file = request.files['attachment']
+    if file.filename == '':
+        flash('❌ لم يتم اختيار ملف', 'danger')
+        conn.close()
+        return redirect(url_for('contract_details', contract_id=contract_id))
+    
+    description = request.form.get('description', '')
+    
+    # حفظ الملف
+    filename = secure_filename(file.filename)
+    # إضافة توقيت لتجنب التكرار
+    name_parts = filename.rsplit('.', 1)
+    if len(name_parts) > 1:
+        filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+    else:
+        filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    
+    # مجلد خاص بمرفقات العقود
+    attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
+    os.makedirs(attachments_folder, exist_ok=True)
+    file_path = os.path.join(attachments_folder, filename)
+    file.save(file_path)
+    
+    # حفظ في قاعدة البيانات
+    file_size = os.path.getsize(file_path)
+    conn.execute('''
+        INSERT INTO contract_attachments 
+        (contract_id, file_name, file_path, file_size, file_type, uploaded_by, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (contract_id, filename, file_path, file_size, file.content_type, 
+          session['user_id'], description))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم رفع المرفق بنجاح', 'success')
+    log_activity(session['user_id'], 'رفع مرفق عقد', f'رفع {filename} للعقد {contract["contract_number"]}')
+    return redirect(url_for('contract_details', contract_id=contract_id))
+@app.route('/download_contract_attachment/<int:attachment_id>')
+def download_contract_attachment(attachment_id):
+    """تحميل مرفق العقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
+    if not attachment:
+        flash('❌ المرفق غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    conn.close()
+    
+    if os.path.exists(attachment['file_path']):
+        return send_file(attachment['file_path'], 
+                       as_attachment=True, 
+                       download_name=attachment['file_name'])
+    else:
+        flash('❌ الملف غير موجود على السيرفر', 'danger')
+        return redirect(request.referrer or url_for('contracts'))
+    @app.route('/delete_contract_attachment/<int:attachment_id>', methods=['POST'])
+def delete_contract_attachment(attachment_id):
+    """حذف مرفق العقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
+    if not attachment:
+        flash('❌ المرفق غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    # حذف الملف الفعلي
+    if os.path.exists(attachment['file_path']):
+        try:
+            os.remove(attachment['file_path'])
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+    
+    # حذف من قاعدة البيانات
+    conn.execute('DELETE FROM contract_attachments WHERE id = ?', (attachment_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف المرفق بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف مرفق عقد', f'حذف {attachment["file_name"]}')
+    return redirect(request.referrer or url_for('contracts'))
+
 
 # ============================================================
 # التقارير
