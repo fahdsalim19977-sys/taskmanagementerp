@@ -39,7 +39,7 @@ def init_db():
         )
     ''')
     
-    cursor.execute('''
+    cursor.execute(''''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -238,11 +238,23 @@ def init_db():
         )
     ''')
     
-    # ===== جدول العقود (بالإصدار الجديد) =====
+    # ===== جدول أنواع العقود =====
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contract_types (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # ===== جدول العقود =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_contracts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_id INTEGER NOT NULL,
+            contract_type_id INTEGER,
             contract_number TEXT UNIQUE NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
@@ -259,6 +271,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+            FOREIGN KEY (contract_type_id) REFERENCES contract_types(id),
             FOREIGN KEY (created_by) REFERENCES users(id)
         )
     ''')
@@ -270,9 +283,10 @@ def init_db():
             contract_id INTEGER NOT NULL,
             installment_number INTEGER NOT NULL,
             amount REAL NOT NULL,
+            paid_amount REAL DEFAULT 0,
             due_date DATE NOT NULL,
             payment_date DATE,
-            status TEXT CHECK(status IN ("مستحقة", "مدفوعة", "متأخرة")) DEFAULT "مستحقة",
+            status TEXT CHECK(status IN ("مستحقة", "مدفوعة", "مدفوعة جزئياً", "متأخرة")) DEFAULT "مستحقة",
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -336,6 +350,18 @@ def init_db():
             ('أحمد سليمان', '0551234567', 'ahmed@trainer.com', 'تدريب تقني', 'مدرب معتمد'),
             ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة'),
             ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير')
+        ''')
+    
+    # ===== أنواع العقود الافتراضية =====
+    cursor.execute("SELECT COUNT(*) as count FROM contract_types")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('''
+            INSERT INTO contract_types (name, description)
+            VALUES 
+            ('عقد خدمات', 'عقد تقديم خدمات استشارية أو تقنية'),
+            ('عقد مقاولات', 'عقد أعمال مقاولات وإنشاءات'),
+            ('عقد توريد', 'عقد توريد مواد أو معدات'),
+            ('عقد تدريب', 'عقد تقديم دورات تدريبية')
         ''')
     
     conn.commit()
