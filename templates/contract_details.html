@@ -79,4 +79,83 @@
         </div>
     </div>
 </div>
+
+<!-- ===== قسم المرفقات ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">📎 المرفقات ({{ contract_attachments|length }})</h5>
+    </div>
+    <div class="card-body">
+        <!-- نموذج رفع ملف إضافي -->
+        <form action="/add_contract_attachment/{{ contract.id }}" 
+              method="POST" 
+              enctype="multipart/form-data" 
+              class="row g-3 mb-4">
+            <div class="col-md-5">
+                <label class="form-label">رفع مرفق إضافي</label>
+                <input type="file" name="attachment" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الوصف</label>
+                <input type="text" name="description" class="form-control" placeholder="وصف المرفق">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-upload"></i> رفع
+                </button>
+            </div>
+        </form>
+
+        <!-- قائمة المرفقات -->
+        {% if contract_attachments %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الملف</th>
+                        <th>الوصف</th>
+                        <th>الحجم</th>
+                        <th>رُفع بواسطة</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in contract_attachments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ att.file_name }}</td>
+                        <td>{{ att.description or '-' }}</td>
+                        <td>{{ (att.file_size / 1024) | round(1) }} ك.ب</td>
+                        <td>{{ att.uploaded_by_name }}</td>
+                        <td>{{ att.created_at[:16] }}</td>
+                        <td>
+                            <a href="/download_contract_attachment/{{ att.id }}" 
+                               class="btn btn-sm btn-info">
+                                <i class="bi bi-download"></i> تحميل
+                            </a>
+                            <form action="/delete_contract_attachment/{{ att.id }}" 
+                                  method="POST" 
+                                  style="display:inline-block;"
+                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا المرفق؟')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i> حذف
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-paperclip" style="font-size:32px;display:block;"></i>
+            <p>لا توجد مرفقات لهذا العقد</p>
+            <small class="text-muted">قم برفع ملف باستخدام النموذج أعلاه</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
