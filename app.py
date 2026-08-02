@@ -1291,6 +1291,7 @@ def print_client_full_report(client_id):
         return redirect(url_for('login'))
     
     conn = get_db()
+    
     client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
     if not client:
         flash('❌ العميل غير موجود', 'danger')
@@ -1314,6 +1315,17 @@ def print_client_full_report(client_id):
         ORDER BY client_payments.created_at DESC
     ''', (client_id,)).fetchall()
     
+    # ===== جلب دفعات العقود =====
+    contract_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.title as contract_title
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE client_contracts.client_id = ?
+        ORDER BY contract_payments.due_date DESC
+    ''', (client_id,)).fetchall()
+    
     stats = conn.execute('''
         SELECT 
             COUNT(*) as total_count,
@@ -1324,6 +1336,17 @@ def print_client_full_report(client_id):
         WHERE client_id = ?
     ''', (client_id,)).fetchone()
     
+    # ===== إحصائيات دفعات العقود =====
+    contract_stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوعة" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "مستحقة" THEN amount ELSE 0 END) as total_due,
+            SUM(CASE WHEN status = "متأخرة" THEN amount ELSE 0 END) as total_overdue
+        FROM contract_payments
+        WHERE contract_id IN (SELECT id FROM client_contracts WHERE client_id = ?)
+    ''', (client_id,)).fetchone()
+    
     settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
     conn.close()
     
@@ -1331,6 +1354,8 @@ def print_client_full_report(client_id):
                          client=client,
                          modules=modules,
                          payments=payments,
+                         contract_payments=contract_payments,
+                         contract_stats=contract_stats,
                          stats=stats,
                          settings=settings,
                          today=datetime.now().date())
@@ -1434,6 +1459,192 @@ def print_client_tasks(client_id):
                          not_started_tasks=not_started_tasks,
                          settings=settings,
                          today=datetime.now().date())
+
+# ============================================================
+# تقارير العقود
+# ============================================================
+@app.route('/contracts_report')
+def contracts_report():
+    """عرض تقرير شامل للعقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    # جلب جميع العقود مع معلومات العميل وعدد الدفعات
+    contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               (SELECT COUNT(*) FROM contract_payments WHERE contract_payments.contract_id = client_contracts.id) as payments_count
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    return render_template('contracts_report.html', contracts=contracts)
+
+@app.route('/contract_payments_report/<int:contract_id>')
+def contract_payments_report(contract_id):
+    """عرض تفاصيل دفعات عقد معين"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    contract = conn.execute('''
+        SELECT client_contracts.*, clients.name as client_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts_report'))
+    
+    payments = conn.execute('''
+        SELECT * FROM contract_payments 
+        WHERE contract_id = ?
+        ORDER BY installment_number ASC
+    ''', (contract_id,)).fetchall()
+    conn.close()
+    
+    return render_template('contract_payments_report.html', 
+                         contract=contract, 
+                         payments=payments)
+
+# ============================================================
+# تصدير تقرير العقود Excel
+# ============================================================
+@app.route('/export_contracts_report_excel')
+def export_contracts_report_excel():
+    """تصدير تقرير العقود إلى Excel"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               (SELECT COUNT(*) FROM contract_payments WHERE contract_payments.contract_id = client_contracts.id) as payments_count
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    data = []
+    for contract in contracts:
+        total = contract['total_amount'] or contract['contract_value'] or 0
+        paid = contract['paid_amount'] or 0
+        data.append({
+            'رقم العقد': contract['contract_number'],
+            'العنوان': contract['title'],
+            'العميل': contract['client_name'],
+            'الشركة': contract['company_name'] or '',
+            'القيمة الإجمالية': total,
+            'المدفوع': paid,
+            'المتبقي': total - paid,
+            'حالة الدفع': contract['payment_status'],
+            'عدد الدفعات': contract['payments_count'] or 0,
+            'تاريخ البداية': contract['start_date'],
+            'تاريخ النهاية': contract['end_date'],
+            'حالة العقد': contract['status']
+        })
+    
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='تقارير العقود')
+        workbook = writer.book
+        worksheet = writer.sheets['تقارير العقود']
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    output.seek(0)
+    return send_file(output, as_attachment=True, 
+                    download_name=f'تقرير_العقود_{datetime.now().strftime("%Y%m%d")}.xlsx',
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+# ============================================================
+# تصدير تقرير العقود PDF
+# ============================================================
+@app.route('/export_contracts_report_pdf')
+def export_contracts_report_pdf():
+    """تصدير تقرير العقود إلى PDF"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=16)
+    
+    story = []
+    story.append(Paragraph("تقرير العقود", title_style))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    story.append(Spacer(1, 24))
+    
+    if contracts:
+        data = [['#', 'رقم العقد', 'العميل', 'القيمة', 'المدفوع', 'المتبقي', 'الحالة']]
+        for i, contract in enumerate(contracts, 1):
+            total = contract['total_amount'] or contract['contract_value'] or 0
+            paid = contract['paid_amount'] or 0
+            data.append([
+                str(i),
+                contract['contract_number'],
+                contract['client_name'],
+                f"{total} ج.م",
+                f"{paid} ج.م",
+                f"{total - paid} ج.م",
+                contract['payment_status']
+            ])
+        
+        table = Table(data, colWidths=[30, 80, 100, 70, 70, 70, 80])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ]))
+        story.append(table)
+    else:
+        story.append(Paragraph("لا توجد عقود مسجلة", styles['Normal']))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True,
+                    download_name=f'تقرير_العقود_{datetime.now().strftime("%Y%m%d")}.pdf',
+                    mimetype='application/pdf')
 
 # ============================================================
 # تشغيل التطبيق
