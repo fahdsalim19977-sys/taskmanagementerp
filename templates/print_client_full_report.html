@@ -8,289 +8,48 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            font-family: 'Tajawal', sans-serif;
-        }
-        
-        body {
-            background: white;
-            padding: 30px;
-        }
-        
-        .print-container {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        
-        /* ===== الرأس ===== */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #1a237e;
-            padding-bottom: 20px;
-            margin-bottom: 25px;
-        }
-        
-        .header .company-info h2 {
-            color: #1a237e;
-            font-weight: 700;
-            margin: 0;
-            font-size: 22px;
-        }
-        
-        .header .company-info small {
-            color: #666;
-            font-size: 13px;
-        }
-        
-        .header .logo-img {
-            max-height: 80px;
-            max-width: 120px;
-            object-fit: contain;
-        }
-        
-        .header .logo-placeholder {
-            font-size: 48px;
-            color: #1a237e;
-        }
-        
-        /* ===== عنوان التقرير ===== */
-        .report-title {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        
-        .report-title h3 {
-            color: #1a237e;
-            font-weight: 700;
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .report-title .client-info {
-            color: #555;
-            font-size: 15px;
-        }
-        
-        .report-title .client-info strong {
-            color: #1a237e;
-        }
-        
-        /* ===== البطاقات ===== */
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        
-        .stats-cards .stat-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid #e9ecef;
-        }
-        
-        .stats-cards .stat-card h4 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 22px;
-        }
-        
-        .stats-cards .stat-card small {
-            color: #666;
-            font-size: 12px;
-        }
-        
+        * { font-family: 'Tajawal', sans-serif; }
+        body { background: white; padding: 30px; }
+        .print-container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a237e; padding-bottom: 20px; margin-bottom: 25px; }
+        .header .company-info h2 { color: #1a237e; font-weight: 700; margin: 0; font-size: 22px; }
+        .header .company-info small { color: #666; font-size: 13px; }
+        .header .logo-img { max-height: 80px; max-width: 120px; object-fit: contain; }
+        .header .logo-placeholder { font-size: 48px; color: #1a237e; }
+        .report-title { text-align: center; margin-bottom: 25px; }
+        .report-title h3 { color: #1a237e; font-weight: 700; font-size: 24px; margin-bottom: 5px; }
+        .report-title .client-info { color: #555; font-size: 15px; }
+        .report-title .client-info strong { color: #1a237e; }
+        .stats-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stats-cards .stat-card { background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center; border: 1px solid #e9ecef; }
+        .stats-cards .stat-card h4 { margin: 0; font-weight: 700; font-size: 22px; }
+        .stats-cards .stat-card small { color: #666; font-size: 12px; }
         .stat-total { border-right: 4px solid #1a237e; }
         .stat-paid { border-right: 4px solid #28a745; }
         .stat-pending { border-right: 4px solid #ffc107; }
         .stat-overdue { border-right: 4px solid #dc3545; }
-        
-        /* ===== الجداول ===== */
-        .section-title {
-            color: #1a237e;
-            font-weight: 700;
-            font-size: 18px;
-            margin: 25px 0 15px 0;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #e9ecef;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .data-table th {
-            background: #1a237e;
-            color: white;
-            padding: 10px 12px;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .data-table td {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            text-align: center;
-            vertical-align: middle;
-        }
-        
-        .data-table tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-        
-        .data-table .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-        }
-        
+        .section-title { color: #1a237e; font-weight: 700; font-size: 18px; margin: 25px 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #e9ecef; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        .data-table th { background: #1a237e; color: white; padding: 10px 12px; text-align: center; font-weight: 600; }
+        .data-table td { padding: 8px 12px; border: 1px solid #ddd; text-align: center; vertical-align: middle; }
+        .data-table tr:nth-child(even) { background: #f8f9fa; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
         .status-active { background: #d4edda; color: #155724; }
         .status-development { background: #fff3cd; color: #856404; }
         .status-completed { background: #cce5ff; color: #004085; }
         .status-stopped { background: #e2e3e5; color: #383d41; }
-        
         .status-paid { background: #d4edda; color: #155724; }
         .status-pending { background: #fff3cd; color: #856404; }
         .status-overdue-pay { background: #f8d7da; color: #721c24; }
-        
-        /* ===== التذييل ===== */
-        .footer-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #ddd;
-        }
-        
-        .footer-section .notes {
-            background: #fff8e1;
-            padding: 12px 18px;
-            border-radius: 8px;
-            border-right: 4px solid #ffc107;
-            margin-bottom: 20px;
-        }
-        
-        .footer-section .signature {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 15px;
-        }
-        
-        .footer-section .signature .company-name {
-            color: #1a237e;
-            font-weight: 700;
-            font-size: 16px;
-        }
-        
-        .footer-section .signature .slogan {
-            color: #666;
-            font-size: 13px;
-            font-style: italic;
-        }
-        
-        /* ===== أزرار التحكم ===== */
-        .no-print {
-            text-align: center;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-        }
-        
-        .no-print .btn {
-            padding: 10px 30px;
-            border-radius: 10px;
-            font-weight: 600;
-            margin: 0 5px;
-        }
-        
-        /* ===== طباعة ===== */
-        @media print {
-            body {
-                padding: 15px;
-                background: white;
-            }
-            .print-container {
-                box-shadow: none;
-                padding: 10px;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .data-table th {
-                background: #1a237e !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .status-active, .status-paid {
-                background: #d4edda !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .status-development, .status-pending {
-                background: #fff3cd !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .status-overdue-pay {
-                background: #f8d7da !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .status-completed {
-                background: #cce5ff !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .status-stopped {
-                background: #e2e3e5 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .header {
-                border-bottom-color: #1a237e !important;
-            }
-            .stats-cards .stat-card {
-                border: 1px solid #ddd !important;
-            }
-            .footer-section .notes {
-                background: #fff8e1 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .header .company-info {
-                margin-bottom: 10px;
-            }
-            .stats-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .data-table {
-                font-size: 12px;
-            }
-            .data-table th,
-            .data-table td {
-                padding: 5px 8px;
-            }
-        }
+        .footer-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd; }
+        .footer-section .notes { background: #fff8e1; padding: 12px 18px; border-radius: 8px; border-right: 4px solid #ffc107; margin-bottom: 20px; }
+        .footer-section .signature { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; }
+        .footer-section .signature .company-name { color: #1a237e; font-weight: 700; font-size: 16px; }
+        .footer-section .signature .slogan { color: #666; font-size: 13px; font-style: italic; }
+        .no-print { text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px solid #eee; }
+        .no-print .btn { padding: 10px 30px; border-radius: 10px; font-weight: 600; margin: 0 5px; }
+        @media print { body { padding: 15px; background: white; } .print-container { box-shadow: none; padding: 10px; } .no-print { display: none !important; } }
+        @media (max-width: 768px) { .header { flex-direction: column; text-align: center; } .header .company-info { margin-bottom: 10px; } .stats-cards { grid-template-columns: repeat(2, 1fr); } .data-table { font-size: 12px; } .data-table th, .data-table td { padding: 5px 8px; } }
     </style>
 </head>
 <body>
@@ -308,9 +67,7 @@
         </div>
         <div>
             {% if settings and settings.logo_path %}
-            <img src="{{ url_for('static', filename=settings.logo_path, _external=True) }}" 
-                 alt="شعار الشركة" 
-                 class="logo-img">
+            <img src="{{ url_for('static', filename=settings.logo_path, _external=True) }}" alt="شعار الشركة" class="logo-img">
             {% else %}
             <span class="logo-placeholder"><i class="bi bi-building"></i></span>
             {% endif %}
@@ -330,7 +87,9 @@
         </div>
     </div>
     
-    <!-- ===== إحصائيات سريعة ===== -->
+    <!-- ===== إحصائيات المدفوعات ===== -->
+    <h5 class="section-title"><i class="bi bi-coin"></i> المدفوعات ({{ payments|length }})</h5>
+    
     <div class="stats-cards">
         <div class="stat-card stat-total">
             <small>إجمالي المدفوعات</small>
@@ -349,7 +108,7 @@
             <h4>{{ stats.total_overdue or 0 }} ج.م</h4>
         </div>
     </div>
-    
+
     <!-- ===== المديولات ===== -->
     <h5 class="section-title"><i class="bi bi-grid"></i> المديولات ({{ modules|length }})</h5>
     
@@ -387,11 +146,11 @@
     {% else %}
     <p class="text-muted text-center">لا توجد مديولات لهذا العميل</p>
     {% endif %}
-<!-- ===== دفعات العقود ===== -->
-<h5 class="section-title"><i class="bi bi-file-earmark-text"></i> دفعات العقود</h5>
 
-{% if contract_payments %}
-<div class="table-responsive">
+    <!-- ===== دفعات العقود (مرة واحدة فقط) ===== -->
+    <h5 class="section-title"><i class="bi bi-file-earmark-text"></i> دفعات العقود ({{ contract_payments|length }})</h5>
+
+    {% if contract_payments %}
     <table class="data-table">
         <thead>
             <tr>
@@ -429,73 +188,68 @@
             {% endfor %}
         </tbody>
     </table>
-</div>
 
-<!-- ===== إحصائيات الدفعات ===== -->
-<div class="row g-3 mt-3">
-    <div class="col-md-4">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <h6>المدفوع</h6>
-                <h3>{{ contract_payments|selectattr('status', 'equalto', 'مدفوعة')|sum(attribute='amount')|round(2) }} ج.م</h3>
+    <!-- ===== إحصائيات دفعات العقود ===== -->
+    <div class="row g-3 mt-3">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h6>المدفوع من العقود</h6>
+                    <h3>{{ contract_stats.total_paid or 0 }} ج.م</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h6>المستحق</h6>
+                    <h3>{{ contract_stats.total_due or 0 }} ج.م</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h6>المتأخر</h6>
+                    <h3>{{ contract_stats.total_overdue or 0 }} ج.م</h3>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card bg-warning text-dark">
-            <div class="card-body text-center">
-                <h6>المستحق</h6>
-                <h3>{{ contract_payments|selectattr('status', 'equalto', 'مستحقة')|sum(attribute='amount')|round(2) }} ج.م</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-danger text-white">
-            <div class="card-body text-center">
-                <h6>المتأخر</h6>
-                <h3>{{ contract_payments|selectattr('status', 'equalto', 'متأخرة')|sum(attribute='amount')|round(2) }} ج.م</h3>
-            </div>
-        </div>
-    </div>
-</div>
-{% else %}
-<p class="text-muted text-center">لا توجد دفعات عقود لهذا العميل</p>
-{% endif %}
-<!-- ===== دفعات العقود ===== -->
-<h5 class="section-title"><i class="bi bi-file-earmark-text"></i> دفعات العقود ({{ contract_payments|length }})</h5>
+    {% else %}
+    <p class="text-muted text-center">لا توجد دفعات عقود لهذا العميل</p>
+    {% endif %}
 
-{% if contract_payments %}
-<div class="table-responsive">
+    <!-- ===== المدفوعات (قائمة مفصلة) ===== -->
+    <h5 class="section-title"><i class="bi bi-list-ul"></i> قائمة المدفوعات ({{ payments|length }})</h5>
+
+    {% if payments %}
     <table class="data-table">
         <thead>
             <tr>
                 <th>#</th>
-                <th>رقم العقد</th>
-                <th>الدفعة</th>
                 <th>المبلغ</th>
-                <th>تاريخ الاستحقاق</th>
+                <th>المديول</th>
                 <th>تاريخ الدفع</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>طريقة الدفع</th>
                 <th>الحالة</th>
             </tr>
         </thead>
         <tbody>
-            {% for payment in contract_payments %}
+            {% for payment in payments %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td>
-                    <a href="/contract/{{ payment.contract_id }}" target="_blank">
-                        {{ payment.contract_number }}
-                    </a>
-                </td>
-                <td>{{ payment.installment_number }}</td>
                 <td><strong>{{ payment.amount }} ج.م</strong></td>
-                <td>{{ payment.due_date }}</td>
-                <td>{{ payment.payment_date or '-' }}</td>
+                <td>{{ payment.module_name or '-' }}</td>
+                <td>{{ payment.payment_date }}</td>
+                <td>{{ payment.due_date or '-' }}</td>
+                <td>{{ payment.payment_method }}</td>
                 <td>
                     <span class="status-badge 
-                        {% if payment.status == 'مدفوعة' %}status-paid
-                        {% elif payment.status == 'متأخرة' %}status-overdue-pay
-                        {% else %}status-pending{% endif %}">
+                        {% if payment.status == 'مدفوع' %}status-paid
+                        {% elif payment.status == 'معلق' %}status-pending
+                        {% else %}status-overdue-pay{% endif %}">
                         {{ payment.status }}
                     </span>
                 </td>
@@ -503,91 +257,15 @@
             {% endfor %}
         </tbody>
     </table>
-</div>
+    {% else %}
+    <p class="text-muted text-center">لا توجد مدفوعات لهذا العميل</p>
+    {% endif %}
 
-<!-- ===== إحصائيات دفعات العقود ===== -->
-<div class="row g-3 mt-3">
-    <div class="col-md-4">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <h6>المدفوع من العقود</h6>
-                <h3>{{ contract_stats.total_paid or 0 }} ج.م</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-warning text-dark">
-            <div class="card-body text-center">
-                <h6>المستحق</h6>
-                <h3>{{ contract_stats.total_due or 0 }} ج.م</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-danger text-white">
-            <div class="card-body text-center">
-                <h6>المتأخر</h6>
-                <h3>{{ contract_stats.total_overdue or 0 }} ج.م</h3>
-            </div>
-        </div>
-    </div>
-</div>
-{% else %}
-<p class="text-muted text-center">لا توجد دفعات عقود لهذا العميل</p>
-{% endif %}
-    
-    <!-- ===== المدفوعات ===== -->
-<h5 class="section-title"><i class="bi bi-coin"></i> المدفوعات ({{ payments|length }})</h5>
-
-{% if payments %}
-<table class="data-table">
-    <thead>
-        <tr>
-            <th style="width:8%;">#</th>
-            <th style="width:15%;">المبلغ</th>
-            <th style="width:20%;">المديول</th>
-            <th style="width:15%;">تاريخ الدفع</th>
-            <th style="width:15%;">تاريخ الاستحقاق</th>
-            <th style="width:15%;">طريقة الدفع</th>
-            <th style="width:12%;">الحالة</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for payment in payments %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td><strong>{{ payment.amount }} ج.م</strong></td>
-            <td>{{ payment.module_name or '-' }}</td>
-            <td>{{ payment.payment_date }}</td>
-            <td>{{ payment.due_date or '-' }}</td>
-            <td>{{ payment.payment_method }}</td>
-            <td>
-                <span class="status-badge 
-                    {% if payment.status == 'مدفوع' %}status-paid
-                    {% elif payment.status == 'معلق' %}status-pending
-                    {% else %}status-overdue-pay{% endif %}">
-                    {{ payment.status }}
-                </span>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p class="text-muted text-center">لا توجد مدفوعات لهذا العميل</p>
-{% endif %}
-
-    
     <!-- ===== التذييل ===== -->
     <div class="footer-section">
         <div class="notes">
             <strong>📌 ملحوظة:</strong>
-            هذا التقرير يشمل جميع المديولات والمدفوعات الخاصة بالعميل.
-            {% if stats.total_pending or stats.total_overdue %}
-            <span class="text-danger">يوجد مبالغ مستحقة لم يتم سدادها.</span>
-            {% else %}
-            <span class="text-success">جميع المبالغ مدفوعة بالكامل.</span>
-            {% endif %}
+            هذا التقرير يشمل جميع المديولات والمدفوعات ودفعات العقود الخاصة بالعميل.
         </div>
         
         <div class="signature">
