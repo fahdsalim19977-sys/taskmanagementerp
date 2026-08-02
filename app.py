@@ -1,4 +1,4 @@
-﻿# app.py - بداية الملف
+﻿# app.py
 import os
 import sys
 import logging
@@ -44,8 +44,6 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = 's7f8g9h0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g4h5i6j7k8l9'
 
-print(f"📁 UPLOAD_FOLDER: {app.config['UPLOAD_FOLDER']}")
-
 # التأكد من وجود مجلدات
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static', exist_ok=True)
@@ -61,6 +59,7 @@ def get_lang():
 
 def t(key):
     return get_text(key, get_lang())
+
 
 # ============================================================
 # دوال مساعدة
