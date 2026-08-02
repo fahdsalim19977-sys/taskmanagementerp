@@ -1521,25 +1521,60 @@ def add_contract():
         contract_value = request.form.get('contract_value', 0)
         status = request.form['status']
         notes = request.form.get('notes', '')
+        attachment_description = request.form.get('attachment_description', '')
         
+        # التحقق من رقم العقد
         check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
         if check:
             flash('❌ رقم العقد موجود مسبقاً', 'danger')
             conn.close()
             return render_template('add_contract.html', clients=clients)
         
-        conn.execute('''
+        # إضافة العقد
+        cursor = conn.execute('''
             INSERT INTO client_contracts 
             (client_id, contract_number, title, description, start_date, end_date, 
              contract_value, status, notes, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (client_id, contract_number, title, description, start_date, end_date, 
               contract_value, status, notes, session['user_id']))
+        contract_id = cursor.lastrowid
+        conn.commit()
+        
+        # ===== معالجة المرفقات =====
+        files = request.files.getlist('attachments')
+        uploaded_count = 0
+        
+        for file in files:
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                name_parts = filename.rsplit('.', 1)
+                if len(name_parts) > 1:
+                    filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+                else:
+                    filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                
+                # مجلد خاص بالعقد
+                attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
+                os.makedirs(attachments_folder, exist_ok=True)
+                file_path = os.path.join(attachments_folder, filename)
+                file.save(file_path)
+                
+                # حفظ في قاعدة البيانات
+                file_size = os.path.getsize(file_path)
+                conn.execute('''
+                    INSERT INTO contract_attachments 
+                    (contract_id, file_name, file_path, file_size, file_type, uploaded_by, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (contract_id, filename, file_path, file_size, file.content_type, 
+                      session['user_id'], attachment_description or filename))
+                uploaded_count += 1
+        
         conn.commit()
         conn.close()
         
-        flash('✅ تم إضافة العقد بنجاح', 'success')
-        log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
+        flash(f'✅ تم إضافة العقد بنجاح مع {uploaded_count} مرفق(ات)', 'success')
+        log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number} مع {uploaded_count} مرفق')
         return redirect(url_for('contracts'))
     
     conn.close()
