@@ -238,6 +238,7 @@ def init_db():
         )
     ''')
     
+    # ===== جدول العقود (بالإصدار الجديد) =====
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_contracts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -248,6 +249,9 @@ def init_db():
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
             contract_value REAL DEFAULT 0,
+            total_amount REAL DEFAULT 0,
+            paid_amount REAL DEFAULT 0,
+            payment_status TEXT CHECK(payment_status IN ("غير مدفوع", "مدفوع جزئياً", "مدفوع بالكامل")) DEFAULT "غير مدفوع",
             status TEXT CHECK(status IN ("نشط", "منتهي", "ملغي", "معلق")) DEFAULT "نشط",
             file_path TEXT,
             notes TEXT,
@@ -256,6 +260,40 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
             FOREIGN KEY (created_by) REFERENCES users(id)
+        )
+    ''')
+    
+    # ===== جدول دفعات العقود =====
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contract_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contract_id INTEGER NOT NULL,
+            installment_number INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            due_date DATE NOT NULL,
+            payment_date DATE,
+            status TEXT CHECK(status IN ("مستحقة", "مدفوعة", "متأخرة")) DEFAULT "مستحقة",
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (contract_id) REFERENCES client_contracts(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # ===== جدول مرفقات العقود =====
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contract_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contract_id INTEGER NOT NULL,
+            file_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            file_type TEXT,
+            uploaded_by INTEGER NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (contract_id) REFERENCES client_contracts(id) ON DELETE CASCADE,
+            FOREIGN KEY (uploaded_by) REFERENCES users(id)
         )
     ''')
     
