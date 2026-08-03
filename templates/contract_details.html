@@ -157,47 +157,45 @@
                         </td>
                     </tr>
 
-                    <!-- ===== مودال سداد الدفعة ===== -->
-                    <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
-    <!-- ... -->
-</form>
-                                    <div class="modal-header bg-success text-white">
-                                        <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">رقم الدفعة</label>
-                                            <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">قيمة الدفعة</label>
-                                            <input type="text" class="form-control" value="{{ payment.amount }} ج.م" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">المبلغ المدفوع</label>
-                                            <input type="number" name="paid_amount" class="form-control" 
-                                                   value="{{ payment.amount }}" step="0.01" max="{{ payment.amount }}" required>
-                                            <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز قيمة الدفعة)</small>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">تاريخ الدفع</label>
-                                            <input type="text" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" disabled>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="bi bi-check-circle"></i> تأكيد السداد
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+                   <!-- ===== مودال سداد الدفعة ===== -->
+<div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">رقم الدفعة</label>
+                        <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">قيمة الدفعة</label>
+                        <input type="text" class="form-control" value="{{ payment.amount }} ج.م" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ المدفوع</label>
+                        <input type="number" name="paid_amount" class="form-control" 
+                               value="{{ payment.amount }}" step="0.01" max="{{ payment.amount }}" required>
+                        <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز قيمة الدفعة)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">تاريخ الدفع</label>
+                        <input type="text" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" disabled>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success" onclick="this.disabled=true; this.innerHTML='جاري المعالجة...'; this.form.submit();">
+                        <i class="bi bi-check-circle"></i> تأكيد السداد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
                     {% endfor %}
                 </tbody>
             </table>
