@@ -1941,11 +1941,11 @@ def mark_payment_paid(payment_id):
     total = contract['total_amount'] or 0
     
     if total_paid >= total:
-        payment_status = 'مدفوع بالكامل'
-    elif total_paid > 0:
-        payment_status = 'مدفوع جزئياً'
-    else:
-        payment_status = 'غير مدفوع'
+    payment_status = 'مدفوع بالكامل'
+elif total_paid > 0:
+    payment_status = 'مدفوع جزئيا'  # ✅ بدون ياء
+else:
+    payment_status = 'غير مدفوع'
     
     conn.execute('''
         UPDATE client_contracts 
