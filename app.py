@@ -1887,8 +1887,6 @@ def contract_payments_report(contract_id):
 # تسجيل دفعة كمدفوعة
 # ============================================================
 
-
-
 @app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
 def mark_payment_paid(payment_id):
     """تسجيل دفعة (كاملة أو جزئية)"""
@@ -1940,12 +1938,13 @@ def mark_payment_paid(payment_id):
     contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     total = contract['total_amount'] or 0
     
+    # تحديث حالة الدفع في العقد
     if total_paid >= total:
-    payment_status = 'مدفوع بالكامل'
-elif total_paid > 0:
-    payment_status = 'مدفوع جزئيا'  # ✅ بدون ياء
-else:
-    payment_status = 'غير مدفوع'
+        payment_status = 'مدفوع بالكامل'
+    elif total_paid > 0:
+        payment_status = 'مدفوع جزئيا'
+    else:
+        payment_status = 'غير مدفوع'
     
     conn.execute('''
         UPDATE client_contracts 
