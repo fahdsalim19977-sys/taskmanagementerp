@@ -440,6 +440,90 @@ def delete_client(client_id):
     log_activity(session['user_id'], 'حذف عميل', f'حذف عميل رقم {client_id}')
     return redirect(url_for('clients'))
 
+
+# ============================================================
+# تقرير شامل للعميل
+# ============================================================
+@app.route('/print_client_full_report/<int:client_id>')
+def print_client_full_report(client_id):
+    """تقرير شامل للعميل - المديولات والمدفوعات ودفعات العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    # معلومات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    # جلب المديولات
+    modules = conn.execute('''
+        SELECT * FROM client_modules 
+        WHERE client_id = ? 
+        ORDER BY created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # جلب المدفوعات
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # جلب دفعات العقود
+    contract_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.title as contract_title
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE client_contracts.client_id = ?
+        ORDER BY contract_payments.due_date DESC
+    ''', (client_id,)).fetchall()
+    
+    # إحصائيات المدفوعات
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+        WHERE client_id = ?
+    ''', (client_id,)).fetchone()
+    
+    # إحصائيات دفعات العقود
+    contract_stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوعة" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "مستحقة" THEN amount ELSE 0 END) as total_due,
+            SUM(CASE WHEN status = "متأخرة" THEN amount ELSE 0 END) as total_overdue
+        FROM contract_payments
+        WHERE contract_id IN (SELECT id FROM client_contracts WHERE client_id = ?)
+    ''', (client_id,)).fetchone()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_client_full_report.html',
+                         client=client,
+                         modules=modules,
+                         payments=payments,
+                         contract_payments=contract_payments,
+                         contract_stats=contract_stats,
+                         stats=stats,
+                         settings=settings,
+                         today=datetime.now().date())
+
 # ============================================================
 # إدارة المهام (التدريبات)
 # ============================================================
