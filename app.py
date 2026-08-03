@@ -1914,14 +1914,14 @@ def mark_payment_paid(payment_id):
     
     # تحديث الدفعة
     if paid_amount >= payment['amount']:
-        status = 'مدفوعة'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    elif paid_amount > 0:
-        status = 'مدفوعة جزئياً'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    else:
-        status = 'مستحقة'
-        payment_date = None
+    status = 'مدفوعة'
+    payment_date = datetime.now().strftime('%Y-%m-%d')
+elif paid_amount > 0:
+    status = 'مدفوعة جزئيا'  # ✅ بدون ياء
+    payment_date = datetime.now().strftime('%Y-%m-%d')
+else:
+    status = 'مستحقة'
+    payment_date = None
     
     conn.execute('''
         UPDATE contract_payments 
