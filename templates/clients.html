@@ -23,7 +23,7 @@
         <tbody>
             {% for client in clients %}
             <tr style="font-size: 1.05rem;">
-                <td>{{ client.id }}</td>
+                <td>{{ loop.index }}</td>
                 <td>
                     <a href="/client_tasks/{{ client.id }}" class="text-decoration-none" style="font-size: 1.1rem;">
                         <strong>{{ client.name }}</strong>

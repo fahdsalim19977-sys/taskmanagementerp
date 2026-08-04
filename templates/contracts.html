@@ -64,7 +64,7 @@
         <tbody>
             {% for contract in contracts %}
             <tr>
-                <td>{{ contract.id }}</td>
+                <td>{{ loop.index }}</td>
                 <td>
                     <a href="/contract/{{ contract.id }}" class="text-decoration-none fw-bold">
                         {{ contract.contract_number }}
