@@ -2717,6 +2717,27 @@ def restore_backup():
     return redirect(url_for('company_settings'))
 
 # ============================================================
+# باك أب تلقائي (API)
+# ============================================================
+@app.route('/api/backup/now')
+def api_backup_now():
+    """إنشاء نسخة احتياطية فورية عبر API"""
+    if not check_role(['مدير']):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        import subprocess
+        result = subprocess.run(['python', 'backup_scheduler.py', '--once'], 
+                               capture_output=True, text=True)
+        return jsonify({
+            'status': 'success',
+            'message': 'تم إنشاء النسخة الاحتياطية',
+            'output': result.stdout
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================
 # تغيير كلمة المرور
 # ============================================================
 @app.route('/change_password', methods=['GET', 'POST'])
