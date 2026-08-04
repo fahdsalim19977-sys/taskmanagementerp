@@ -19,49 +19,6 @@
     </div>
 </div>
 
-<!-- ===== بطاقات إحصائيات العقود ===== -->
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card bg-primary text-white shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0 opacity-75">إجمالي العقود</h6>
-                        <h2 class="mb-0">{{ total_contracts or 0 }}</h2>
-                    </div>
-                    <i class="bi bi-file-earmark-text fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-success text-white shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0 opacity-75">مدفوعة بالكامل</h6>
-                        <h2 class="mb-0">{{ contracts_paid_full or 0 }}</h2>
-                    </div>
-                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-danger text-white shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0 opacity-75">غير مدفوعة</h6>
-                        <h2 class="mb-0">{{ contracts_unpaid or 0 }}</h2>
-                    </div>
-                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- ===== تقارير مفصلة ===== -->
 <div class="row g-4">
     <!-- ===== تقرير المدفوعات ===== -->
