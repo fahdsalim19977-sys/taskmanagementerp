@@ -2103,7 +2103,7 @@ def mark_payment_paid(payment_id):
     except:
         paid_amount = 0
     
-    # ===== جلب تاريخ الدفع من النموذج =====
+    # جلب تاريخ الدفع
     payment_date = request.form.get('payment_date', '')
     if not payment_date:
         payment_date = datetime.now().strftime('%Y-%m-%d')
@@ -2137,22 +2137,48 @@ def mark_payment_paid(payment_id):
     # ===== تحديث حالة العقد =====
     contract_id = payment['contract_id']
     
+    # حساب إجمالي المدفوع من جميع دفعات العقد
     total_paid = conn.execute('''
         SELECT SUM(paid_amount) as total FROM contract_payments 
         WHERE contract_id = ?
     ''', (contract_id,)).fetchone()['total'] or 0
     
-    contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-    total = contract['total_amount'] or 0
+    # جلب المبلغ الإجمالي للعقد
+    contract = conn.execute('SELECT total_amount, contract_value FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     
+    # استخدام total_amount إذا كان موجوداً، وإلا استخدم contract_value
+    total = contract['total_amount'] or contract['contract_value'] or 0
+    
+    # ===== حساب عدد الدفعات المدفوعة بالكامل =====
+    paid_full_count = conn.execute('''
+        SELECT COUNT(*) as count FROM contract_payments 
+        WHERE contract_id = ? AND status = 'مدفوعة'
+    ''', (contract_id,)).fetchone()['count']
+    
+    total_installments = conn.execute('''
+        SELECT COUNT(*) as count FROM contract_payments 
+        WHERE contract_id = ?
+    ''', (contract_id,)).fetchone()['count']
+    
+    # ===== تحديد حالة الدفع بناءً على المبلغ المدفوع =====
     if total == 0:
         payment_status = 'غير مدفوع'
     elif total_paid >= total:
         payment_status = 'مدفوع بالكامل'
+    elif total_paid > 0 and paid_full_count < total_installments:
+        payment_status = 'مدفوع جزئيا'
     elif total_paid > 0:
         payment_status = 'مدفوع جزئيا'
     else:
         payment_status = 'غير مدفوع'
+    
+    # طباعة للتصحيح (تظهر في سجلات Railway)
+    print(f"📊 تحديث حالة العقد {contract_id}:")
+    print(f"   total_amount: {total}")
+    print(f"   total_paid: {total_paid}")
+    print(f"   paid_full_count: {paid_full_count}")
+    print(f"   total_installments: {total_installments}")
+    print(f"   payment_status: {payment_status}")
     
     conn.execute('''
         UPDATE client_contracts 
