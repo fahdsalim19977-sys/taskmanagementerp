@@ -1766,6 +1766,7 @@ def edit_contract(contract_id):
             conn.close()
             return render_template('edit_contract.html', contract=contract, clients=clients, contract_types=contract_types)
         
+        # ===== تحديث العقد =====
         conn.execute('''
             UPDATE client_contracts SET 
                 client_id = ?, contract_type_id = ?, contract_number = ?, title = ?, description = ?,
@@ -1774,6 +1775,36 @@ def edit_contract(contract_id):
             WHERE id = ?
         ''', (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
               contract_value, status, notes, contract_id))
+        
+        # ===== تحديث الدفعات =====
+        # حذف الدفعات القديمة
+        conn.execute('DELETE FROM contract_payments WHERE contract_id = ?', (contract_id,))
+        
+        # إعادة إنشاء الدفعات
+        installment_count = int(request.form.get('installment_count', 0))
+        total_amount = float(request.form.get('total_amount', 0))
+        
+        if installment_count > 0 and total_amount > 0:
+            installment_amount = total_amount / installment_count
+            base_date = datetime.now().date()
+            
+            for i in range(1, installment_count + 1):
+                amount = request.form.get(f'installment_amount_{i}', installment_amount)
+                due_date = request.form.get(f'installment_due_date_{i}', '')
+                note = request.form.get(f'installment_notes_{i}', '')
+                
+                # إذا لم يتم تحديد تاريخ، استخدم تاريخ افتراضي بعد شهر من اليوم
+                if not due_date:
+                    future_date = base_date + timedelta(days=i*30)
+                    due_date = future_date.strftime('%Y-%m-%d')
+                
+                if float(amount) > 0:
+                    conn.execute('''
+                        INSERT INTO contract_payments 
+                        (contract_id, installment_number, amount, paid_amount, due_date, notes, status)
+                        VALUES (?, ?, ?, 0, ?, ?, 'مستحقة')
+                    ''', (contract_id, i, amount, due_date, note))
+        
         conn.commit()
         conn.close()
         
@@ -1781,8 +1812,18 @@ def edit_contract(contract_id):
         log_activity(session['user_id'], 'تحديث عقد', f'حدث عقد {contract_number}')
         return redirect(url_for('contracts'))
     
+    # ===== GET request =====
+    # جلب الدفعات الحالية لعرضها في نموذج التعديل
+    contract_payments = conn.execute('''
+        SELECT * FROM contract_payments WHERE contract_id = ? ORDER BY installment_number ASC
+    ''', (contract_id,)).fetchall()
     conn.close()
-    return render_template('edit_contract.html', contract=contract, clients=clients, contract_types=contract_types)
+    
+    return render_template('edit_contract.html', 
+                         contract=contract, 
+                         clients=clients, 
+                         contract_types=contract_types,
+                         contract_payments=contract_payments)
 
 @app.route('/delete_contract/<int:contract_id>', methods=['POST'])
 def delete_contract(contract_id):
@@ -1955,33 +1996,28 @@ def delete_contract_attachment(attachment_id):
 
 @app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
 def mark_payment_paid(payment_id):
-    """تسجيل دفعة (كاملة أو جزئية)"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
     
-    # جلب الدفعة
     payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
     if not payment:
         flash('❌ الدفعة غير موجودة', 'danger')
         conn.close()
         return redirect(url_for('contracts'))
     
-    # المبلغ المدفوع من النموذج
+    current_paid = payment['paid_amount'] or 0
     paid_amount = request.form.get('paid_amount', 0)
     try:
         paid_amount = float(paid_amount)
     except:
         paid_amount = 0
     
-    # حساب المتبقي الحالي
-    current_paid = payment['paid_amount'] or 0
     current_remaining = payment['amount'] - current_paid
     
-    # التحقق من أن المبلغ المدفوع لا يتجاوز المتبقي
     if paid_amount > current_remaining:
-        flash(f'❌ المبلغ المدفوع ({paid_amount} ج.م) لا يمكن أن يتجاوز المتبقي ({current_remaining} ج.م)', 'danger')
+        flash(f'❌ المبلغ المدفوع ({paid_amount} ر.س) لا يمكن أن يتجاوز المتبقي ({current_remaining} ر.س)', 'danger')
         conn.close()
         return redirect(request.referrer or url_for('contracts'))
     
@@ -1990,10 +2026,8 @@ def mark_payment_paid(payment_id):
         conn.close()
         return redirect(request.referrer or url_for('contracts'))
     
-    # المبلغ المدفوع الجديد (المدفوع القديم + المبلغ الجديد)
     new_paid_amount = current_paid + paid_amount
     
-    # تحديث حالة الدفعة
     if new_paid_amount >= payment['amount']:
         status = 'مدفوعة'
         payment_date = datetime.now().strftime('%Y-%m-%d')
@@ -2001,27 +2035,21 @@ def mark_payment_paid(payment_id):
         status = 'مدفوعة جزئيا'
         payment_date = datetime.now().strftime('%Y-%m-%d')
     
-    # تحديث الدفعة في قاعدة البيانات
     conn.execute('''
         UPDATE contract_payments 
         SET paid_amount = ?, status = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     ''', (new_paid_amount, status, payment_date, payment_id))
     
-    # ===== تحديث المبلغ المدفوع في العقد =====
     contract_id = payment['contract_id']
-    
-    # حساب إجمالي المدفوع من جميع دفعات العقد
     total_paid = conn.execute('''
         SELECT SUM(paid_amount) as total FROM contract_payments 
         WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئيا')
     ''', (contract_id,)).fetchone()['total'] or 0
     
-    # جلب المبلغ الإجمالي للعقد
     contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     total = contract['total_amount'] or 0
     
-    # تحديث حالة العقد
     if total_paid >= total:
         payment_status = 'مدفوع بالكامل'
     elif total_paid > 0:
@@ -2038,8 +2066,8 @@ def mark_payment_paid(payment_id):
     conn.commit()
     conn.close()
     
-    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح (إجمالي المدفوع للدفعة: {new_paid_amount} ج.م)', 'success')
-    log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ج.م للدفعة {payment["installment_number"]}')
+    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ر.س بنجاح (إجمالي المدفوع للدفعة: {new_paid_amount} ر.س)', 'success')
+    log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ر.س للدفعة {payment["installment_number"]}')
     return redirect(request.referrer or url_for('contracts'))
 
 # ============================================================
@@ -2356,6 +2384,41 @@ def mark_notification_read(notif_id):
     return jsonify({'success': True})
 
 # ============================================================
+# رفع أيقونة الموقع (Favicon)
+# ============================================================
+@app.route('/upload_favicon', methods=['POST'])
+def upload_favicon():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    if 'favicon' not in request.files:
+        flash('❌ لم يتم اختيار صورة', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    file = request.files['favicon']
+    if file.filename == '':
+        flash('❌ لم يتم اختيار صورة', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    if file:
+        filename = secure_filename(file.filename)
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'png'
+        filename = f"favicon.{ext}"
+        file_path = os.path.join('static', filename)
+        file.save(file_path)
+        
+        conn = get_db()
+        conn.execute('UPDATE company_settings SET favicon_path = ?', (filename,))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم رفع أيقونة الموقع بنجاح', 'success')
+        log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
+    
+    return redirect(url_for('company_settings'))
+
+# ============================================================
 # إعدادات الشركة
 # ============================================================
 @app.route('/company_settings', methods=['GET', 'POST'])
@@ -2579,42 +2642,6 @@ def page_not_found(e):
 def internal_server_error(e):
     flash('❌ حدث خطأ في السيرفر. يرجى المحاولة مرة أخرى.', 'danger')
     return redirect(url_for('index'))
-
-# ============================================================
-# رفع أيقونة الموقع (Favicon)
-# ============================================================
-@app.route('/upload_favicon', methods=['POST'])
-def upload_favicon():
-    """رفع أيقونة الموقع"""
-    if not check_role(['مدير']):
-        flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('company_settings'))
-    
-    if 'favicon' not in request.files:
-        flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('company_settings'))
-    
-    file = request.files['favicon']
-    if file.filename == '':
-        flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('company_settings'))
-    
-    if file:
-        filename = secure_filename(file.filename)
-        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'png'
-        filename = f"favicon.{ext}"
-        file_path = os.path.join('static', filename)
-        file.save(file_path)
-        
-        conn = get_db()
-        conn.execute('UPDATE company_settings SET favicon_path = ?', (filename,))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم رفع أيقونة الموقع بنجاح', 'success')
-        log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
-    
-    return redirect(url_for('company_settings'))
 
 # ============================================================
 # تشغيل التطبيق
