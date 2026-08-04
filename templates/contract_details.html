@@ -35,13 +35,13 @@
                 </p>
                 <p><strong>القيمة:</strong> {{ contract.contract_value }} ر.س</p>
                 <p><strong>حالة الدفع:</strong>
-                    <span class="badge 
-                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
-                        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
-                        {% else %}bg-danger{% endif %}">
-                        {{ contract.payment_status }}
-                    </span>
-                </p>
+    <span class="badge 
+        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
+        {% else %}bg-danger{% endif %}">
+        {{ contract.payment_status }}
+    </span>
+</p>
             </div>
         </div>
     </div>
