@@ -14,71 +14,79 @@
     </div>
 </div>
 
-<!-- ===== بطاقات العقود ===== -->
+<!-- ===== بطاقات العقود (قابلة للنقر) ===== -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="stat-card-v2" style="background: linear-gradient(135deg, #1a237e, #283593);">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="stat-label-v2">إجمالي العقود</span>
-                    <h2 class="stat-number-v2">{{ total_contracts or 0 }}</h2>
+        <a href="/contracts" class="text-decoration-none">
+            <div class="stat-card-v2" style="background: linear-gradient(135deg, #1a237e, #283593); cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="stat-label-v2">إجمالي العقود</span>
+                        <h2 class="stat-number-v2">{{ total_contracts or 0 }}</h2>
+                    </div>
+                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
                 </div>
-                <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                    <i class="bi bi-file-earmark-text"></i>
+                <div class="mt-2">
+                    <span class="stat-link-v2">عرض جميع العقود <i class="bi bi-arrow-left"></i></span>
                 </div>
             </div>
-            <div class="mt-2">
-                <a href="/contracts" class="stat-link-v2">عرض التفاصيل <i class="bi bi-arrow-left"></i></a>
-            </div>
-        </div>
+        </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="stat-card-v2" style="background: linear-gradient(135deg, #1e7e34, #28a745);">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="stat-label-v2">مدفوعة بالكامل</span>
-                    <h2 class="stat-number-v2">{{ contracts_paid_full or 0 }}</h2>
+        <a href="/contracts/filter/paid_full" class="text-decoration-none">
+            <div class="stat-card-v2" style="background: linear-gradient(135deg, #1e7e34, #28a745); cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="stat-label-v2">مدفوعة بالكامل</span>
+                        <h2 class="stat-number-v2">{{ contracts_paid_full or 0 }}</h2>
+                    </div>
+                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
                 </div>
-                <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                    <i class="bi bi-check-circle-fill"></i>
+                <div class="mt-2">
+                    <span class="stat-sub-v2">نسبة: {{ contracts_paid_percent or 0 }}%</span>
                 </div>
             </div>
-            <div class="mt-2">
-                <span class="stat-sub-v2">نسبة: {{ contracts_paid_percent or 0 }}%</span>
-            </div>
-        </div>
+        </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="stat-card-v2" style="background: linear-gradient(135deg, #e6a800, #f9a825);">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="stat-label-v2">مدفوعة جزئياً</span>
-                    <h2 class="stat-number-v2">{{ contracts_partial or 0 }}</h2>
+        <a href="/contracts/filter/partial" class="text-decoration-none">
+            <div class="stat-card-v2" style="background: linear-gradient(135deg, #e6a800, #f9a825); cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="stat-label-v2">مدفوعة جزئياً</span>
+                        <h2 class="stat-number-v2">{{ contracts_partial or 0 }}</h2>
+                    </div>
+                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
                 </div>
-                <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                    <i class="bi bi-clock-history"></i>
+                <div class="mt-2">
+                    <span class="stat-sub-v2">متبقي: {{ contracts_partial_due or 0 }} ج.م</span>
                 </div>
             </div>
-            <div class="mt-2">
-                <span class="stat-sub-v2">متبقي: {{ contracts_partial_due or 0 }} ج.م</span>
-            </div>
-        </div>
+        </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
-        <div class="stat-card-v2" style="background: linear-gradient(135deg, #b71c1c, #dc3545);">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="stat-label-v2">غير مدفوعة</span>
-                    <h2 class="stat-number-v2">{{ contracts_unpaid or 0 }}</h2>
+        <a href="/contracts/filter/unpaid" class="text-decoration-none">
+            <div class="stat-card-v2" style="background: linear-gradient(135deg, #b71c1c, #dc3545); cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="stat-label-v2">غير مدفوعة</span>
+                        <h2 class="stat-number-v2">{{ contracts_unpaid or 0 }}</h2>
+                    </div>
+                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
                 </div>
-                <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
+                <div class="mt-2">
+                    <span class="stat-sub-v2">قيمة: {{ contracts_unpaid_amount or 0 }} ج.م</span>
                 </div>
             </div>
-            <div class="mt-2">
-                <span class="stat-sub-v2">قيمة: {{ contracts_unpaid_amount or 0 }} ج.م</span>
-            </div>
-        </div>
+        </a>
     </div>
 </div>
 
