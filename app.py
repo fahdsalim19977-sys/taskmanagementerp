@@ -1955,53 +1955,73 @@ def delete_contract_attachment(attachment_id):
 
 @app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
 def mark_payment_paid(payment_id):
+    """تسجيل دفعة (كاملة أو جزئية)"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
     
+    # جلب الدفعة
     payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
     if not payment:
         flash('❌ الدفعة غير موجودة', 'danger')
         conn.close()
         return redirect(url_for('contracts'))
     
-    paid_amount = request.form.get('paid_amount', payment['amount'])
+    # المبلغ المدفوع من النموذج
+    paid_amount = request.form.get('paid_amount', 0)
     try:
         paid_amount = float(paid_amount)
     except:
-        paid_amount = payment['amount']
+        paid_amount = 0
     
-    if paid_amount > payment['amount']:
-        flash('❌ المبلغ المدفوع لا يمكن أن يتجاوز قيمة الدفعة', 'danger')
+    # حساب المتبقي الحالي
+    current_paid = payment['paid_amount'] or 0
+    current_remaining = payment['amount'] - current_paid
+    
+    # التحقق من أن المبلغ المدفوع لا يتجاوز المتبقي
+    if paid_amount > current_remaining:
+        flash(f'❌ المبلغ المدفوع ({paid_amount} ج.م) لا يمكن أن يتجاوز المتبقي ({current_remaining} ج.م)', 'danger')
         conn.close()
         return redirect(request.referrer or url_for('contracts'))
     
-    if paid_amount >= payment['amount']:
+    if paid_amount <= 0:
+        flash('❌ المبلغ المدفوع يجب أن يكون أكبر من صفر', 'danger')
+        conn.close()
+        return redirect(request.referrer or url_for('contracts'))
+    
+    # المبلغ المدفوع الجديد (المدفوع القديم + المبلغ الجديد)
+    new_paid_amount = current_paid + paid_amount
+    
+    # تحديث حالة الدفعة
+    if new_paid_amount >= payment['amount']:
         status = 'مدفوعة'
         payment_date = datetime.now().strftime('%Y-%m-%d')
-    elif paid_amount > 0:
+    else:
         status = 'مدفوعة جزئيا'
         payment_date = datetime.now().strftime('%Y-%m-%d')
-    else:
-        status = 'مستحقة'
-        payment_date = None
     
+    # تحديث الدفعة في قاعدة البيانات
     conn.execute('''
         UPDATE contract_payments 
         SET paid_amount = ?, status = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    ''', (paid_amount, status, payment_date, payment_id))
+    ''', (new_paid_amount, status, payment_date, payment_id))
     
+    # ===== تحديث المبلغ المدفوع في العقد =====
     contract_id = payment['contract_id']
+    
+    # حساب إجمالي المدفوع من جميع دفعات العقد
     total_paid = conn.execute('''
         SELECT SUM(paid_amount) as total FROM contract_payments 
         WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئيا')
     ''', (contract_id,)).fetchone()['total'] or 0
     
+    # جلب المبلغ الإجمالي للعقد
     contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     total = contract['total_amount'] or 0
     
+    # تحديث حالة العقد
     if total_paid >= total:
         payment_status = 'مدفوع بالكامل'
     elif total_paid > 0:
@@ -2018,7 +2038,7 @@ def mark_payment_paid(payment_id):
     conn.commit()
     conn.close()
     
-    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح', 'success')
+    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح (إجمالي المدفوع للدفعة: {new_paid_amount} ج.م)', 'success')
     log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ج.م للدفعة {payment["installment_number"]}')
     return redirect(request.referrer or url_for('contracts'))
 
