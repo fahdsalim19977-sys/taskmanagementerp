@@ -623,7 +623,8 @@ def add_task():
     
     conn = get_db()
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
-    users = conn.execute('SELECT * FROM users WHERE role != "مراقب" ORDER BY name').fetchall()
+    # جلب المدربين فقط (من جدول trainers)
+    trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
     conn.close()
     
@@ -714,14 +715,15 @@ def edit_task(task_id):
         flash('⛔ ليس لديك صلاحية لتعديل المهام', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
-    
     if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
         flash('⛔ يمكنك تعديل مهامك فقط', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
-    users = conn.execute('SELECT * FROM users WHERE role != "مراقب" ORDER BY name').fetchall()
+    
+    # ===== التعديل هنا: جلب المدربين بدلاً من المستخدمين =====
+    trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     
     if request.method == 'POST':
         client_id = request.form['client_id']
@@ -755,26 +757,8 @@ def edit_task(task_id):
         return redirect(url_for('tasks'))
     
     conn.close()
-    return render_template('edit_task.html', task=task, clients=clients, users=users)
+    return render_template('edit_task.html', task=task, clients=clients, trainers=trainers)
 
-@app.route('/update_task_status/<int:task_id>', methods=['POST'])
-def update_task_status(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    status = request.form['status']
-    completion = request.form.get('completion_percentage', 0)
-    actual_duration = request.form.get('actual_duration', 0)
-    
-    conn = get_db()
-    conn.execute('UPDATE tasks SET status = ?, completion_percentage = ?, actual_duration = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                (status, completion, actual_duration, task_id))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم تحديث حالة المهمة', 'success')
-    log_activity(session['user_id'], 'تحديث مهمة', f'غير حالة المهمة {task_id}')
-    return redirect(url_for('tasks'))
 
 @app.route('/add_note/<int:task_id>', methods=['POST'])
 def add_note(task_id):
