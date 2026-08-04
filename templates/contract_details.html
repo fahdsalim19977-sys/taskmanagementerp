@@ -197,9 +197,9 @@
                                             <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز المتبقي)</small>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">تاريخ الدفع</label>
-                                            <input type="text" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" disabled>
-                                        </div>
+    <label class="form-label">تاريخ الدفع</label>
+    <input type="date" name="payment_date" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+</div>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
