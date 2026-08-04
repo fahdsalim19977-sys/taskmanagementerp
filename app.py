@@ -1,4 +1,4 @@
-# app.py
+﻿# app.py
 import os
 import sys
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
@@ -221,6 +221,7 @@ def index():
     settings = get_company_settings()
     
     return render_template('index.html', 
+                         # ===== إحصائيات المهام =====
                          total_tasks=total_tasks,
                          completed_tasks=completed_tasks,
                          overdue_tasks=overdue_tasks,
@@ -230,6 +231,8 @@ def index():
                          upcoming_meetings=upcoming_meetings,
                          total_revenue=total_revenue,
                          total_payments=total_payments,
+                         
+                         # ===== إحصائيات العقود =====
                          total_contracts=total_contracts,
                          contracts_paid_full=contracts_paid_full,
                          contracts_partial=contracts_partial,
@@ -238,6 +241,8 @@ def index():
                          contracts_paid_percent=contracts_paid_percent,
                          contracts_partial_due=contracts_partial_due,
                          recent_contracts=recent_contracts,
+                         
+                         # ===== بيانات أخرى =====
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
@@ -494,6 +499,90 @@ def delete_client(client_id):
     log_activity(session['user_id'], 'حذف عميل', f'حذف عميل رقم {client_id}')
     return redirect(url_for('clients'))
 
+
+# ============================================================
+# تقرير شامل للعميل
+# ============================================================
+@app.route('/print_client_full_report/<int:client_id>')
+def print_client_full_report(client_id):
+    """تقرير شامل للعميل - المديولات والمدفوعات ودفعات العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    # معلومات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        flash('❌ العميل غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('clients'))
+    
+    # جلب المديولات
+    modules = conn.execute('''
+        SELECT * FROM client_modules 
+        WHERE client_id = ? 
+        ORDER BY created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # جلب المدفوعات
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # جلب دفعات العقود
+    contract_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.title as contract_title
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE client_contracts.client_id = ?
+        ORDER BY contract_payments.due_date DESC
+    ''', (client_id,)).fetchall()
+    
+    # إحصائيات المدفوعات
+    stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
+            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
+        FROM client_payments
+        WHERE client_id = ?
+    ''', (client_id,)).fetchone()
+    
+    # إحصائيات دفعات العقود
+    contract_stats = conn.execute('''
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = "مدفوعة" THEN amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = "مستحقة" THEN amount ELSE 0 END) as total_due,
+            SUM(CASE WHEN status = "متأخرة" THEN amount ELSE 0 END) as total_overdue
+        FROM contract_payments
+        WHERE contract_id IN (SELECT id FROM client_contracts WHERE client_id = ?)
+    ''', (client_id,)).fetchone()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_client_full_report.html',
+                         client=client,
+                         modules=modules,
+                         payments=payments,
+                         contract_payments=contract_payments,
+                         contract_stats=contract_stats,
+                         stats=stats,
+                         settings=settings,
+                         today=datetime.now().date())
+
 # ============================================================
 # إدارة المهام (التدريبات)
 # ============================================================
@@ -534,6 +623,7 @@ def add_task():
     
     conn = get_db()
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
+    # جلب المدربين فقط (من جدول trainers)
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
     conn.close()
@@ -569,7 +659,7 @@ def add_task():
         log_activity(session['user_id'], 'إضافة مهمة', f'أضاف {title}')
         return redirect(url_for('tasks'))
     
-    return render_template('add_task.html', clients=clients, trainers=trainers, meetings=meetings)
+    return render_template('add_task.html', clients=clients, users=users, meetings=meetings)
 
 @app.route('/task/<int:task_id>')
 def task_details(task_id):
@@ -631,6 +721,8 @@ def edit_task(task_id):
         return redirect(url_for('tasks'))
     
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
+    
+    # ===== التعديل هنا: جلب المدربين بدلاً من المستخدمين =====
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     
     if request.method == 'POST':
@@ -667,131 +759,6 @@ def edit_task(task_id):
     conn.close()
     return render_template('edit_task.html', task=task, clients=clients, trainers=trainers)
 
-@app.route('/update_task_status/<int:task_id>', methods=['POST'])
-def update_task_status(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    status = request.form['status']
-    completion = request.form.get('completion_percentage', 0)
-    actual_duration = request.form.get('actual_duration', 0)
-    
-    conn = get_db()
-    conn.execute('''
-        UPDATE tasks SET 
-            status = ?, 
-            completion_percentage = ?, 
-            actual_duration = ?, 
-            updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
-    ''', (status, completion, actual_duration, task_id))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
-    log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
-    return redirect(request.referrer or url_for('tasks'))
-
-@app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
-def update_task_status_form(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
-    conn.close()
-    
-    if not task:
-        flash('❌ التدريب غير موجود', 'danger')
-        return redirect(url_for('tasks'))
-    
-    if request.method == 'POST':
-        status = request.form['status']
-        completion = request.form.get('completion_percentage', 0)
-        actual_duration = request.form.get('actual_duration', 0)
-        
-        conn = get_db()
-        conn.execute('''
-            UPDATE tasks SET 
-                status = ?, 
-                completion_percentage = ?, 
-                actual_duration = ?, 
-                updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-        ''', (status, completion, actual_duration, task_id))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم تحديث الحالة بنجاح', 'success')
-        return redirect(url_for('tasks'))
-    
-    return render_template('update_task_status.html', task=task)
-
-@app.route('/add_note/<int:task_id>', methods=['POST'])
-def add_note(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    note = request.form.get('note', '')
-    file = request.files.get('attachment')
-    
-    attachment_path = None
-    if file and file.filename:
-        filename = secure_filename(file.filename)
-        name_parts = filename.rsplit('.', 1)
-        if len(name_parts) > 1:
-            filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
-        else:
-            filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        attachment_path = file_path
-    
-    conn = get_db()
-    conn.execute('''
-        INSERT INTO task_updates (task_id, user_id, note, attachment_path)
-        VALUES (?, ?, ?, ?)
-    ''', (task_id, session['user_id'], note, attachment_path))
-    conn.commit()
-    conn.close()
-    
-    flash('📝 تم إضافة الملاحظة بنجاح', 'success')
-    log_activity(session['user_id'], 'إضافة ملاحظة', f'أضاف ملاحظة للتدريب {task_id}')
-    return redirect(request.referrer or url_for('tasks'))
-
-@app.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
-def add_note_form(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        note = request.form.get('note', '')
-        file = request.files.get('attachment')
-        
-        attachment_path = None
-        if file and file.filename:
-            filename = secure_filename(file.filename)
-            name_parts = filename.rsplit('.', 1)
-            if len(name_parts) > 1:
-                filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
-            else:
-                filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            attachment_path = file_path
-        
-        conn = get_db()
-        conn.execute('''
-            INSERT INTO task_updates (task_id, user_id, note, attachment_path)
-            VALUES (?, ?, ?, ?)
-        ''', (task_id, session['user_id'], note, attachment_path))
-        conn.commit()
-        conn.close()
-        
-        flash('📝 تم إضافة الملاحظة بنجاح', 'success')
-        return redirect(url_for('tasks'))
-    
-    return render_template('add_note.html', task_id=task_id)
 
 @app.route('/delete_task/<int:task_id>', methods=['POST'])
 def delete_task(task_id):
@@ -801,17 +768,17 @@ def delete_task(task_id):
     conn = get_db()
     task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
     if not task:
-        flash('❌ التدريب غير موجود', 'danger')
+        flash('❌ المهمة غير موجودة', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
     user_role = session['user_role']
     if user_role == 'مراقب':
-        flash('⛔ ليس لديك صلاحية لحذف التدريبات', 'danger')
+        flash('⛔ ليس لديك صلاحية لحذف المهام', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
-        flash('⛔ يمكنك حذف تدريباتك فقط', 'danger')
+        flash('⛔ يمكنك حذف مهامك فقط', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
@@ -819,8 +786,8 @@ def delete_task(task_id):
     conn.commit()
     conn.close()
     
-    flash('✅ تم حذف التدريب بنجاح', 'success')
-    log_activity(session['user_id'], 'حذف تدريب', f'حذف تدريب رقم {task_id}')
+    flash('✅ تم حذف المهمة بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف مهمة', f'حذف مهمة رقم {task_id}')
     return redirect(url_for('tasks'))
 
 @app.route('/tasks/search')
@@ -872,6 +839,225 @@ def group_tasks():
     
     flash(f'✅ تم تجميع مهام العميل تحت مجموعة "{group_name}"', 'success')
     return redirect(url_for('client_tasks', client_id=client_id))
+
+# ============================================================
+# تحديث حالة التدريب (من صفحة التفاصيل)
+# ============================================================
+@app.route('/update_task_status/<int:task_id>', methods=['POST'])
+def update_task_status(task_id):
+    """تحديث حالة التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    status = request.form['status']
+    completion = request.form.get('completion_percentage', 0)
+    actual_duration = request.form.get('actual_duration', 0)
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE tasks SET 
+            status = ?, 
+            completion_percentage = ?, 
+            actual_duration = ?, 
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    ''', (status, completion, actual_duration, task_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
+    log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
+    return redirect(request.referrer or url_for('tasks'))
+
+# ============================================================
+# نموذج تحديث حالة التدريب
+# ============================================================
+@app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
+def update_task_status_form(task_id):
+    """عرض نموذج تحديث حالة التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    conn.close()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        return redirect(url_for('tasks'))
+    
+    if request.method == 'POST':
+        status = request.form['status']
+        completion = request.form.get('completion_percentage', 0)
+        actual_duration = request.form.get('actual_duration', 0)
+        
+        conn = get_db()
+        conn.execute('''
+            UPDATE tasks SET 
+                status = ?, 
+                completion_percentage = ?, 
+                actual_duration = ?, 
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (status, completion, actual_duration, task_id))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث الحالة بنجاح', 'success')
+        return redirect(url_for('tasks'))
+    
+    return render_template('update_task_status.html', task=task)
+
+# ============================================================
+# إضافة ملاحظة للتدريب
+# ============================================================
+@app.route('/add_note/<int:task_id>', methods=['POST'])
+def add_note(task_id):
+    """إضافة ملاحظة للتدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    note = request.form.get('note', '')
+    file = request.files.get('attachment')
+    
+    attachment_path = None
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        name_parts = filename.rsplit('.', 1)
+        if len(name_parts) > 1:
+            filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+        else:
+            filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        attachment_path = file_path
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO task_updates (task_id, user_id, note, attachment_path)
+        VALUES (?, ?, ?, ?)
+    ''', (task_id, session['user_id'], note, attachment_path))
+    conn.commit()
+    conn.close()
+    
+    flash('📝 تم إضافة الملاحظة بنجاح', 'success')
+    log_activity(session['user_id'], 'إضافة ملاحظة', f'أضاف ملاحظة للتدريب {task_id}')
+    return redirect(request.referrer or url_for('tasks'))
+
+# ============================================================
+# نموذج إضافة ملاحظة
+# ============================================================
+@app.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
+def add_note_form(task_id):
+    """عرض نموذج إضافة ملاحظة"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        note = request.form.get('note', '')
+        file = request.files.get('attachment')
+        
+        attachment_path = None
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            name_parts = filename.rsplit('.', 1)
+            if len(name_parts) > 1:
+                filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+            else:
+                filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            attachment_path = file_path
+        
+        conn = get_db()
+        conn.execute('''
+            INSERT INTO task_updates (task_id, user_id, note, attachment_path)
+            VALUES (?, ?, ?, ?)
+        ''', (task_id, session['user_id'], note, attachment_path))
+        conn.commit()
+        conn.close()
+        
+        flash('📝 تم إضافة الملاحظة بنجاح', 'success')
+        return redirect(url_for('tasks'))
+    
+    return render_template('add_note.html', task_id=task_id)
+
+
+# ============================================================
+# حذف التدريب
+# ============================================================
+@app.route('/delete_task/<int:task_id>', methods=['POST'])
+def delete_task(task_id):
+    """حذف تدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    # التحقق من الصلاحيات
+    user_role = session['user_role']
+    if user_role == 'مراقب':
+        flash('⛔ ليس لديك صلاحية لحذف التدريبات', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
+        flash('⛔ يمكنك حذف تدريباتك فقط', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف التدريب بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف تدريب', f'حذف تدريب رقم {task_id}')
+    return redirect(url_for('tasks'))
+
+# ============================================================
+# تفاصيل التدريب
+# ============================================================
+@app.route('/task/<int:task_id>')
+def task_details(task_id):
+    """عرض تفاصيل التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('''
+        SELECT tasks.*, 
+               clients.name as client_name, 
+               clients.phone as client_phone,
+               clients.email as client_email,
+               clients.address as client_address,
+               clients.company_name as client_company,
+               users.name as assigned_name,
+               users.email as assigned_email
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN users ON tasks.assigned_to = users.id 
+        WHERE tasks.id = ?
+    ''', (task_id,)).fetchone()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    updates = conn.execute('''
+        SELECT task_updates.*, users.name as user_name
+        FROM task_updates
+        JOIN users ON task_updates.user_id = users.id
+        WHERE task_updates.task_id = ?
+        ORDER BY task_updates.created_at DESC
+    ''', (task_id,)).fetchall()
+    conn.close()
+    
+    return render_template('task_details.html', task=task, updates=updates, today=datetime.now().date())
 
 # ============================================================
 # إدارة المدربين
@@ -1067,82 +1253,6 @@ def print_client_tasks(client_id):
                          in_progress_tasks=in_progress_tasks,
                          overdue_tasks=overdue_tasks,
                          not_started_tasks=not_started_tasks,
-                         settings=settings,
-                         today=datetime.now().date())
-
-# ============================================================
-# تقرير شامل للعميل
-# ============================================================
-@app.route('/print_client_full_report/<int:client_id>')
-def print_client_full_report(client_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    
-    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
-    if not client:
-        flash('❌ العميل غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('clients'))
-    
-    modules = conn.execute('''
-        SELECT * FROM client_modules 
-        WHERE client_id = ? 
-        ORDER BY created_at DESC
-    ''', (client_id,)).fetchall()
-    
-    payments = conn.execute('''
-        SELECT client_payments.*, 
-               client_modules.name as module_name,
-               users.name as created_by_name
-        FROM client_payments
-        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
-        LEFT JOIN users ON client_payments.created_by = users.id
-        WHERE client_payments.client_id = ?
-        ORDER BY client_payments.created_at DESC
-    ''', (client_id,)).fetchall()
-    
-    contract_payments = conn.execute('''
-        SELECT contract_payments.*, 
-               client_contracts.contract_number,
-               client_contracts.title as contract_title
-        FROM contract_payments
-        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
-        WHERE client_contracts.client_id = ?
-        ORDER BY contract_payments.due_date DESC
-    ''', (client_id,)).fetchall()
-    
-    stats = conn.execute('''
-        SELECT 
-            COUNT(*) as total_count,
-            SUM(CASE WHEN status = "مدفوع" THEN amount ELSE 0 END) as total_paid,
-            SUM(CASE WHEN status = "معلق" THEN amount ELSE 0 END) as total_pending,
-            SUM(CASE WHEN status = "متأخر" THEN amount ELSE 0 END) as total_overdue
-        FROM client_payments
-        WHERE client_id = ?
-    ''', (client_id,)).fetchone()
-    
-    contract_stats = conn.execute('''
-        SELECT 
-            COUNT(*) as total_count,
-            SUM(CASE WHEN status = "مدفوعة" THEN amount ELSE 0 END) as total_paid,
-            SUM(CASE WHEN status = "مستحقة" THEN amount ELSE 0 END) as total_due,
-            SUM(CASE WHEN status = "متأخرة" THEN amount ELSE 0 END) as total_overdue
-        FROM contract_payments
-        WHERE contract_id IN (SELECT id FROM client_contracts WHERE client_id = ?)
-    ''', (client_id,)).fetchone()
-    
-    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
-    conn.close()
-    
-    return render_template('print_client_full_report.html',
-                         client=client,
-                         modules=modules,
-                         payments=payments,
-                         contract_payments=contract_payments,
-                         contract_stats=contract_stats,
-                         stats=stats,
                          settings=settings,
                          today=datetime.now().date())
 
@@ -1852,175 +1962,54 @@ def contract_details(contract_id):
                          contract_attachments=attachments,
                          contract_payments=payments)
 
-# ===== مرفقات العقود =====
-
-@app.route('/add_contract_attachment/<int:contract_id>', methods=['POST'])
-def add_contract_attachment(contract_id):
+# ============================================================
+# تصفية العقود حسب حالة الدفع
+# ============================================================
+@app.route('/contracts/filter/<status>')
+def contracts_filter(status):
+    """عرض العقود حسب حالة الدفع"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    conn = get_db()
-    contract = conn.execute('SELECT * FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-    if not contract:
-        flash('❌ العقد غير موجود', 'danger')
-        conn.close()
+    # ترجمة الحالة إلى العربية
+    status_map = {
+        'paid_full': 'مدفوع بالكامل',
+        'partial': 'مدفوع جزئيا',
+        'unpaid': 'غير مدفوع'
+    }
+    
+    status_text = status_map.get(status, '')
+    if not status_text:
+        flash('❌ حالة غير صحيحة', 'danger')
         return redirect(url_for('contracts'))
     
-    if 'attachment' not in request.files:
-        flash('❌ لم يتم اختيار ملف', 'danger')
-        conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
-    
-    file = request.files['attachment']
-    if file.filename == '':
-        flash('❌ لم يتم اختيار ملف', 'danger')
-        conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
-    
-    description = request.form.get('description', '')
-    
-    filename = secure_filename(file.filename)
-    name_parts = filename.rsplit('.', 1)
-    if len(name_parts) > 1:
-        filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
-    else:
-        filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
-    attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
-    os.makedirs(attachments_folder, exist_ok=True)
-    file_path = os.path.join(attachments_folder, filename)
-    file.save(file_path)
-    
-    file_size = os.path.getsize(file_path)
-    conn.execute('''
-        INSERT INTO contract_attachments 
-        (contract_id, file_name, file_path, file_size, file_type, uploaded_by, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (contract_id, filename, file_path, file_size, file.content_type, 
-          session['user_id'], description))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم رفع المرفق بنجاح', 'success')
-    log_activity(session['user_id'], 'رفع مرفق عقد', f'رفع {filename} للعقد {contract["contract_number"]}')
-    return redirect(url_for('contract_details', contract_id=contract_id))
-
-@app.route('/download_contract_attachment/<int:attachment_id>')
-def download_contract_attachment(attachment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
     conn = get_db()
-    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
-    if not attachment:
-        flash('❌ المرفق غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
+    contracts_list = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               contract_types.name as contract_type_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.payment_status = ?
+        ORDER BY client_contracts.created_at DESC
+    ''', (status_text,)).fetchall()
     conn.close()
     
-    if os.path.exists(attachment['file_path']):
-        return send_file(attachment['file_path'], 
-                       as_attachment=True, 
-                       download_name=attachment['file_name'])
-    else:
-        flash('❌ الملف غير موجود على السيرفر', 'danger')
-        return redirect(request.referrer or url_for('contracts'))
-
-@app.route('/delete_contract_attachment/<int:attachment_id>', methods=['POST'])
-def delete_contract_attachment(attachment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+    # عناوين الصفحة
+    titles = {
+        'paid_full': 'العقود المدفوعة بالكامل',
+        'partial': 'العقود المدفوعة جزئياً',
+        'unpaid': 'العقود غير المدفوعة'
+    }
     
-    conn = get_db()
-    attachment = conn.execute('SELECT * FROM contract_attachments WHERE id = ?', (attachment_id,)).fetchone()
-    if not attachment:
-        flash('❌ المرفق غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    if os.path.exists(attachment['file_path']):
-        try:
-            os.remove(attachment['file_path'])
-        except Exception as e:
-            print(f"Error deleting file: {e}")
-    
-    conn.execute('DELETE FROM contract_attachments WHERE id = ?', (attachment_id,))
-    conn.commit()
-    conn.close()
-    
-    flash('✅ تم حذف المرفق بنجاح', 'success')
-    log_activity(session['user_id'], 'حذف مرفق عقد', f'حذف {attachment["file_name"]}')
-    return redirect(request.referrer or url_for('contracts'))
-
-@app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
-def mark_payment_paid(payment_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    
-    payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
-    if not payment:
-        flash('❌ الدفعة غير موجودة', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    paid_amount = request.form.get('paid_amount', payment['amount'])
-    try:
-        paid_amount = float(paid_amount)
-    except:
-        paid_amount = payment['amount']
-    
-    if paid_amount > payment['amount']:
-        flash('❌ المبلغ المدفوع لا يمكن أن يتجاوز قيمة الدفعة', 'danger')
-        conn.close()
-        return redirect(request.referrer or url_for('contracts'))
-    
-    if paid_amount >= payment['amount']:
-        status = 'مدفوعة'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    elif paid_amount > 0:
-        status = 'مدفوعة جزئيا'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
-    else:
-        status = 'مستحقة'
-        payment_date = None
-    
-    conn.execute('''
-        UPDATE contract_payments 
-        SET paid_amount = ?, status = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (paid_amount, status, payment_date, payment_id))
-    
-    contract_id = payment['contract_id']
-    total_paid = conn.execute('''
-        SELECT SUM(paid_amount) as total FROM contract_payments 
-        WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئيا')
-    ''', (contract_id,)).fetchone()['total'] or 0
-    
-    contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-    total = contract['total_amount'] or 0
-    
-    if total_paid >= total:
-        payment_status = 'مدفوع بالكامل'
-    elif total_paid > 0:
-        payment_status = 'مدفوع جزئيا'
-    else:
-        payment_status = 'غير مدفوع'
-    
-    conn.execute('''
-        UPDATE client_contracts 
-        SET paid_amount = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (total_paid, payment_status, contract_id))
-    
-    conn.commit()
-    conn.close()
-    
-    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح', 'success')
-    log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ج.م للدفعة {payment["installment_number"]}')
-    return redirect(request.referrer or url_for('contracts'))
+    return render_template('contracts_filter.html', 
+                         contracts=contracts_list,
+                         filter_title=titles.get(status, ''),
+                         filter_status=status)
 
 # ============================================================
 # أنواع العقود
@@ -2090,52 +2079,6 @@ def delete_contract_type(type_id):
     
     flash('✅ تم حذف نوع العقد بنجاح', 'success')
     return redirect(url_for('contract_types'))
-
-# ============================================================
-# تصفية العقود حسب حالة الدفع
-# ============================================================
-@app.route('/contracts/filter/<status>')
-def contracts_filter(status):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    status_map = {
-        'paid_full': 'مدفوع بالكامل',
-        'partial': 'مدفوع جزئيا',
-        'unpaid': 'غير مدفوع'
-    }
-    
-    status_text = status_map.get(status, '')
-    if not status_text:
-        flash('❌ حالة غير صحيحة', 'danger')
-        return redirect(url_for('contracts'))
-    
-    conn = get_db()
-    contracts_list = conn.execute('''
-        SELECT client_contracts.*, 
-               clients.name as client_name,
-               clients.company_name,
-               contract_types.name as contract_type_name,
-               users.name as created_by_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
-        JOIN users ON client_contracts.created_by = users.id
-        WHERE client_contracts.payment_status = ?
-        ORDER BY client_contracts.created_at DESC
-    ''', (status_text,)).fetchall()
-    conn.close()
-    
-    titles = {
-        'paid_full': 'العقود المدفوعة بالكامل',
-        'partial': 'العقود المدفوعة جزئياً',
-        'unpaid': 'العقود غير المدفوعة'
-    }
-    
-    return render_template('contracts_filter.html', 
-                         contracts=contracts_list,
-                         filter_title=titles.get(status, ''),
-                         filter_status=status)
 
 # ============================================================
 # التقارير
@@ -2288,7 +2231,7 @@ def contract_payments_report(contract_id):
         
         conn.close()
         
-        total_paid = sum(p['paid_amount'] or 0 for p in payments if p['status'] in ('مدفوعة', 'مدفوعة جزئيا'))
+        total_paid = sum(p['paid_amount'] or 0 for p in payments if p['status'] in ('مدفوعة', 'مدفوعة جزئياً'))
         total_due = sum(p['amount'] for p in payments if p['status'] == 'مستحقة')
         total_overdue = sum(p['amount'] for p in payments if p['status'] == 'متأخرة')
         
@@ -2304,6 +2247,85 @@ def contract_payments_report(contract_id):
         traceback.print_exc()
         flash(f'❌ حدث خطأ: {str(e)}', 'danger')
         return redirect(url_for('contracts_report'))
+
+    
+
+# ============================================================
+# تسجيل دفعة كمدفوعة
+# ============================================================
+
+@app.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
+def mark_payment_paid(payment_id):
+    """تسجيل دفعة (كاملة أو جزئية)"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
+    if not payment:
+        flash('❌ الدفعة غير موجودة', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    paid_amount = request.form.get('paid_amount', payment['amount'])
+    try:
+        paid_amount = float(paid_amount)
+    except:
+        paid_amount = payment['amount']
+    
+    if paid_amount > payment['amount']:
+        flash('❌ المبلغ المدفوع لا يمكن أن يتجاوز قيمة الدفعة', 'danger')
+        conn.close()
+        return redirect(request.referrer or url_for('contracts'))
+    
+    # تحديث الدفعة
+    if paid_amount >= payment['amount']:
+        status = 'مدفوعة'
+        payment_date = datetime.now().strftime('%Y-%m-%d')
+    elif paid_amount > 0:
+        status = 'مدفوعة جزئيا'
+        payment_date = datetime.now().strftime('%Y-%m-%d')
+    else:
+        status = 'مستحقة'
+        payment_date = None
+    
+    conn.execute('''
+        UPDATE contract_payments 
+        SET paid_amount = ?, status = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (paid_amount, status, payment_date, payment_id))
+    
+    contract_id = payment['contract_id']
+    total_paid = conn.execute('''
+        SELECT SUM(paid_amount) as total FROM contract_payments 
+        WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئيا')
+    ''', (contract_id,)).fetchone()['total'] or 0
+    
+    contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+    total = contract['total_amount'] or 0
+    
+    # تحديث حالة الدفع في العقد
+    if total_paid >= total:
+        payment_status = 'مدفوع بالكامل'
+    elif total_paid > 0:
+        payment_status = 'مدفوع جزئيا'
+    else:
+        payment_status = 'غير مدفوع'
+    
+    conn.execute('''
+        UPDATE client_contracts 
+        SET paid_amount = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (total_paid, payment_status, contract_id))
+    
+    conn.commit()
+    conn.close()
+    
+    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ج.م بنجاح', 'success')
+    log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ج.م للدفعة {payment["installment_number"]}')
+    return redirect(request.referrer or url_for('contracts'))
+
 
 # ============================================================
 # الإشعارات
@@ -2559,6 +2581,43 @@ def page_not_found(e):
 def internal_server_error(e):
     flash('❌ حدث خطأ في السيرفر. يرجى المحاولة مرة أخرى.', 'danger')
     return redirect(url_for('index'))
+
+# ============================================================
+# رفع أيقونة الموقع (Favicon)
+# ============================================================
+@app.route('/upload_favicon', methods=['POST'])
+def upload_favicon():
+    """رفع أيقونة الموقع"""
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    if 'favicon' not in request.files:
+        flash('❌ لم يتم اختيار صورة', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    file = request.files['favicon']
+    if file.filename == '':
+        flash('❌ لم يتم اختيار صورة', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    if file:
+        filename = secure_filename(file.filename)
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'png'
+        # إعادة تسمية الملف إلى favicon
+        filename = f"favicon.{ext}"
+        file_path = os.path.join('static', filename)
+        file.save(file_path)
+        
+        conn = get_db()
+        conn.execute('UPDATE company_settings SET favicon_path = ?', (filename,))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم رفع أيقونة الموقع بنجاح', 'success')
+        log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
+    
+    return redirect(url_for('company_settings'))
 
 # ============================================================
 # تشغيل التطبيق

@@ -33,6 +33,7 @@ def init_db():
             phone TEXT,
             address TEXT,
             logo_path TEXT,
+            favicon_path TEXT,
             email TEXT,
             website TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
