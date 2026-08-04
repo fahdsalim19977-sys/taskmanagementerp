@@ -77,6 +77,42 @@
             </div>
         </div>
 
+        <!-- ===== رفع الأيقونة ===== -->
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="bi bi-image"></i> أيقونة الموقع (Favicon)</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-md-6">
+                        {% if settings and settings.favicon_path %}
+                        <img src="{{ url_for('static', filename=settings.favicon_path) }}" 
+                             alt="أيقونة الموقع" 
+                             style="width:64px;height:64px;border-radius:10px;border:2px solid #ddd;padding:5px;">
+                        <br><small class="text-muted">الأيقونة الحالية</small>
+                        {% else %}
+                        <div class="alert alert-secondary">
+                            <i class="bi bi-image" style="font-size:48px;display:block;"></i>
+                            <p>لا توجد أيقونة للموقع</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <form method="POST" action="/upload_favicon" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label">اختر أيقونة جديدة</label>
+                                <input type="file" name="favicon" class="form-control" accept="image/*" required>
+                                <small class="text-muted">يفضل صورة مربعة 32x32 أو 64x64 بكسل (PNG, ICO, SVG)</small>
+                            </div>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-upload"></i> رفع الأيقونة
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== النسخ الاحتياطي ===== -->
         <div class="card mt-4">
             <div class="card-header bg-success text-white">
@@ -99,7 +135,7 @@
             </div>
         </div>
 
-        <!-- ===== استعادة البيانات (جديد) ===== -->
+        <!-- ===== استعادة البيانات ===== -->
         <div class="card mt-4 border-danger">
             <div class="card-header bg-danger text-white">
                 <h5 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> استعادة البيانات من النسخة الاحتياطية</h5>
