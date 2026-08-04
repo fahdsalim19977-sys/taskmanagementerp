@@ -20,14 +20,14 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Trainer Responsible{% else %}المدرب المسؤول{% endif %} <span class="text-danger">*</span></label>
-                            <select name="assigned_to" class="form-select" required>
-                                <option value="">{% if get_lang() == 'en' %}Select Trainer{% else %}اختر المدرب{% endif %}</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+    <label class="form-label">{% if get_lang() == 'en' %}Trainer Responsible{% else %}المدرب المسؤول{% endif %} <span class="text-danger">*</span></label>
+    <select name="assigned_to" class="form-select" required>
+        <option value="">{% if get_lang() == 'en' %}Select Trainer{% else %}اختر المدرب{% endif %}</option>
+        {% for trainer in trainers %}
+        <option value="{{ trainer.id }}">{{ trainer.name }}</option>
+        {% endfor %}
+    </select>
+</div>
                     </div>
                     
                     <div class="mb-3">

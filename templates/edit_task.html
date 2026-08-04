@@ -21,15 +21,15 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">المسؤول <span class="text-danger">*</span></label>
-                            <select name="assigned_to" class="form-select" required>
-                                {% for user in users %}
-                                <option value="{{ user.id }}" {% if user.id == task.assigned_to %}selected{% endif %}>
-                                    {{ user.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+    <label class="form-label">المدرب المسؤول <span class="text-danger">*</span></label>
+    <select name="assigned_to" class="form-select" required>
+        {% for trainer in trainers %}
+        <option value="{{ trainer.id }}" {% if trainer.id == task.assigned_to %}selected{% endif %}>
+            {{ trainer.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
                     </div>
                     
                     <div class="mb-3">
