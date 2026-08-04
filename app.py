@@ -1675,11 +1675,12 @@ def add_contract():
             conn.close()
             return render_template('add_contract.html', clients=clients, contract_types=contract_types)
         
+        # إدراج العقد مع payment_status = 'غير مدفوع'
         cursor = conn.execute('''
             INSERT INTO client_contracts 
             (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
-             contract_value, total_amount, status, notes, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             contract_value, total_amount, paid_amount, payment_status, status, notes, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'غير مدفوع', ?, ?, ?)
         ''', (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
               contract_value, total_amount, status, notes, session['user_id']))
         contract_id = cursor.lastrowid
@@ -1793,7 +1794,6 @@ def edit_contract(contract_id):
                 due_date = request.form.get(f'installment_due_date_{i}', '')
                 note = request.form.get(f'installment_notes_{i}', '')
                 
-                # إذا لم يتم تحديد تاريخ، استخدم تاريخ افتراضي بعد شهر من اليوم
                 if not due_date:
                     future_date = base_date + timedelta(days=i*30)
                     due_date = future_date.strftime('%Y-%m-%d')
@@ -1805,6 +1805,26 @@ def edit_contract(contract_id):
                         VALUES (?, ?, ?, 0, ?, ?, 'مستحقة')
                     ''', (contract_id, i, amount, due_date, note))
         
+        # ===== إعادة حساب حالة الدفع =====
+        total_paid = conn.execute('''
+            SELECT SUM(paid_amount) as total FROM contract_payments WHERE contract_id = ?
+        ''', (contract_id,)).fetchone()['total'] or 0
+        
+        if total_amount == 0:
+            payment_status = 'غير مدفوع'
+        elif total_paid >= total_amount:
+            payment_status = 'مدفوع بالكامل'
+        elif total_paid > 0:
+            payment_status = 'مدفوع جزئيا'
+        else:
+            payment_status = 'غير مدفوع'
+        
+        conn.execute('''
+            UPDATE client_contracts 
+            SET total_amount = ?, paid_amount = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (total_amount, total_paid, payment_status, contract_id))
+        
         conn.commit()
         conn.close()
         
@@ -1813,7 +1833,6 @@ def edit_contract(contract_id):
         return redirect(url_for('contracts'))
     
     # ===== GET request =====
-    # جلب الدفعات الحالية لعرضها في نموذج التعديل
     contract_payments = conn.execute('''
         SELECT * FROM contract_payments WHERE contract_id = ? ORDER BY installment_number ASC
     ''', (contract_id,)).fetchall()
@@ -1892,6 +1911,76 @@ def contract_details(contract_id):
                          contract=contract,
                          contract_attachments=attachments,
                          contract_payments=payments)
+
+@app.route('/print_contract/<int:contract_id>')
+def print_contract(contract_id):
+    """طباعة عقد واحد بتفاصيله"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               contract_types.name as contract_type_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    payments = conn.execute('''
+        SELECT * FROM contract_payments 
+        WHERE contract_id = ?
+        ORDER BY installment_number ASC
+    ''', (contract_id,)).fetchall()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_contract.html',
+                         contract=contract,
+                         contract_payments=payments,
+                         settings=settings,
+                         today=datetime.now().date())
+
+@app.route('/print_all_contracts')
+def print_all_contracts():
+    """طباعة جميع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               contract_types.name as contract_type_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_all_contracts.html',
+                         contracts=contracts,
+                         settings=settings,
+                         today=datetime.now().date())
 
 # ===== مرفقات العقود =====
 
@@ -2014,6 +2103,11 @@ def mark_payment_paid(payment_id):
     except:
         paid_amount = 0
     
+    # ===== جلب تاريخ الدفع من النموذج =====
+    payment_date = request.form.get('payment_date', '')
+    if not payment_date:
+        payment_date = datetime.now().strftime('%Y-%m-%d')
+    
     current_remaining = payment['amount'] - current_paid
     
     if paid_amount > current_remaining:
@@ -2028,12 +2122,11 @@ def mark_payment_paid(payment_id):
     
     new_paid_amount = current_paid + paid_amount
     
+    # تحديث حالة الدفعة
     if new_paid_amount >= payment['amount']:
         status = 'مدفوعة'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
     else:
         status = 'مدفوعة جزئيا'
-        payment_date = datetime.now().strftime('%Y-%m-%d')
     
     conn.execute('''
         UPDATE contract_payments 
@@ -2041,16 +2134,20 @@ def mark_payment_paid(payment_id):
         WHERE id = ?
     ''', (new_paid_amount, status, payment_date, payment_id))
     
+    # ===== تحديث حالة العقد =====
     contract_id = payment['contract_id']
+    
     total_paid = conn.execute('''
         SELECT SUM(paid_amount) as total FROM contract_payments 
-        WHERE contract_id = ? AND status IN ('مدفوعة', 'مدفوعة جزئيا')
+        WHERE contract_id = ?
     ''', (contract_id,)).fetchone()['total'] or 0
     
     contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
     total = contract['total_amount'] or 0
     
-    if total_paid >= total:
+    if total == 0:
+        payment_status = 'غير مدفوع'
+    elif total_paid >= total:
         payment_status = 'مدفوع بالكامل'
     elif total_paid > 0:
         payment_status = 'مدفوع جزئيا'
@@ -2066,7 +2163,7 @@ def mark_payment_paid(payment_id):
     conn.commit()
     conn.close()
     
-    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ر.س بنجاح (إجمالي المدفوع للدفعة: {new_paid_amount} ر.س)', 'success')
+    flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ر.س بنجاح', 'success')
     log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ر.س للدفعة {payment["installment_number"]}')
     return redirect(request.referrer or url_for('contracts'))
 
@@ -2258,82 +2355,6 @@ def revenue_report():
                          total_revenue=total_revenue,
                          revenue_by_client=revenue_by_client,
                          revenue_by_month=revenue_by_month)
-
-# ============================================================
-# طباعة عقد واحد
-# ============================================================
-@app.route('/print_contract/<int:contract_id>')
-def print_contract(contract_id):
-    """طباعة عقد واحد بتفاصيله"""
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    
-    contract = conn.execute('''
-        SELECT client_contracts.*, 
-               clients.name as client_name,
-               clients.company_name,
-               clients.phone as client_phone,
-               clients.email as client_email,
-               contract_types.name as contract_type_name,
-               users.name as created_by_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
-        JOIN users ON client_contracts.created_by = users.id
-        WHERE client_contracts.id = ?
-    ''', (contract_id,)).fetchone()
-    
-    if not contract:
-        flash('❌ العقد غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('contracts'))
-    
-    payments = conn.execute('''
-        SELECT * FROM contract_payments 
-        WHERE contract_id = ?
-        ORDER BY installment_number ASC
-    ''', (contract_id,)).fetchall()
-    
-    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
-    conn.close()
-    
-    return render_template('print_contract.html',
-                         contract=contract,
-                         contract_payments=payments,
-                         settings=settings,
-                         today=datetime.now().date())
-
-# ============================================================
-# طباعة جميع العقود
-# ============================================================
-@app.route('/print_all_contracts')
-def print_all_contracts():
-    """طباعة جميع العقود"""
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    
-    contracts = conn.execute('''
-        SELECT client_contracts.*, 
-               clients.name as client_name,
-               clients.company_name,
-               contract_types.name as contract_type_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
-        ORDER BY client_contracts.created_at DESC
-    ''').fetchall()
-    
-    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
-    conn.close()
-    
-    return render_template('print_all_contracts.html',
-                         contracts=contracts,
-                         settings=settings,
-                         today=datetime.now().date())
 
 # ============================================================
 # تقارير العقود
