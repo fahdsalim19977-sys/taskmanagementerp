@@ -2260,6 +2260,82 @@ def revenue_report():
                          revenue_by_month=revenue_by_month)
 
 # ============================================================
+# طباعة عقد واحد
+# ============================================================
+@app.route('/print_contract/<int:contract_id>')
+def print_contract(contract_id):
+    """طباعة عقد واحد بتفاصيله"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    contract = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone,
+               clients.email as client_email,
+               contract_types.name as contract_type_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.id = ?
+    ''', (contract_id,)).fetchone()
+    
+    if not contract:
+        flash('❌ العقد غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('contracts'))
+    
+    payments = conn.execute('''
+        SELECT * FROM contract_payments 
+        WHERE contract_id = ?
+        ORDER BY installment_number ASC
+    ''', (contract_id,)).fetchall()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_contract.html',
+                         contract=contract,
+                         contract_payments=payments,
+                         settings=settings,
+                         today=datetime.now().date())
+
+# ============================================================
+# طباعة جميع العقود
+# ============================================================
+@app.route('/print_all_contracts')
+def print_all_contracts():
+    """طباعة جميع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               contract_types.name as contract_type_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        ORDER BY client_contracts.created_at DESC
+    ''').fetchall()
+    
+    settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
+    conn.close()
+    
+    return render_template('print_all_contracts.html',
+                         contracts=contracts,
+                         settings=settings,
+                         today=datetime.now().date())
+
+# ============================================================
 # تقارير العقود
 # ============================================================
 @app.route('/contracts_report')
