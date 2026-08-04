@@ -1787,6 +1787,56 @@ def contract_details(contract_id):
                          contract=contract,
                          contract_attachments=attachments,
                          contract_payments=payments)
+
+# ============================================================
+# تصفية العقود حسب حالة الدفع
+# ============================================================
+@app.route('/contracts/filter/<status>')
+def contracts_filter(status):
+    """عرض العقود حسب حالة الدفع"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # ترجمة الحالة إلى العربية
+    status_map = {
+        'paid_full': 'مدفوع بالكامل',
+        'partial': 'مدفوع جزئيا',
+        'unpaid': 'غير مدفوع'
+    }
+    
+    status_text = status_map.get(status, '')
+    if not status_text:
+        flash('❌ حالة غير صحيحة', 'danger')
+        return redirect(url_for('contracts'))
+    
+    conn = get_db()
+    contracts_list = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name,
+               clients.company_name,
+               contract_types.name as contract_type_name,
+               users.name as created_by_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE client_contracts.payment_status = ?
+        ORDER BY client_contracts.created_at DESC
+    ''', (status_text,)).fetchall()
+    conn.close()
+    
+    # عناوين الصفحة
+    titles = {
+        'paid_full': 'العقود المدفوعة بالكامل',
+        'partial': 'العقود المدفوعة جزئياً',
+        'unpaid': 'العقود غير المدفوعة'
+    }
+    
+    return render_template('contracts_filter.html', 
+                         contracts=contracts_list,
+                         filter_title=titles.get(status, ''),
+                         filter_status=status)
+
 # ============================================================
 # أنواع العقود
 # ============================================================
