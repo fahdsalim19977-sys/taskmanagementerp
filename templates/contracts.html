@@ -3,9 +3,14 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-file-earmark-text"></i> عقود العملاء</h2>
-    <a href="/add_contract" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> إضافة عقد
-    </a>
+    <div>
+        <a href="/print_all_contracts" class="btn btn-secondary" target="_blank">
+            <i class="bi bi-printer"></i> طباعة الكل
+        </a>
+        <a href="/add_contract" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> إضافة عقد
+        </a>
+    </div>
 </div>
 
 <!-- ===== إحصائيات سريعة ===== -->
@@ -96,6 +101,9 @@
                     </a>
                     <a href="/edit_contract/{{ contract.id }}" class="btn btn-sm btn-info" title="تعديل">
                         <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="/print_contract/{{ contract.id }}" class="btn btn-sm btn-secondary" title="طباعة" target="_blank">
+                        <i class="bi bi-printer"></i>
                     </a>
                     <button class="btn btn-sm btn-danger" onclick="deleteContract({{ contract.id }})" title="حذف">
                         <i class="bi bi-trash"></i>

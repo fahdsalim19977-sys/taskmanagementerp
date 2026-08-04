@@ -54,6 +54,42 @@
     </div>
 </div>
 
+<!-- ===== إحصائيات سريعة ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي العقود</h6>
+                <h3>{{ contracts|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>مدفوعة بالكامل</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'مدفوع بالكامل')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>مدفوعة جزئياً</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'مدفوع جزئياً')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h6>غير مدفوعة</h6>
+                <h3>{{ contracts|selectattr('payment_status', 'equalto', 'غير مدفوع')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ===== قائمة العقود ===== -->
 {% if contracts %}
 <div class="table-responsive">
@@ -112,6 +148,9 @@
                 <td>
                     <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-primary" title="تفاصيل العقد">
                         <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/print_contract/{{ contract.id }}" class="btn btn-sm btn-secondary" title="طباعة" target="_blank">
+                        <i class="bi bi-printer"></i>
                     </a>
                 </td>
             </tr>

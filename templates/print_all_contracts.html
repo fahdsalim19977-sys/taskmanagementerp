@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طباعة جميع العقود</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Tajawal', sans-serif; }
+        body { background: white; padding: 30px; }
+        .print-container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a237e; padding-bottom: 20px; margin-bottom: 25px; }
+        .header .company-info h2 { color: #1a237e; font-weight: 700; margin: 0; font-size: 22px; }
+        .header .company-info small { color: #666; font-size: 13px; }
+        .header .logo-img { max-height: 80px; max-width: 120px; object-fit: contain; }
+        .report-title { text-align: center; margin-bottom: 25px; }
+        .report-title h3 { color: #1a237e; font-weight: 700; font-size: 24px; margin-bottom: 5px; }
+        .report-title .info { color: #555; font-size: 15px; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+        .data-table th { background: #1a237e; color: white; padding: 8px 10px; text-align: center; font-weight: 600; }
+        .data-table td { padding: 6px 10px; border: 1px solid #ddd; text-align: center; vertical-align: middle; }
+        .data-table tr:nth-child(even) { background: #f8f9fa; }
+        .status-badge { padding: 3px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-completed { background: #cce5ff; color: #004085; }
+        .status-stopped { background: #e2e3e5; color: #383d41; }
+        .status-paid { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-overdue { background: #f8d7da; color: #721c24; }
+        .footer-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd; }
+        .footer-section .signature { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; }
+        .footer-section .signature .company-name { color: #1a237e; font-weight: 700; font-size: 16px; }
+        .no-print { text-align: center; margin-top: 25px; padding-top: 20px; border-top: 2px solid #eee; }
+        .no-print .btn { padding: 10px 30px; border-radius: 10px; font-weight: 600; margin: 0 5px; }
+        @media print { body { padding: 15px; background: white; } .print-container { box-shadow: none; padding: 10px; } .no-print { display: none !important; } }
+        @media (max-width: 768px) { .header { flex-direction: column; text-align: center; } .data-table { font-size: 11px; } .data-table th, .data-table td { padding: 4px 6px; } }
+    </style>
+</head>
+<body>
+<div class="print-container" id="printArea">
+    
+    <!-- ===== الرأس ===== -->
+    <div class="header">
+        <div class="company-info">
+            <h2>{{ settings.name if settings else 'نظام إدارة المهام' }}</h2>
+            <small>
+                {% if settings.phone %}<i class="bi bi-telephone"></i> {{ settings.phone }} {% endif %}
+                {% if settings.address %} | <i class="bi bi-geo-alt"></i> {{ settings.address }}{% endif %}
+            </small>
+        </div>
+        <div>
+            {% if settings and settings.logo_path %}
+            <img src="{{ url_for('static', filename=settings.logo_path, _external=True) }}" alt="شعار الشركة" class="logo-img">
+            {% else %}
+            <span class="logo-placeholder"><i class="bi bi-building"></i></span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- ===== عنوان التقرير ===== -->
+    <div class="report-title">
+        <h3>📋 تقرير جميع العقود</h3>
+        <div class="info">
+            <strong>إجمالي العقود:</strong> {{ contracts|length }}
+            | <strong>التاريخ:</strong> {{ today.strftime('%Y-%m-%d') }}
+        </div>
+    </div>
+    
+    <!-- ===== جدول العقود ===== -->
+    {% if contracts %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>رقم العقد</th>
+                <th>نوع العقد</th>
+                <th>العنوان</th>
+                <th>العميل</th>
+                <th>الشركة</th>
+                <th>القيمة</th>
+                <th>حالة الدفع</th>
+                <th>حالة العقد</th>
+                <th>تاريخ البداية</th>
+                <th>تاريخ النهاية</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contract in contracts %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ contract.contract_number }}</strong></td>
+                <td>{{ contract.contract_type_name or '-' }}</td>
+                <td>{{ contract.title }}</td>
+                <td>{{ contract.client_name }}</td>
+                <td>{{ contract.company_name or '-' }}</td>
+                <td>{{ contract.contract_value }} ر.س</td>
+                <td>
+                    <span class="status-badge 
+                        {% if contract.payment_status == 'مدفوع بالكامل' %}status-paid
+                        {% elif contract.payment_status == 'مدفوع جزئيا' %}status-pending
+                        {% else %}status-overdue{% endif %}">
+                        {{ contract.payment_status }}
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge 
+                        {% if contract.status == 'نشط' %}status-active
+                        {% elif contract.status == 'مكتمل' %}status-completed
+                        {% else %}status-stopped{% endif %}">
+                        {{ contract.status }}
+                    </span>
+                </td>
+                <td>{{ contract.start_date }}</td>
+                <td>{{ contract.end_date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-file-earmark-text" style="font-size:48px;display:block;"></i>
+        <h4>لا توجد عقود</h4>
+    </div>
+    {% endif %}
+    
+    <!-- ===== التذييل ===== -->
+    <div class="footer-section">
+        <div class="signature">
+            <div>
+                <div class="company-name">{{ settings.name if settings else 'نظام إدارة المهام' }}</div>
+                <div class="slogan">تكنولوجيا المستقبل بين يديك</div>
+            </div>
+            <div style="text-align:left;">
+                <div style="color:#666; font-size:13px;">
+                    تم الإنشاء: {{ today.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                <div style="color:#999; font-size:12px;">
+                    هذا التقرير شامل جميع العقود
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== أزرار التحكم ===== -->
+    <div class="no-print">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> طباعة
+        </button>
+        <a href="/contracts" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+</body>
+</html>
