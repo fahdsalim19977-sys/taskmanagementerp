@@ -40,6 +40,17 @@ def init_db():
         )
     """)
     
+    # ===== إضافة عمود favicon_path إذا لم يكن موجوداً (للترقية) =====
+    try:
+        cursor.execute("ALTER TABLE company_settings ADD COLUMN favicon_path TEXT")
+        print("✅ تم إضافة عمود favicon_path")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("ℹ️ عمود favicon_path موجود مسبقاً")
+        else:
+            print(f"❌ خطأ: {e}")
+    
+    # ===== باقي الجداول =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
