@@ -33,7 +33,7 @@
                         {{ contract.status }}
                     </span>
                 </p>
-                <p><strong>القيمة:</strong> {{ contract.contract_value }}  ر.س</p>
+                <p><strong>القيمة:</strong> {{ contract.contract_value }} ر.س</p>
                 <p><strong>حالة الدفع:</strong>
                     <span class="badge 
                         {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
@@ -141,7 +141,7 @@
                                 {{ remaining }} ر.س
                             </strong>
                         </td>
-                        <td>{{ payment.due_date }}</td>
+                        <td>{{ payment.due_date or 'لم يحدد' }}</td>
                         <td>{{ payment.payment_date or '-' }}</td>
                         <td>
                             <span class="badge 
@@ -181,6 +181,14 @@
                                         <div class="mb-3">
                                             <label class="form-label">قيمة الدفعة</label>
                                             <input type="text" class="form-control" value="{{ payment.amount }} ر.س" disabled>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">المبلغ المدفوع حالياً</label>
+                                            <input type="text" class="form-control" value="{{ payment.paid_amount or 0 }} ر.س" disabled>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">المتبقي</label>
+                                            <input type="text" class="form-control" value="{{ payment.amount - (payment.paid_amount or 0) }} ر.س" disabled>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">المبلغ المدفوع</label>

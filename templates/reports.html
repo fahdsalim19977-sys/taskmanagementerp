@@ -19,54 +19,41 @@
     </div>
 </div>
 
-<!-- ===== بطاقات الإحصائيات الرئيسية ===== -->
+<!-- ===== بطاقات إحصائيات العقود ===== -->
 <div class="row g-4 mb-4">
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-primary text-white shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Total Tasks{% else %}إجمالي التدريبات{% endif %}</h6>
-                        <h2 class="mb-0">{{ total_tasks or 0 }}</h2>
+                        <h6 class="card-title mb-0 opacity-75">إجمالي العقود</h6>
+                        <h2 class="mb-0">{{ total_contracts or 0 }}</h2>
                     </div>
-                    <i class="bi bi-list-task fs-1 opacity-50"></i>
+                    <i class="bi bi-file-earmark-text fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-success text-white shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Completed{% else %}مكتملة{% endif %}</h6>
-                        <h2 class="mb-0">{{ completed_count or 0 }}</h2>
+                        <h6 class="card-title mb-0 opacity-75">مدفوعة بالكامل</h6>
+                        <h2 class="mb-0">{{ contracts_paid_full or 0 }}</h2>
                     </div>
                     <i class="bi bi-check-circle fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark shadow-sm">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}</h6>
-                        <h2 class="mb-0">{{ in_progress_count or 0 }}</h2>
-                    </div>
-                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-danger text-white shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title mb-0 opacity-75">{% if get_lang() == 'en' %}Overdue{% else %}متأخرة{% endif %}</h6>
-                        <h2 class="mb-0">{{ overdue_count or 0 }}</h2>
+                        <h6 class="card-title mb-0 opacity-75">غير مدفوعة</h6>
+                        <h2 class="mb-0">{{ contracts_unpaid or 0 }}</h2>
                     </div>
                     <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
                 </div>
@@ -77,43 +64,6 @@
 
 <!-- ===== تقارير مفصلة ===== -->
 <div class="row g-4">
-    <!-- ===== تقرير التدريبات ===== -->
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-list-task"></i> {% if get_lang() == 'en' %}Training Report{% else %}تقرير التدريبات{% endif %}</h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <i class="bi bi-list-task" style="font-size: 3rem; color: #1a237e;"></i>
-                </div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{% if get_lang() == 'en' %}Total Trainings{% else %}إجمالي التدريبات{% endif %}</span>
-                        <span class="badge bg-primary rounded-pill">{{ total_tasks or 0 }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{% if get_lang() == 'en' %}Completed{% else %}مكتملة{% endif %}</span>
-                        <span class="badge bg-success rounded-pill">{{ completed_count or 0 }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{% if get_lang() == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}</span>
-                        <span class="badge bg-warning rounded-pill">{{ in_progress_count or 0 }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{% if get_lang() == 'en' %}Overdue{% else %}متأخرة{% endif %}</span>
-                        <span class="badge bg-danger rounded-pill">{{ overdue_count or 0 }}</span>
-                    </li>
-                </ul>
-                <div class="mt-3">
-                    <a href="/tasks" class="btn btn-primary w-100">
-                        <i class="bi bi-eye"></i> {% if get_lang() == 'en' %}View All Trainings{% else %}عرض جميع التدريبات{% endif %}
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== تقرير المدفوعات ===== -->
     <div class="col-md-4">
         <div class="card h-100 shadow-sm">
@@ -131,7 +81,7 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}Total Amount{% else %}إجمالي المبلغ{% endif %}</span>
-                        <span class="badge bg-success rounded-pill">{{ total_payments_amount or 0 }} ج.م</span>
+                        <span class="badge bg-success rounded-pill">{{ total_payments_amount or 0 }} ر.س</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}Paid{% else %}مدفوع{% endif %}</span>
@@ -154,20 +104,22 @@
             </div>
         </div>
     </div>
-<div class="col-md-4">
-    <div class="card h-100 shadow-sm">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> تقارير العقود</h5>
-        </div>
-        <div class="card-body text-center">
-            <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #17a2b8;"></i>
-            <p class="mt-3">عرض تقارير العقود بكل تفاصيلها</p>
-            <a href="/contracts_report" class="btn btn-info w-100">
-                <i class="bi bi-eye"></i> عرض تقارير العقود
-            </a>
+
+    <!-- ===== تقارير العقود ===== -->
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> تقارير العقود</h5>
+            </div>
+            <div class="card-body text-center">
+                <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #17a2b8;"></i>
+                <p class="mt-3">عرض تقارير العقود بكل تفاصيلها</p>
+                <a href="/contracts_report" class="btn btn-info w-100">
+                    <i class="bi bi-eye"></i> عرض تقارير العقود
+                </a>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- ===== تقرير الإيرادات ===== -->
     <div class="col-md-4">
@@ -182,19 +134,19 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}Total Revenue{% else %}إجمالي الإيرادات{% endif %}</span>
-                        <span class="badge bg-info rounded-pill">{{ total_revenue or 0 }} ج.م</span>
+                        <span class="badge bg-info rounded-pill">{{ total_revenue or 0 }} ر.س</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}This Month{% else %}هذا الشهر{% endif %}</span>
-                        <span class="badge bg-primary rounded-pill">{{ monthly_revenue or 0 }} ج.م</span>
+                        <span class="badge bg-primary rounded-pill">{{ monthly_revenue or 0 }} ر.س</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</span>
-                        <span class="badge bg-success rounded-pill">{{ weekly_revenue or 0 }} ج.م</span>
+                        <span class="badge bg-success rounded-pill">{{ weekly_revenue or 0 }} ر.س</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{% if get_lang() == 'en' %}Today{% else %}اليوم{% endif %}</span>
-                        <span class="badge bg-warning rounded-pill">{{ daily_revenue or 0 }} ج.م</span>
+                        <span class="badge bg-warning rounded-pill">{{ daily_revenue or 0 }} ر.س</span>
                     </li>
                 </ul>
                 <div class="mt-3">
@@ -300,16 +252,13 @@
 <script>
 // ===== طباعة متقدمة =====
 document.addEventListener('DOMContentLoaded', function() {
-    // إضافة زر طباعة في حالة عدم ظهوره
     var printBtn = document.querySelector('button[onclick="window.print()"]');
     if (printBtn) {
         printBtn.addEventListener('click', function(e) {
-            // إضافة رأس الطباعة قبل الطباعة
             var header = document.querySelector('.print-header');
             if (header) {
                 header.classList.remove('no-print');
             }
-            // إعادة إضافة class بعد الطباعة
             setTimeout(function() {
                 if (header) {
                     header.classList.add('no-print');
