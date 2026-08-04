@@ -886,6 +886,225 @@ def group_tasks():
     return redirect(url_for('client_tasks', client_id=client_id))
 
 # ============================================================
+# تحديث حالة التدريب (من صفحة التفاصيل)
+# ============================================================
+@app.route('/update_task_status/<int:task_id>', methods=['POST'])
+def update_task_status(task_id):
+    """تحديث حالة التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    status = request.form['status']
+    completion = request.form.get('completion_percentage', 0)
+    actual_duration = request.form.get('actual_duration', 0)
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE tasks SET 
+            status = ?, 
+            completion_percentage = ?, 
+            actual_duration = ?, 
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    ''', (status, completion, actual_duration, task_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
+    log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
+    return redirect(request.referrer or url_for('tasks'))
+
+# ============================================================
+# نموذج تحديث حالة التدريب
+# ============================================================
+@app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
+def update_task_status_form(task_id):
+    """عرض نموذج تحديث حالة التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    conn.close()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        return redirect(url_for('tasks'))
+    
+    if request.method == 'POST':
+        status = request.form['status']
+        completion = request.form.get('completion_percentage', 0)
+        actual_duration = request.form.get('actual_duration', 0)
+        
+        conn = get_db()
+        conn.execute('''
+            UPDATE tasks SET 
+                status = ?, 
+                completion_percentage = ?, 
+                actual_duration = ?, 
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (status, completion, actual_duration, task_id))
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم تحديث الحالة بنجاح', 'success')
+        return redirect(url_for('tasks'))
+    
+    return render_template('update_task_status.html', task=task)
+
+# ============================================================
+# إضافة ملاحظة للتدريب
+# ============================================================
+@app.route('/add_note/<int:task_id>', methods=['POST'])
+def add_note(task_id):
+    """إضافة ملاحظة للتدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    note = request.form.get('note', '')
+    file = request.files.get('attachment')
+    
+    attachment_path = None
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        name_parts = filename.rsplit('.', 1)
+        if len(name_parts) > 1:
+            filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+        else:
+            filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        attachment_path = file_path
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO task_updates (task_id, user_id, note, attachment_path)
+        VALUES (?, ?, ?, ?)
+    ''', (task_id, session['user_id'], note, attachment_path))
+    conn.commit()
+    conn.close()
+    
+    flash('📝 تم إضافة الملاحظة بنجاح', 'success')
+    log_activity(session['user_id'], 'إضافة ملاحظة', f'أضاف ملاحظة للتدريب {task_id}')
+    return redirect(request.referrer or url_for('tasks'))
+
+# ============================================================
+# نموذج إضافة ملاحظة
+# ============================================================
+@app.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
+def add_note_form(task_id):
+    """عرض نموذج إضافة ملاحظة"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        note = request.form.get('note', '')
+        file = request.files.get('attachment')
+        
+        attachment_path = None
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            name_parts = filename.rsplit('.', 1)
+            if len(name_parts) > 1:
+                filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
+            else:
+                filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            attachment_path = file_path
+        
+        conn = get_db()
+        conn.execute('''
+            INSERT INTO task_updates (task_id, user_id, note, attachment_path)
+            VALUES (?, ?, ?, ?)
+        ''', (task_id, session['user_id'], note, attachment_path))
+        conn.commit()
+        conn.close()
+        
+        flash('📝 تم إضافة الملاحظة بنجاح', 'success')
+        return redirect(url_for('tasks'))
+    
+    return render_template('add_note.html', task_id=task_id)
+
+
+# ============================================================
+# حذف التدريب
+# ============================================================
+@app.route('/delete_task/<int:task_id>', methods=['POST'])
+def delete_task(task_id):
+    """حذف تدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    # التحقق من الصلاحيات
+    user_role = session['user_role']
+    if user_role == 'مراقب':
+        flash('⛔ ليس لديك صلاحية لحذف التدريبات', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
+        flash('⛔ يمكنك حذف تدريباتك فقط', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف التدريب بنجاح', 'success')
+    log_activity(session['user_id'], 'حذف تدريب', f'حذف تدريب رقم {task_id}')
+    return redirect(url_for('tasks'))
+
+# ============================================================
+# تفاصيل التدريب
+# ============================================================
+@app.route('/task/<int:task_id>')
+def task_details(task_id):
+    """عرض تفاصيل التدريب"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('''
+        SELECT tasks.*, 
+               clients.name as client_name, 
+               clients.phone as client_phone,
+               clients.email as client_email,
+               clients.address as client_address,
+               clients.company_name as client_company,
+               users.name as assigned_name,
+               users.email as assigned_email
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN users ON tasks.assigned_to = users.id 
+        WHERE tasks.id = ?
+    ''', (task_id,)).fetchone()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    updates = conn.execute('''
+        SELECT task_updates.*, users.name as user_name
+        FROM task_updates
+        JOIN users ON task_updates.user_id = users.id
+        WHERE task_updates.task_id = ?
+        ORDER BY task_updates.created_at DESC
+    ''', (task_id,)).fetchall()
+    conn.close()
+    
+    return render_template('task_details.html', task=task, updates=updates, today=datetime.now().date())
+
+# ============================================================
 # إدارة المدربين
 # ============================================================
 @app.route('/trainers')
