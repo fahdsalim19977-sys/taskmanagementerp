@@ -54,6 +54,7 @@
                 <th>رقم العقد</th>
                 <th>العنوان</th>
                 <th>العميل</th>
+                <th>الشركة</th>
                 <th>القيمة</th>
                 <th>تاريخ البداية</th>
                 <th>تاريخ النهاية</th>
@@ -74,11 +75,9 @@
                 <td>
                     <a href="/client_tasks/{{ contract.client_id }}" class="text-decoration-none">
                         {{ contract.client_name }}
-                        {% if contract.company_name %}
-                        <br><small class="text-muted">{{ contract.company_name }}</small>
-                        {% endif %}
                     </a>
                 </td>
+                <td>{{ contract.company_name or '-' }}</td>
                 <td>{{ contract.contract_value }} ر.س</td>
                 <td>{{ contract.start_date }}</td>
                 <td>{{ contract.end_date }}</td>
