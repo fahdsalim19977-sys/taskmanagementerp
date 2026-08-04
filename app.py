@@ -146,6 +146,8 @@ def index():
         return redirect(url_for('login'))
     
     conn = get_db()
+    
+    # ===== إحصائيات المهام =====
     total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
     completed_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
     overdue_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
@@ -154,7 +156,50 @@ def index():
     total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
     upcoming_meetings = conn.execute('SELECT COUNT(*) as count FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول"').fetchone()['count']
     total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
+    total_payments = conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count'] or 0
     
+    # ===== إحصائيات العقود =====
+    total_contracts = conn.execute('SELECT COUNT(*) as count FROM client_contracts').fetchone()['count'] or 0
+    
+    contracts_paid_full = conn.execute('''
+        SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = 'مدفوع بالكامل'
+    ''').fetchone()['count'] or 0
+    
+    contracts_partial = conn.execute('''
+        SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = 'مدفوع جزئيا'
+    ''').fetchone()['count'] or 0
+    
+    contracts_unpaid = conn.execute('''
+        SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = 'غير مدفوع'
+    ''').fetchone()['count'] or 0
+    
+    contracts_unpaid_amount = conn.execute('''
+        SELECT SUM(total_amount - paid_amount) as total 
+        FROM client_contracts 
+        WHERE payment_status != 'مدفوع بالكامل'
+    ''').fetchone()['total'] or 0
+    
+    contracts_paid_percent = 0
+    if total_contracts > 0:
+        contracts_paid_percent = round((contracts_paid_full / total_contracts) * 100, 1)
+    
+    contracts_partial_due = conn.execute('''
+        SELECT SUM(total_amount - paid_amount) as total 
+        FROM client_contracts 
+        WHERE payment_status = 'مدفوع جزئيا'
+    ''').fetchone()['total'] or 0
+    
+    # ===== آخر 5 عقود =====
+    recent_contracts = conn.execute('''
+        SELECT client_contracts.*, 
+               clients.name as client_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        ORDER BY client_contracts.created_at DESC
+        LIMIT 5
+    ''').fetchall()
+    
+    # ===== المهام المتأخرة =====
     overdue_list = conn.execute('''
         SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
         FROM tasks 
@@ -176,6 +221,7 @@ def index():
     settings = get_company_settings()
     
     return render_template('index.html', 
+                         # ===== إحصائيات المهام =====
                          total_tasks=total_tasks,
                          completed_tasks=completed_tasks,
                          overdue_tasks=overdue_tasks,
@@ -184,6 +230,19 @@ def index():
                          total_users=total_users,
                          upcoming_meetings=upcoming_meetings,
                          total_revenue=total_revenue,
+                         total_payments=total_payments,
+                         
+                         # ===== إحصائيات العقود =====
+                         total_contracts=total_contracts,
+                         contracts_paid_full=contracts_paid_full,
+                         contracts_partial=contracts_partial,
+                         contracts_unpaid=contracts_unpaid,
+                         contracts_unpaid_amount=contracts_unpaid_amount,
+                         contracts_paid_percent=contracts_paid_percent,
+                         contracts_partial_due=contracts_partial_due,
+                         recent_contracts=recent_contracts,
+                         
+                         # ===== بيانات أخرى =====
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
