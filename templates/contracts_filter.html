@@ -27,7 +27,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <h6>إجمالي القيمة</h6>
-                <h3>{{ contracts|sum(attribute='total_amount')|round(2) }} ج.م</h3>
+                <h3>{{ contracts|sum(attribute='total_amount')|round(2) }} ر.س</h3>
             </div>
         </div>
     </div>
@@ -35,7 +35,7 @@
         <div class="card bg-info text-white">
             <div class="card-body text-center">
                 <h6>المدفوع</h6>
-                <h3>{{ contracts|sum(attribute='paid_amount')|round(2) }} ج.م</h3>
+                <h3>{{ contracts|sum(attribute='paid_amount')|round(2) }} ر.س</h3>
             </div>
         </div>
     </div>
@@ -46,7 +46,7 @@
                 <h3>
                     {% set total = contracts|sum(attribute='total_amount') %}
                     {% set paid = contracts|sum(attribute='paid_amount') %}
-                    {{ (total - paid)|round(2) }} ج.م
+                    {{ (total - paid)|round(2) }} ر.س
                 </h3>
             </div>
         </div>
@@ -88,12 +88,12 @@
                         {{ contract.client_name }}
                     </a>
                 </td>
-                <td>{{ contract.total_amount or contract.contract_value }} ج.م</td>
-                <td>{{ contract.paid_amount or 0 }} ج.م</td>
+                <td>{{ contract.total_amount or contract.contract_value }} ر.س</td>
+                <td>{{ contract.paid_amount or 0 }} ر.س</td>
                 <td>
                     {% set total = contract.total_amount or contract.contract_value %}
                     {% set paid = contract.paid_amount or 0 %}
-                    {{ (total - paid)|round(2) }} ج.م
+                    {{ (total - paid)|round(2) }} ر.س
                 </td>
                 <td>
                     <span class="badge 

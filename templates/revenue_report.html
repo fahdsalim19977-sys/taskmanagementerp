@@ -25,7 +25,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <h5>إجمالي الإيرادات</h5>
-                <h1>{{ total_revenue }} ج.م</h1>
+                <h1>{{ total_revenue }} ر.س</h1>
             </div>
         </div>
     </div>
@@ -54,7 +54,7 @@
                         <td>{{ loop.index }}</td>
                         <td><strong>{{ client.name }}</strong></td>
                         <td><span class="badge bg-primary">{{ client.count }}</span></td>
-                        <td><span class="badge bg-success">{{ client.total }} ج.م</span></td>
+                        <td><span class="badge bg-success">{{ client.total }} ر.س</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -85,7 +85,7 @@
                     {% for month in revenue_by_month %}
                     <tr>
                         <td>{{ month.month }}</td>
-                        <td><span class="badge bg-success">{{ month.total }} ج.م</span></td>
+                        <td><span class="badge bg-success">{{ month.total }} ر.س</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>

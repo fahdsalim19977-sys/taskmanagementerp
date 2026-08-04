@@ -22,7 +22,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <h6>إجمالي المدفوع</h6>
-                <h3>{{ stats.total_paid or 0 }} ج.م</h3>
+                <h3>{{ stats.total_paid or 0 }} ر.س</h3>
             </div>
         </div>
     </div>
@@ -30,7 +30,7 @@
         <div class="card bg-warning text-dark">
             <div class="card-body text-center">
                 <h6>معلق</h6>
-                <h3>{{ stats.total_pending or 0 }} ج.م</h3>
+                <h3>{{ stats.total_pending or 0 }} ر.س</h3>
             </div>
         </div>
     </div>
@@ -38,7 +38,7 @@
         <div class="card bg-danger text-white">
             <div class="card-body text-center">
                 <h6>متأخر</h6>
-                <h3>{{ stats.total_overdue or 0 }} ج.م</h3>
+                <h3>{{ stats.total_overdue or 0 }} ر.س</h3>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@
             {% for payment in payments %}
             <tr>
                 <td>{{ payment.id }}</td>
-                <td><strong>{{ payment.amount }} ج.م</strong></td>
+                <td><strong>{{ payment.amount }} ر.س</strong></td>
                 <td>{{ payment.payment_date }}</td>
                 <td>{{ payment.due_date or '-' }}</td>
                 <td>{{ payment.payment_method }}</td>

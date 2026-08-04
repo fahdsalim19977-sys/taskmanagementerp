@@ -33,7 +33,7 @@
                         {{ contract.status }}
                     </span>
                 </p>
-                <p><strong>القيمة:</strong> {{ contract.contract_value }} ج.م</p>
+                <p><strong>القيمة:</strong> {{ contract.contract_value }}  ر.س</p>
                 <p><strong>حالة الدفع:</strong>
                     <span class="badge 
                         {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
@@ -98,17 +98,17 @@
         <div class="row g-3 mb-3">
             <div class="col-md-4">
                 <div class="alert alert-info">
-                    <strong>إجمالي المبلغ:</strong> {{ contract.total_amount or contract.contract_value }} ج.م
+                    <strong>إجمالي المبلغ:</strong> {{ contract.total_amount or contract.contract_value }} ر.س
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="alert alert-success">
-                    <strong>المدفوع:</strong> {{ contract.paid_amount or 0 }} ج.م
+                    <strong>المدفوع:</strong> {{ contract.paid_amount or 0 }} ر.س
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="alert alert-warning">
-                    <strong>المتبقي:</strong> {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ج.م
+                    <strong>المتبقي:</strong> {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ر.س
                 </div>
             </div>
         </div>
@@ -133,12 +133,12 @@
                     {% for payment in contract_payments %}
                     <tr>
                         <td>{{ payment.installment_number }}</td>
-                        <td><strong>{{ payment.amount }} ج.م</strong></td>
-                        <td>{{ payment.paid_amount or 0 }} ج.م</td>
+                        <td><strong>{{ payment.amount }} ر.س</strong></td>
+                        <td>{{ payment.paid_amount or 0 }} ر.س</td>
                         <td>
                             {% set remaining = payment.amount - (payment.paid_amount or 0) %}
                             <strong class="{% if remaining > 0 %}text-danger{% else %}text-success{% endif %}">
-                                {{ remaining }} ج.م
+                                {{ remaining }} ر.س
                             </strong>
                         </td>
                         <td>{{ payment.due_date }}</td>
@@ -180,7 +180,7 @@
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">قيمة الدفعة</label>
-                                            <input type="text" class="form-control" value="{{ payment.amount }} ج.م" disabled>
+                                            <input type="text" class="form-control" value="{{ payment.amount }} ر.س" disabled>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">المبلغ المدفوع</label>

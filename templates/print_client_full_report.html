@@ -97,15 +97,15 @@
         </div>
         <div class="stat-card stat-paid">
             <small>إجمالي المدفوع</small>
-            <h4>{{ stats.total_paid or 0 }} ج.م</h4>
+            <h4>{{ stats.total_paid or 0 }} ر.س</h4>
         </div>
         <div class="stat-card stat-pending">
             <small>معلق</small>
-            <h4>{{ stats.total_pending or 0 }} ج.م</h4>
+            <h4>{{ stats.total_pending or 0 }} ر.س</h4>
         </div>
         <div class="stat-card stat-overdue">
             <small>متأخر</small>
-            <h4>{{ stats.total_overdue or 0 }} ج.م</h4>
+            <h4>{{ stats.total_overdue or 0 }} ر.س</h4>
         </div>
     </div>
 
@@ -129,7 +129,7 @@
                 <td>{{ loop.index }}</td>
                 <td><strong>{{ module.name }}</strong></td>
                 <td style="text-align:right;">{{ module.description or '-' }}</td>
-                <td>{{ module.price }} ج.م</td>
+                <td>{{ module.price }} ر.س</td>
                 <td>
                     <span class="status-badge 
                         {% if module.status == 'نشط' %}status-active
@@ -173,7 +173,7 @@
                     </a>
                 </td>
                 <td>{{ payment.installment_number }}</td>
-                <td><strong>{{ payment.amount }} ج.م</strong></td>
+                <td><strong>{{ payment.amount }} ر.س</strong></td>
                 <td>{{ payment.due_date }}</td>
                 <td>{{ payment.payment_date or '-' }}</td>
                 <td>
@@ -195,7 +195,7 @@
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
                     <h6>المدفوع من العقود</h6>
-                    <h3>{{ contract_stats.total_paid or 0 }} ج.م</h3>
+                    <h3>{{ contract_stats.total_paid or 0 }} ر.س</h3>
                 </div>
             </div>
         </div>
@@ -203,7 +203,7 @@
             <div class="card bg-warning text-dark">
                 <div class="card-body text-center">
                     <h6>المستحق</h6>
-                    <h3>{{ contract_stats.total_due or 0 }} ج.م</h3>
+                    <h3>{{ contract_stats.total_due or 0 }} ر.س</h3>
                 </div>
             </div>
         </div>
@@ -211,7 +211,7 @@
             <div class="card bg-danger text-white">
                 <div class="card-body text-center">
                     <h6>المتأخر</h6>
-                    <h3>{{ contract_stats.total_overdue or 0 }} ج.م</h3>
+                    <h3>{{ contract_stats.total_overdue or 0 }} ر.س</h3>
                 </div>
             </div>
         </div>
@@ -240,7 +240,7 @@
             {% for payment in payments %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td><strong>{{ payment.amount }} ج.م</strong></td>
+                <td><strong>{{ payment.amount }} ر.س</strong></td>
                 <td>{{ payment.module_name or '-' }}</td>
                 <td>{{ payment.payment_date }}</td>
                 <td>{{ payment.due_date or '-' }}</td>
