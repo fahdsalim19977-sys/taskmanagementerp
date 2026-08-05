@@ -834,6 +834,30 @@ def update_task_status(task_id):
     log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
     return redirect(request.referrer or url_for('tasks'))
 
+
+@app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
+def update_task_status_form(task_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    conn.close()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        return redirect(url_for('tasks'))
+    
+    if request.method == 'POST':
+        status = request.form['status']
+        completion = request.form.get('completion_percentage', 0)
+        actual_duration = request.form.get('actual_duration', 0)
+        
+        # إعادة توجيه إلى دالة التحديث
+        return redirect(url_for('update_task_status', task_id=task_id))
+    
+    return render_template('update_task_status.html', task=task)
+
 @app.route('/add_note/<int:task_id>', methods=['POST'])
 def add_note(task_id):
     if 'user_id' not in session:
