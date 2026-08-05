@@ -545,6 +545,17 @@ def add_task():
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
+    
+    # ===== جلب الدفعات المتاحة للربط =====
+    available_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.client_id
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
+        ORDER BY client_contracts.client_id, contract_payments.due_date
+    ''').fetchall()
     conn.close()
     
     if request.method == 'POST':
@@ -557,30 +568,16 @@ def add_task():
         estimated_duration = request.form.get('estimated_duration', 0)
         meeting_id = request.form.get('meeting_id') or None
         task_group = request.form.get('task_group', '')
+        contract_payment_id = request.form.get('contract_payment_id') or None
         
-        # التحقق من وجود المدرب
         conn = get_db()
-        trainer = conn.execute('SELECT * FROM trainers WHERE id = ? AND is_active = 1', (assigned_to,)).fetchone()
-        if not trainer:
-            flash('❌ المدرب غير موجود أو غير نشط', 'danger')
-            conn.close()
-            return redirect(url_for('add_task'))
-        
         cursor = conn.execute('''
             INSERT INTO tasks (client_id, assigned_to, title, description, due_date, priority, 
-                             estimated_duration, meeting_id, task_group)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             estimated_duration, meeting_id, task_group, contract_payment_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (client_id, assigned_to, title, description, due_date, priority, 
-              estimated_duration, meeting_id, task_group))
+              estimated_duration, meeting_id, task_group, contract_payment_id))
         task_id = cursor.lastrowid
-        
-        # التحقق من الإضافة
-        check = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
-        if not check:
-            flash('❌ حدث خطأ في إضافة التدريب', 'danger')
-            conn.close()
-            return redirect(url_for('add_task'))
-        
         conn.commit()
         
         message = f'📋 تم تكليفك بمهمة جديدة: {title}'
@@ -593,7 +590,11 @@ def add_task():
         log_activity(session['user_id'], 'إضافة تدريب', f'أضاف {title}')
         return redirect(url_for('tasks'))
     
-    return render_template('add_task.html', clients=clients, trainers=trainers, meetings=meetings)
+    return render_template('add_task.html', 
+                         clients=clients, 
+                         trainers=trainers, 
+                         meetings=meetings,
+                         available_payments=available_payments)
 
 @app.route('/task/<int:task_id>')
 def task_details(task_id):
@@ -706,6 +707,65 @@ def update_task_status(task_id):
     actual_duration = request.form.get('actual_duration', 0)
     
     conn = get_db()
+    
+    # جلب معلومات التدريب
+    task = conn.execute('''
+        SELECT tasks.*, clients.name as client_name 
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        WHERE tasks.id = ?
+    ''', (task_id,)).fetchone()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        conn.close()
+        return redirect(url_for('tasks'))
+    
+    # ===== إذا كان التدريب مكتمل ولديه دفعة مرتبطة =====
+    if status == 'مكتملة' and task['contract_payment_id']:
+        payment_id = task['contract_payment_id']
+        
+        # جلب معلومات الدفعة
+        payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
+        
+        if payment:
+            # التحقق من أن الدفعة لم تصبح مدفوعة بالفعل
+            if payment['status'] != 'مدفوعة':
+                # تحديث حالة الدفعة إلى "مستحقة" (إذا كانت غير ذلك)
+                conn.execute('''
+                    UPDATE contract_payments 
+                    SET status = 'مستحقة', 
+                        notes = COALESCE(notes, '') || ' | تم تفعيلها بإكمال تدريب: ' || ?
+                    WHERE id = ?
+                ''', (task['title'], payment_id))
+                
+                # تحديث حالة العقد إذا لزم الأمر
+                contract_id = payment['contract_id']
+                total_paid = conn.execute('''
+                    SELECT SUM(paid_amount) as total FROM contract_payments 
+                    WHERE contract_id = ? AND status = 'مدفوعة'
+                ''', (contract_id,)).fetchone()['total'] or 0
+                
+                contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+                total = contract['total_amount'] or 0
+                
+                if total_paid >= total:
+                    payment_status = 'مدفوع بالكامل'
+                elif total_paid > 0:
+                    payment_status = 'مدفوع جزئيا'
+                else:
+                    payment_status = 'غير مدفوع'
+                
+                conn.execute('''
+                    UPDATE client_contracts 
+                    SET payment_status = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (payment_status, contract_id))
+                
+                flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد {payment["contract_id"]}', 'success')
+                log_activity(session['user_id'], 'تفعيل دفعة من تدريب', f'تم تفعيل دفعة {payment_id} من تدريب {task["title"]}')
+    
+    # تحديث حالة التدريب
     conn.execute('''
         UPDATE tasks SET 
             status = ?, 
@@ -720,41 +780,6 @@ def update_task_status(task_id):
     flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
     log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
     return redirect(request.referrer or url_for('tasks'))
-
-@app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
-def update_task_status_form(task_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
-    conn.close()
-    
-    if not task:
-        flash('❌ التدريب غير موجود', 'danger')
-        return redirect(url_for('tasks'))
-    
-    if request.method == 'POST':
-        status = request.form['status']
-        completion = request.form.get('completion_percentage', 0)
-        actual_duration = request.form.get('actual_duration', 0)
-        
-        conn = get_db()
-        conn.execute('''
-            UPDATE tasks SET 
-                status = ?, 
-                completion_percentage = ?, 
-                actual_duration = ?, 
-                updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-        ''', (status, completion, actual_duration, task_id))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم تحديث الحالة بنجاح', 'success')
-        return redirect(url_for('tasks'))
-    
-    return render_template('update_task_status.html', task=task)
 
 @app.route('/add_note/<int:task_id>', methods=['POST'])
 def add_note(task_id):

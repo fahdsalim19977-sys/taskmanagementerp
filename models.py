@@ -116,6 +116,7 @@ def init_db():
             meeting_id INTEGER,
             estimated_duration INTEGER DEFAULT 0,
             actual_duration INTEGER DEFAULT 0,
+            contract_payment_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id),
