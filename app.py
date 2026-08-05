@@ -504,23 +504,32 @@ def tasks():
     
     conn = get_db()
     user_role = session['user_role']
+    
+    # ===== استخدام trainers بدلاً من users =====
     if user_role == 'موظف':
         task_list = conn.execute('''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            SELECT tasks.*, 
+                   clients.name as client_name, 
+                   clients.company_name, 
+                   trainers.name as assigned_name 
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN users ON tasks.assigned_to = users.id 
+            JOIN trainers ON tasks.assigned_to = trainers.id 
             WHERE tasks.assigned_to = ?
             ORDER BY tasks.due_date ASC
         ''', (session['user_id'],)).fetchall()
     else:
         task_list = conn.execute('''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            SELECT tasks.*, 
+                   clients.name as client_name, 
+                   clients.company_name, 
+                   trainers.name as assigned_name 
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN users ON tasks.assigned_to = users.id 
+            JOIN trainers ON tasks.assigned_to = trainers.id 
             ORDER BY tasks.due_date ASC
         ''').fetchall()
+    
     conn.close()
     return render_template('tasks.html', tasks=task_list, today=datetime.now().date())
 
@@ -549,7 +558,14 @@ def add_task():
         meeting_id = request.form.get('meeting_id') or None
         task_group = request.form.get('task_group', '')
         
+        # التحقق من وجود المدرب
         conn = get_db()
+        trainer = conn.execute('SELECT * FROM trainers WHERE id = ? AND is_active = 1', (assigned_to,)).fetchone()
+        if not trainer:
+            flash('❌ المدرب غير موجود أو غير نشط', 'danger')
+            conn.close()
+            return redirect(url_for('add_task'))
+        
         cursor = conn.execute('''
             INSERT INTO tasks (client_id, assigned_to, title, description, due_date, priority, 
                              estimated_duration, meeting_id, task_group)
@@ -557,6 +573,14 @@ def add_task():
         ''', (client_id, assigned_to, title, description, due_date, priority, 
               estimated_duration, meeting_id, task_group))
         task_id = cursor.lastrowid
+        
+        # التحقق من الإضافة
+        check = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+        if not check:
+            flash('❌ حدث خطأ في إضافة التدريب', 'danger')
+            conn.close()
+            return redirect(url_for('add_task'))
+        
         conn.commit()
         
         message = f'📋 تم تكليفك بمهمة جديدة: {title}'
@@ -565,8 +589,8 @@ def add_task():
         conn.commit()
         conn.close()
         
-        flash('✅ تم إضافة المهمة بنجاح', 'success')
-        log_activity(session['user_id'], 'إضافة مهمة', f'أضاف {title}')
+        flash('✅ تم إضافة التدريب بنجاح', 'success')
+        log_activity(session['user_id'], 'إضافة تدريب', f'أضاف {title}')
         return redirect(url_for('tasks'))
     
     return render_template('add_task.html', clients=clients, trainers=trainers, meetings=meetings)
@@ -584,16 +608,16 @@ def task_details(task_id):
                clients.email as client_email,
                clients.address as client_address,
                clients.company_name as client_company,
-               users.name as assigned_name,
-               users.email as assigned_email
+               trainers.name as assigned_name,
+               trainers.email as assigned_email
         FROM tasks 
         JOIN clients ON tasks.client_id = clients.id 
-        JOIN users ON tasks.assigned_to = users.id 
+        JOIN trainers ON tasks.assigned_to = trainers.id 
         WHERE tasks.id = ?
     ''', (task_id,)).fetchone()
     
     if not task:
-        flash('❌ المهمة غير موجودة', 'danger')
+        flash('❌ التدريب غير موجود', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
@@ -613,20 +637,25 @@ def edit_task(task_id):
         return redirect(url_for('login'))
     
     conn = get_db()
-    task = conn.execute('SELECT tasks.*, clients.name as client_name FROM tasks JOIN clients ON tasks.client_id = clients.id WHERE tasks.id = ?', (task_id,)).fetchone()
+    task = conn.execute('''
+        SELECT tasks.*, clients.name as client_name 
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        WHERE tasks.id = ?
+    ''', (task_id,)).fetchone()
     
     if not task:
-        flash('❌ المهمة غير موجودة', 'danger')
+        flash('❌ التدريب غير موجود', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
     user_role = session['user_role']
     if user_role == 'مراقب':
-        flash('⛔ ليس لديك صلاحية لتعديل المهام', 'danger')
+        flash('⛔ ليس لديك صلاحية لتعديل التدريبات', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
-        flash('⛔ يمكنك تعديل مهامك فقط', 'danger')
+        flash('⛔ يمكنك تعديل تدريباتك فقط', 'danger')
         conn.close()
         return redirect(url_for('tasks'))
     
@@ -660,8 +689,8 @@ def edit_task(task_id):
         conn.commit()
         conn.close()
         
-        flash('✅ تم تحديث المهمة بنجاح', 'success')
-        log_activity(session['user_id'], 'تعديل مهمة', f'عدل {title}')
+        flash('✅ تم تحديث التدريب بنجاح', 'success')
+        log_activity(session['user_id'], 'تعديل تدريب', f'عدل {title}')
         return redirect(url_for('tasks'))
     
     conn.close()
@@ -834,20 +863,26 @@ def search_tasks():
     
     if user_role == 'موظف':
         query = '''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            SELECT tasks.*, 
+                   clients.name as client_name, 
+                   clients.company_name, 
+                   trainers.name as assigned_name 
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN users ON tasks.assigned_to = users.id 
+            JOIN trainers ON tasks.assigned_to = trainers.id 
             WHERE tasks.assigned_to = ? AND clients.name LIKE ?
             ORDER BY tasks.due_date ASC
         '''
         params = (session['user_id'], f'%{search_term}%')
     else:
         query = '''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, users.name as assigned_name 
+            SELECT tasks.*, 
+                   clients.name as client_name, 
+                   clients.company_name, 
+                   trainers.name as assigned_name 
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN users ON tasks.assigned_to = users.id 
+            JOIN trainers ON tasks.assigned_to = trainers.id 
             WHERE clients.name LIKE ?
             ORDER BY tasks.due_date ASC
         '''
