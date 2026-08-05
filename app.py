@@ -23,6 +23,7 @@ import json
 import sqlite3
 import shutil
 import zipfile
+import time
 
 # ===== إعدادات IIS =====
 if os.name == 'nt':
@@ -74,12 +75,27 @@ def send_email(to_email, subject, body, attachment=None):
         print(f"Error sending email: {str(e)}")
         return False
 
-def log_activity(user_id, action, details=None):
-    conn = get_db()
-    conn.execute('INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)', 
-                 (user_id, action, details))
-    conn.commit()
-    conn.close()
+def log_activity(user_id, action, details=None, retries=3):
+    """تسجيل النشاط مع إعادة المحاولة"""
+    for attempt in range(retries):
+        try:
+            conn = get_db()
+            conn.execute('INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)', 
+                         (user_id, action, details))
+            conn.commit()
+            conn.close()
+            return True
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e) and attempt < retries - 1:
+                time.sleep(0.5)  # انتظار نصف ثانية
+                continue
+            else:
+                print(f"❌ خطأ في تسجيل النشاط: {e}")
+                return False
+        except Exception as e:
+            print(f"❌ خطأ في تسجيل النشاط: {e}")
+            return False
+    return False
 
 def check_role(allowed_roles):
     if 'user_id' not in session:
@@ -761,30 +777,29 @@ def update_task_status(task_id):
     
     conn = get_db()
     
-    # جلب معلومات التدريب
-    task = conn.execute('''
-        SELECT tasks.*, clients.name as client_name 
-        FROM tasks 
-        JOIN clients ON tasks.client_id = clients.id 
-        WHERE tasks.id = ?
-    ''', (task_id,)).fetchone()
-    
-    if not task:
-        flash('❌ التدريب غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('tasks'))
-    
-    # ===== إذا كان التدريب مكتمل ولديه دفعة مرتبطة =====
-    if status == 'مكتملة' and task['contract_payment_id']:
-        payment_id = task['contract_payment_id']
+    try:
+        # جلب معلومات التدريب
+        task = conn.execute('''
+            SELECT tasks.*, clients.name as client_name 
+            FROM tasks 
+            JOIN clients ON tasks.client_id = clients.id 
+            WHERE tasks.id = ?
+        ''', (task_id,)).fetchone()
         
-        # جلب معلومات الدفعة
-        payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
+        if not task:
+            flash('❌ التدريب غير موجود', 'danger')
+            conn.close()
+            return redirect(url_for('tasks'))
         
-        if payment:
-            # التحقق من أن الدفعة لم تصبح مدفوعة بالفعل
-            if payment['status'] != 'مدفوعة':
-                # تحديث حالة الدفعة إلى "مستحقة"
+        # ===== إذا كان التدريب مكتمل ولديه دفعة مرتبطة =====
+        if status == 'مكتملة' and task['contract_payment_id']:
+            payment_id = task['contract_payment_id']
+            
+            # جلب معلومات الدفعة
+            payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
+            
+            if payment and payment['status'] != 'مدفوعة':
+                # تحديث حالة الدفعة
                 conn.execute('''
                     UPDATE contract_payments 
                     SET status = 'مستحقة', 
@@ -792,7 +807,7 @@ def update_task_status(task_id):
                     WHERE id = ?
                 ''', (task['title'], payment_id))
                 
-                # تحديث حالة العقد إذا لزم الأمر
+                # تحديث حالة العقد
                 contract_id = payment['contract_id']
                 total_paid = conn.execute('''
                     SELECT SUM(paid_amount) as total FROM contract_payments 
@@ -816,22 +831,33 @@ def update_task_status(task_id):
                 ''', (payment_status, contract_id))
                 
                 flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد', 'success')
-                log_activity(session['user_id'], 'تفعيل دفعة من تدريب', f'تم تفعيل دفعة {payment_id} من تدريب {task["title"]}')
-    
-    # تحديث حالة التدريب
-    conn.execute('''
-        UPDATE tasks SET 
-            status = ?, 
-            completion_percentage = ?, 
-            actual_duration = ?, 
-            updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
-    ''', (status, completion, actual_duration, task_id))
-    conn.commit()
-    conn.close()
+        
+        # تحديث حالة التدريب
+        conn.execute('''
+            UPDATE tasks SET 
+                status = ?, 
+                completion_percentage = ?, 
+                actual_duration = ?, 
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (status, completion, actual_duration, task_id))
+        
+        conn.commit()
+        
+        # ===== تسجيل النشاط (بعد commit) =====
+        try:
+            log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
+        except Exception as e:
+            print(f"⚠️ خطأ في تسجيل النشاط: {e}")
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ خطأ: {e}")
+        flash(f'❌ حدث خطأ: {str(e)}', 'danger')
+    finally:
+        conn.close()
     
     flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
-    log_activity(session['user_id'], 'تحديث حالة تدريب', f'غير حالة التدريب {task_id}')
     return redirect(request.referrer or url_for('tasks'))
 
 
