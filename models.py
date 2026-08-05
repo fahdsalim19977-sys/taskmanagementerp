@@ -40,17 +40,6 @@ def init_db():
         )
     """)
     
-    # ===== إضافة عمود favicon_path إذا لم يكن موجوداً (للترقية) =====
-    try:
-        cursor.execute("ALTER TABLE company_settings ADD COLUMN favicon_path TEXT")
-        print("✅ تم إضافة عمود favicon_path")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e):
-            print("ℹ️ عمود favicon_path موجود مسبقاً")
-        else:
-            print(f"❌ خطأ: {e}")
-    
-    # ===== باقي الجداول =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,6 +90,7 @@ def init_db():
         )
     """)
     
+    # ===== جدول tasks مع العمود الجديد =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,15 +106,27 @@ def init_db():
             meeting_id INTEGER,
             estimated_duration INTEGER DEFAULT 0,
             actual_duration INTEGER DEFAULT 0,
-            contract_payment_id INTEGER,
+            contract_payment_id INTEGER,  -- ✅ العمود الجديد
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id),
             FOREIGN KEY (assigned_to) REFERENCES users(id),
-            FOREIGN KEY (meeting_id) REFERENCES meetings(id)
+            FOREIGN KEY (meeting_id) REFERENCES meetings(id),
+            FOREIGN KEY (contract_payment_id) REFERENCES contract_payments(id)
         )
     """)
     
+    # ===== إضافة عمود contract_payment_id إذا كان الجدول موجوداً مسبقاً =====
+    try:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN contract_payment_id INTEGER")
+        print("✅ تم إضافة عمود contract_payment_id إلى جدول tasks")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("ℹ️ عمود contract_payment_id موجود مسبقاً في جدول tasks")
+        else:
+            print(f"❌ خطأ: {e}")
+    
+    # ===== باقي الجداول =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS task_updates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -323,6 +325,16 @@ def init_db():
             FOREIGN KEY (uploaded_by) REFERENCES users(id)
         )
     """)
+    
+    # ===== إضافة عمود favicon_path =====
+    try:
+        cursor.execute("ALTER TABLE company_settings ADD COLUMN favicon_path TEXT")
+        print("✅ تم إضافة عمود favicon_path")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("ℹ️ عمود favicon_path موجود مسبقاً")
+        else:
+            print(f"❌ خطأ: {e}")
     
     # ===== البيانات الافتراضية =====
     cursor.execute("SELECT * FROM company_settings")
