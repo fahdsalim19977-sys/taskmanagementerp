@@ -199,6 +199,48 @@ def index():
         LIMIT 5
     ''').fetchall()
     
+    # ===== الدفعات المستحقة هذا الشهر =====
+    current_month = datetime.now().strftime('%Y-%m')
+    
+    due_this_month = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.title as contract_title,
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        JOIN clients ON client_contracts.client_id = clients.id
+        WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
+        AND strftime('%Y-%m', contract_payments.due_date) = ?
+        ORDER BY contract_payments.due_date ASC
+    ''', (current_month,)).fetchall()
+    
+    # ===== الدفعات المتأخرة =====
+    overdue_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number,
+               client_contracts.title as contract_title,
+               clients.name as client_name,
+               clients.company_name,
+               clients.phone as client_phone
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        JOIN clients ON client_contracts.client_id = clients.id
+        WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
+        AND contract_payments.due_date < date('now')
+        ORDER BY contract_payments.due_date ASC
+    ''').fetchall()
+    
+    # ===== إجمالي المطلوب تحصيله هذا الشهر =====
+    total_due_this_month = conn.execute('''
+        SELECT SUM(amount - paid_amount) as total 
+        FROM contract_payments
+        WHERE status IN ('مستحقة', 'مدفوعة جزئيا')
+        AND strftime('%Y-%m', due_date) = ?
+    ''', (current_month,)).fetchone()['total'] or 0
+    
     # ===== المهام المتأخرة =====
     overdue_list = conn.execute('''
         SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
@@ -221,6 +263,7 @@ def index():
     settings = get_company_settings()
     
     return render_template('index.html', 
+                         # ===== إحصائيات المهام =====
                          total_tasks=total_tasks,
                          completed_tasks=completed_tasks,
                          overdue_tasks=overdue_tasks,
@@ -230,6 +273,8 @@ def index():
                          upcoming_meetings=upcoming_meetings,
                          total_revenue=total_revenue,
                          total_payments=total_payments,
+                         
+                         # ===== إحصائيات العقود =====
                          total_contracts=total_contracts,
                          contracts_paid_full=contracts_paid_full,
                          contracts_partial=contracts_partial,
@@ -238,10 +283,18 @@ def index():
                          contracts_paid_percent=contracts_paid_percent,
                          contracts_partial_due=contracts_partial_due,
                          recent_contracts=recent_contracts,
+                         
+                         # ===== الدفعات المستحقة هذا الشهر =====
+                         due_this_month=due_this_month,
+                         overdue_payments=overdue_payments,
+                         total_due_this_month=total_due_this_month,
+                         current_month=current_month,
+                         
+                         # ===== بيانات أخرى =====
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
-
+                         
 # ============================================================
 # تسجيل الدخول والخروج
 # ============================================================
