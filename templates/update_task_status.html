@@ -8,7 +8,7 @@
                 <h4 class="mb-0"><i class="bi bi-arrow-repeat"></i> تحديث حالة التدريب</h4>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" action="/update_task_status/{{ task.id }}">
                     <div class="mb-3">
                         <label class="form-label">الحالة</label>
                         <select name="status" class="form-select">
@@ -28,6 +28,16 @@
                         <input type="number" name="actual_duration" class="form-control" 
                                value="{{ task.actual_duration or 0 }}" min="0" step="0.5">
                     </div>
+                    
+                    {% if task.contract_payment_id %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-link"></i>
+                        هذا التدريب مرتبط بدفعة عقد (ID: {{ task.contract_payment_id }})
+                        <br>
+                        <small>عند اختيار "مكتملة"، سيتم تفعيل الدفعة تلقائياً</small>
+                    </div>
+                    {% endif %}
+                    
                     <button type="submit" class="btn btn-primary w-100">حفظ</button>
                 </form>
             </div>
