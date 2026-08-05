@@ -294,7 +294,7 @@ def index():
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
-                         
+
 # ============================================================
 # تسجيل الدخول والخروج
 # ============================================================
@@ -784,7 +784,7 @@ def update_task_status(task_id):
         if payment:
             # التحقق من أن الدفعة لم تصبح مدفوعة بالفعل
             if payment['status'] != 'مدفوعة':
-                # تحديث حالة الدفعة إلى "مستحقة" (إذا كانت غير ذلك)
+                # تحديث حالة الدفعة إلى "مستحقة"
                 conn.execute('''
                     UPDATE contract_payments 
                     SET status = 'مستحقة', 
@@ -815,7 +815,7 @@ def update_task_status(task_id):
                     WHERE id = ?
                 ''', (payment_status, contract_id))
                 
-                flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد {payment["contract_id"]}', 'success')
+                flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد', 'success')
                 log_activity(session['user_id'], 'تفعيل دفعة من تدريب', f'تم تفعيل دفعة {payment_id} من تدريب {task["title"]}')
     
     # تحديث حالة التدريب
@@ -1353,6 +1353,28 @@ def update_meeting_status(meeting_id):
     
     flash('✅ تم تحديث حالة الموعد', 'success')
     return redirect(url_for('meetings'))
+    @app.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
+def update_task_status_form(task_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    task = conn.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+    conn.close()
+    
+    if not task:
+        flash('❌ التدريب غير موجود', 'danger')
+        return redirect(url_for('tasks'))
+    
+    if request.method == 'POST':
+        status = request.form['status']
+        completion = request.form.get('completion_percentage', 0)
+        actual_duration = request.form.get('actual_duration', 0)
+        
+        # إعادة توجيه إلى دالة التحديث
+        return redirect(url_for('update_task_status', task_id=task_id))
+    
+    return render_template('update_task_status.html', task=task)
 
 # ============================================================
 # المدفوعات
