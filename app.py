@@ -2623,7 +2623,8 @@ def advanced_reports():
         })
     
     # ===== أفضل العملاء =====
-    top_clients = conn.execute('''
+    top_clients = []
+    top_clients_data = conn.execute('''
         SELECT clients.id, clients.name,
                COUNT(client_contracts.id) as contracts_count,
                SUM(client_contracts.total_amount) as total_amount,
@@ -2635,11 +2636,19 @@ def advanced_reports():
         LIMIT 10
     ''').fetchall()
     
-    for client in top_clients:
-        client['remaining'] = client['total_amount'] - client['paid_amount']
+    for row in top_clients_data:
+        top_clients.append({
+            'id': row['id'],
+            'name': row['name'],
+            'contracts_count': row['contracts_count'],
+            'total_amount': row['total_amount'] or 0,
+            'paid_amount': row['paid_amount'] or 0,
+            'remaining': (row['total_amount'] or 0) - (row['paid_amount'] or 0)
+        })
     
     # ===== أداء المدربين =====
-    trainer_performance = conn.execute('''
+    trainer_performance = []
+    trainer_data = conn.execute('''
         SELECT trainers.id, trainers.name,
                COUNT(DISTINCT client_trainers.client_id) as clients_count,
                COUNT(tasks.id) as tasks_count,
@@ -2652,8 +2661,19 @@ def advanced_reports():
         ORDER BY tasks_count DESC
     ''').fetchall()
     
-    for trainer in trainer_performance:
-        trainer['completion_rate'] = round((trainer['completed_tasks'] / trainer['tasks_count'] * 100) if trainer['tasks_count'] > 0 else 0, 1)
+    for row in trainer_data:
+        tasks_count = row['tasks_count'] or 0
+        completed = row['completed_tasks'] or 0
+        completion_rate = round((completed / tasks_count * 100) if tasks_count > 0 else 0, 1)
+        
+        trainer_performance.append({
+            'id': row['id'],
+            'name': row['name'],
+            'clients_count': row['clients_count'] or 0,
+            'tasks_count': tasks_count,
+            'completed_tasks': completed,
+            'completion_rate': completion_rate
+        })
     
     conn.close()
     
