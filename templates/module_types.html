@@ -1,19 +1,40 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-grid"></i> أنواع المديولات</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-grid text-primary"></i> أنواع المديولات</h2>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleTypeModal">
         <i class="bi bi-plus-circle"></i> إضافة نوع مديول
     </button>
 </div>
 
+<!-- ===== إحصائيات ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card-mini bg-primary">
+            <div class="stat-value">{{ types|length }}</div>
+            <div class="stat-label">إجمالي الأنواع</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card-mini bg-success">
+            <div class="stat-value">{{ types|selectattr('is_active', 'equalto', 1)|list|length }}</div>
+            <div class="stat-label">نشط</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card-mini bg-warning">
+            <div class="stat-value">{{ types|selectattr('is_active', 'equalto', 0)|list|length }}</div>
+            <div class="stat-label">غير نشط</div>
+        </div>
+    </div>
+</div>
+
 <!-- ===== قائمة الأنواع ===== -->
 <div class="card">
-    <div class="card-body">
-        {% if types %}
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-modern mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -31,7 +52,7 @@
                         <td>{{ loop.index }}</td>
                         <td><strong>{{ type.name }}</strong></td>
                         <td>{{ type.description or '-' }}</td>
-                        <td>{{ type.price }}</td>
+                        <td><span class="fw-bold">{{ type.price }}</span></td>
                         <td>
                             {% if type.is_active %}
                             <span class="badge bg-success">نشط</span>
@@ -41,20 +62,22 @@
                         </td>
                         <td>{{ type.created_at[:10] }}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editModuleTypeModal{{ type.id }}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <form action="/delete_module_type/{{ type.id }}" method="POST" style="display:inline-block;">
-                                <button class="btn btn-sm btn-danger" onclick="return confirm('تأكيد الحذف؟')">
-                                    <i class="bi bi-trash"></i>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#editModuleTypeModal{{ type.id }}">
+                                    <i class="bi bi-pencil"></i>
                                 </button>
-                            </form>
+                                <form action="/delete_module_type/{{ type.id }}" method="POST" style="display:inline-block;">
+                                    <button class="btn btn-outline-danger" onclick="return confirm('تأكيد الحذف؟')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
 
                     <!-- ===== مودال تعديل ===== -->
                     <div class="modal fade" id="editModuleTypeModal{{ type.id }}" tabindex="-1">
-                        <div class="modal-dialog">
+                        <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <form action="/edit_module_type/{{ type.id }}" method="POST">
                                     <div class="modal-header bg-info text-white">
@@ -83,7 +106,7 @@
                                         </div>
                                     </div>
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
                                         <button type="submit" class="btn btn-primary">حفظ</button>
                                     </div>
                                 </form>
@@ -94,19 +117,12 @@
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-grid" style="font-size:48px;display:block;"></i>
-            <h4>لا توجد أنواع مديولات</h4>
-            <p>قم بإضافة نوع مديول جديد</p>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- ===== مودال إضافة نوع جديد ===== -->
+<!-- ===== مودال إضافة ===== -->
 <div class="modal fade" id="addModuleTypeModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="/add_module_type" method="POST">
                 <div class="modal-header bg-primary text-white">
@@ -128,11 +144,57 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-primary">إضافة</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<style>
+.stat-card-mini {
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    text-align: center;
+}
+
+.stat-card-mini .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.stat-card-mini .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.table-modern {
+    font-size: 14px;
+}
+
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+
+.btn-group .btn {
+    border-radius: 8px !important;
+    margin: 0 2px;
+}
+</style>
 {% endblock %}

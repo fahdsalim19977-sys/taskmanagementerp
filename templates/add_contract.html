@@ -2,15 +2,16 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-10">
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة عقد جديد</h4>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <!-- ===== معلومات أساسية ===== -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
                             <label class="form-label">العميل <span class="text-danger">*</span></label>
                             <select name="client_id" class="form-select" required>
                                 <option value="">-- اختر العميل --</option>
@@ -19,7 +20,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">نوع العقد</label>
                             <select name="contract_type_id" class="form-select">
                                 <option value="">-- اختر نوع العقد --</option>
@@ -28,41 +29,31 @@
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
                             <input type="text" name="contract_number" class="form-control" required placeholder="مثال: CONT-001">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">عنوان العقد <span class="text-danger">*</span></label>
                             <input type="text" name="title" class="form-control" required>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">الوصف</label>
-                        <textarea name="description" class="form-control" rows="3"></textarea>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-12">
+                            <label class="form-label">الوصف</label>
+                            <textarea name="description" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
                             <input type="date" name="start_date" class="form-control" required>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
                             <input type="date" name="end_date" class="form-control" required>
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">قيمة العقد (ر.س)</label>
                             <input type="number" name="contract_value" class="form-control" value="0" step="0.01">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">الحالة</label>
                             <select name="status" class="form-select">
                                 <option value="نشط">نشط</option>
@@ -71,17 +62,17 @@
                                 <option value="ملغي">ملغي</option>
                             </select>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">ملاحظات</label>
-                        <textarea name="notes" class="form-control" rows="2"></textarea>
-                    </div>
+                    <hr>
 
-                    <!-- ===== اختيار المديولات (نفس شكل اختيار المدربين) ===== -->
+                    <!-- ===== المديولات المرتبطة ===== -->
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-grid"></i> المديولات المرتبطة</label>
-                        
+                        <label class="form-label"><i class="bi bi-grid text-info"></i> المديولات المرتبطة</label>
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" 
                                     type="button" id="moduleDropdown" 
@@ -90,7 +81,7 @@
                                 <span id="selectedModulesText" style="color: #6c757d;">اختر المديولات</span>
                             </button>
                             <ul class="dropdown-menu w-100 p-2" aria-labelledby="moduleDropdown" 
-                                style="max-height: 200px; overflow-y: auto; border-radius: 12px; border: 2px solid #e0e0e0; box-shadow: 0 8px 30px rgba(0,0,0,0.1);">
+                                style="max-height: 200px; overflow-y: auto; border-radius: 12px; border: 2px solid #e0e0e0;">
                                 {% if module_types %}
                                     {% for module in module_types %}
                                     <li>
@@ -109,19 +100,17 @@
                                     </li>
                                     {% endfor %}
                                 {% else %}
-                                    <li class="text-muted">⚠️ لا توجد أنواع مديولات</li>
+                                    <li class="text-muted text-center">⚠️ لا توجد أنواع مديولات</li>
                                 {% endif %}
                             </ul>
                         </div>
                         <small class="text-muted">💡 اختر مديول واحد أو أكثر من القائمة</small>
-                        {% if not module_types %}
-                        <br>
-                        <a href="/module_types" class="btn btn-sm btn-info mt-1">➕ إضافة أنواع مديولات</a>
-                        {% endif %}
                     </div>
 
+                    <hr>
+
                     <!-- ===== جدولة الدفعات ===== -->
-                    <div class="card mt-3 mb-3 border border-success">
+                    <div class="card bg-light border-0 mb-3">
                         <div class="card-header bg-success text-white">
                             <h5 class="mb-0"><i class="bi bi-calendar-event"></i> جدولة الدفعات</h5>
                         </div>
@@ -136,7 +125,6 @@
                                     <input type="number" name="installment_count" id="installmentCount" class="form-control" value="1" min="1" max="12" onchange="updateInstallments()">
                                 </div>
                             </div>
-
                             <div class="mt-3" id="installmentsContainer">
                                 <label class="form-label fw-bold">تفاصيل الدفعات</label>
                                 <div class="table-responsive">
@@ -170,15 +158,11 @@
                     </div>
 
                     <!-- ===== المرفقات ===== -->
-                    <div class="card mt-3 mb-3 border border-primary">
+                    <div class="card bg-light border-0 mb-3">
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0"><i class="bi bi-paperclip"></i> المرفقات</h5>
                         </div>
                         <div class="card-body">
-                            <div class="alert alert-secondary">
-                                <i class="bi bi-info-circle"></i> يمكنك رفع ملفات متعددة (PDF, Word, Excel, صور)
-                            </div>
-
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">اختر ملفات</label>
@@ -193,7 +177,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100">
+                    <button type="submit" class="btn btn-success w-100 py-2">
                         <i class="bi bi-check-circle"></i> إضافة العقد
                     </button>
                 </form>
@@ -203,7 +187,6 @@
 </div>
 
 <script>
-// ===== تحديث النص المعروض لاختيار المديولات =====
 function updateModuleSelection() {
     var checkboxes = document.querySelectorAll('.module-checkbox:checked');
     var textElement = document.getElementById('selectedModulesText');
@@ -223,7 +206,6 @@ function updateModuleSelection() {
     }
 }
 
-// ===== تحديث جدولة الدفعات =====
 function updateInstallments() {
     const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
     const count = parseInt(document.getElementById('installmentCount').value) || 1;
@@ -256,7 +238,6 @@ function updateInstallments() {
     tbody.innerHTML = html;
 }
 
-// ===== عند تحميل الصفحة =====
 document.addEventListener('DOMContentLoaded', function() {
     updateModuleSelection();
     updateInstallments();
@@ -264,69 +245,39 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* ===== تنسيق الزر ===== */
 .btn-outline-secondary {
     border: 2px solid #e0e0e0 !important;
     transition: all 0.3s ease !important;
 }
-
 .btn-outline-secondary:hover {
-    border-color: #1a237e !important;
+    border-color: #2563EB !important;
     background: #f8f9fa !important;
 }
-
-.btn-outline-secondary:focus {
-    border-color: #1a237e !important;
-    box-shadow: 0 0 0 4px rgba(26, 35, 126, 0.1) !important;
-}
-
-/* ===== تنسيق القائمة ===== */
 .dropdown-menu {
     padding: 8px !important;
 }
-
 .dropdown-menu .form-check {
     padding: 6px 8px !important;
     border-radius: 8px !important;
     transition: all 0.2s ease !important;
 }
-
 .dropdown-menu .form-check:hover {
     background: #f0f2f5 !important;
 }
-
-.dropdown-menu .form-check-input {
-    margin-left: 0 !important;
-}
-
 .dropdown-menu .form-check-input:checked {
-    background-color: #1a237e !important;
-    border-color: #1a237e !important;
+    background-color: #2563EB !important;
+    border-color: #2563EB !important;
 }
-
-.dropdown-menu .form-check-label {
-    font-size: 14px !important;
-    color: #333 !important;
-    cursor: pointer !important;
-}
-
-/* ===== تنسيق الـ Scrollbar ===== */
 .dropdown-menu::-webkit-scrollbar {
     width: 6px;
 }
-
 .dropdown-menu::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 10px;
 }
-
 .dropdown-menu::-webkit-scrollbar-thumb {
-    background: #1a237e;
+    background: #2563EB;
     border-radius: 10px;
-}
-
-.dropdown-menu::-webkit-scrollbar-thumb:hover {
-    background: #0d1445;
 }
 </style>
 {% endblock %}

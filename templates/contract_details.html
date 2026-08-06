@@ -1,103 +1,146 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-file-earmark-text"></i> تفاصيل العقد</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-file-earmark-text text-primary"></i> تفاصيل العقد</h2>
     <div>
         <a href="/edit_contract/{{ contract.id }}" class="btn btn-warning">
             <i class="bi bi-pencil"></i> تعديل
         </a>
-        <a href="/contracts" class="btn btn-secondary">
+        <a href="/print_contract/{{ contract.id }}" class="btn btn-outline-secondary" target="_blank">
+            <i class="bi bi-printer"></i> طباعة
+        </a>
+        <a href="/contracts" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-right"></i> رجوع
         </a>
     </div>
 </div>
 
-<div class="row">
+<!-- ===== معلومات العقد ===== -->
+<div class="row g-3 mb-4">
     <div class="col-md-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">معلومات العقد</h5>
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> معلومات العقد</h5>
             </div>
             <div class="card-body">
-                <p><strong>رقم العقد:</strong> {{ contract.contract_number }}</p>
-                <p><strong>نوع العقد:</strong> {{ contract.contract_type_name or '-' }}</p>
-                <p><strong>العنوان:</strong> {{ contract.title }}</p>
-                <p><strong>الوصف:</strong> {{ contract.description or '-' }}</p>
-                <p><strong>الحالة:</strong>
-                    <span class="badge 
-                        {% if contract.status == 'نشط' %}bg-success
-                        {% elif contract.status == 'معلق' %}bg-warning text-dark
-                        {% elif contract.status == 'منتهي' %}bg-secondary
-                        {% else %}bg-danger{% endif %}">
-                        {{ contract.status }}
-                    </span>
-                </p>
-                <p><strong>القيمة:</strong> {{ contract.contract_value }} ر.س</p>
-                <p><strong>حالة الدفع:</strong>
-                    <span class="badge 
-                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
-                        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
-                        {% else %}bg-danger{% endif %}">
-                        {{ contract.payment_status }}
-                    </span>
-                </p>
+                <div class="info-grid">
+                    <div>
+                        <span class="info-label">رقم العقد</span>
+                        <span class="info-value">{{ contract.contract_number }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">نوع العقد</span>
+                        <span class="info-value">{{ contract.contract_type_name or '-' }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">العنوان</span>
+                        <span class="info-value">{{ contract.title }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">الوصف</span>
+                        <span class="info-value">{{ contract.description or '-' }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">الحالة</span>
+                        <span class="badge 
+                            {% if contract.status == 'نشط' %}bg-success
+                            {% elif contract.status == 'معلق' %}bg-warning text-dark
+                            {% elif contract.status == 'منتهي' %}bg-secondary
+                            {% else %}bg-danger{% endif %}">
+                            {{ contract.status }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="info-label">القيمة</span>
+                        <span class="info-value fw-bold text-success">{{ contract.contract_value }} ر.س</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0">معلومات العميل</h5>
+                <h5 class="mb-0"><i class="bi bi-person"></i> معلومات العميل</h5>
             </div>
             <div class="card-body">
-                <p><strong>الاسم:</strong> {{ contract.client_name }}</p>
-                <p><strong>الشركة:</strong> {{ contract.company_name or '-' }}</p>
-                <p><strong>الهاتف:</strong> {{ contract.client_phone or '-' }}</p>
-                <p><strong>البريد:</strong> {{ contract.client_email or '-' }}</p>
+                <div class="info-grid">
+                    <div>
+                        <span class="info-label">الاسم</span>
+                        <span class="info-value">{{ contract.client_name }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">الشركة</span>
+                        <span class="info-value">{{ contract.company_name or '-' }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">الهاتف</span>
+                        <span class="info-value">{{ contract.client_phone or '-' }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">البريد</span>
+                        <span class="info-value">{{ contract.client_email or '-' }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
+<!-- ===== التواريخ والملاحظات ===== -->
+<div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0">التواريخ</h5>
+                <h5 class="mb-0"><i class="bi bi-calendar"></i> التواريخ</h5>
             </div>
             <div class="card-body">
-                <p><strong>تاريخ البداية:</strong> {{ contract.start_date }}</p>
-                <p><strong>تاريخ النهاية:</strong> {{ contract.end_date }}</p>
-                <p><strong>المدة:</strong> 
-                    {% set days = (contract.end_date|string|replace('-', '')|int - contract.start_date|string|replace('-', '')|int)|abs %}
-                    {{ days }} يوم
-                </p>
-                <p><strong>أضيف بواسطة:</strong> {{ contract.created_by_name }}</p>
+                <div class="info-grid">
+                    <div>
+                        <span class="info-label">تاريخ البداية</span>
+                        <span class="info-value">{{ contract.start_date }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">تاريخ النهاية</span>
+                        <span class="info-value">{{ contract.end_date }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">المدة</span>
+                        <span class="info-value">
+                            {% set days = (contract.end_date|string|replace('-', '')|int - contract.start_date|string|replace('-', '')|int)|abs %}
+                            {{ days }} يوم
+                        </span>
+                    </div>
+                    <div>
+                        <span class="info-label">أضيف بواسطة</span>
+                        <span class="info-value">{{ contract.created_by_name }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0">ملاحظات</h5>
+                <h5 class="mb-0"><i class="bi bi-file-text"></i> ملاحظات</h5>
             </div>
             <div class="card-body">
-                <p>{{ contract.notes or 'لا توجد ملاحظات' }}</p>
+                <p class="text-muted mb-0">{{ contract.notes or 'لا توجد ملاحظات' }}</p>
             </div>
         </div>
     </div>
 </div>
 
 <!-- ===== المديولات المرتبطة ===== -->
-<div class="card mt-4">
+<div class="card mb-4">
     <div class="card-header bg-info text-white">
         <h5 class="mb-0"><i class="bi bi-grid"></i> المديولات المرتبطة ({{ contract_modules|length }})</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if contract_modules %}
         <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+            <table class="table table-modern mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -121,41 +164,28 @@
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-grid" style="font-size:32px;display:block;"></i>
-            <p>لا توجد مديولات مرتبطة بهذا العقد</p>
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-grid" style="font-size: 2rem;"></i>
+            <p class="mt-2">لا توجد مديولات مرتبطة بهذا العقد</p>
         </div>
         {% endif %}
     </div>
 </div>
 
 <!-- ===== دفعات العقد ===== -->
-<div class="card mt-4">
-    <div class="card-header bg-success text-white">
+<div class="card mb-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-coin"></i> دفعات العقد</h5>
-    </div>
-    <div class="card-body">
-        <div class="row g-3 mb-3">
-            <div class="col-md-4">
-                <div class="alert alert-info">
-                    <strong>إجمالي المبلغ:</strong> {{ contract.total_amount or contract.contract_value }} ر.س
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="alert alert-success">
-                    <strong>المدفوع:</strong> {{ contract.paid_amount or 0 }} ر.س
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="alert alert-warning">
-                    <strong>المتبقي:</strong> {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ر.س
-                </div>
-            </div>
+        <div>
+            <span class="badge bg-light text-dark me-2">إجمالي: {{ contract.total_amount or contract.contract_value }} ر.س</span>
+            <span class="badge bg-light text-dark me-2">المدفوع: {{ contract.paid_amount or 0 }} ر.س</span>
+            <span class="badge bg-light text-dark">المتبقي: {{ (contract.total_amount or contract.contract_value) - (contract.paid_amount or 0) }} ر.س</span>
         </div>
-
+    </div>
+    <div class="card-body p-0">
         {% if contract_payments %}
         <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+            <table class="table table-modern mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -165,7 +195,6 @@
                         <th>تاريخ الاستحقاق</th>
                         <th>تاريخ الدفع</th>
                         <th>الحالة</th>
-                        <th>ملاحظات</th>
                         <th>إجراءات</th>
                     </tr>
                 </thead>
@@ -177,9 +206,9 @@
                         <td>{{ payment.paid_amount or 0 }} ر.س</td>
                         <td>
                             {% set remaining = payment.amount - (payment.paid_amount or 0) %}
-                            <strong class="{% if remaining > 0 %}text-danger{% else %}text-success{% endif %}">
+                            <span class="fw-bold {% if remaining > 0 %}text-danger{% else %}text-success{% endif %}">
                                 {{ remaining }} ر.س
-                            </strong>
+                            </span>
                         </td>
                         <td>{{ payment.due_date or 'لم يحدد' }}</td>
                         <td>{{ payment.payment_date or '-' }}</td>
@@ -192,7 +221,6 @@
                                 {{ payment.status }}
                             </span>
                         </td>
-                        <td>{{ payment.notes or '-' }}</td>
                         <td>
                             {% if payment.status != 'مدفوعة' %}
                             <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal{{ payment.id }}">
@@ -203,95 +231,51 @@
                             {% endif %}
                         </td>
                     </tr>
-
-                    <!-- ===== مودال سداد الدفعة ===== -->
-                    <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
-                                    <div class="modal-header bg-success text-white">
-                                        <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">رقم الدفعة</label>
-                                            <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">قيمة الدفعة</label>
-                                            <input type="text" class="form-control" value="{{ payment.amount }} ر.س" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">المبلغ المدفوع حالياً</label>
-                                            <input type="text" class="form-control" value="{{ payment.paid_amount or 0 }} ر.س" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">المتبقي</label>
-                                            <input type="text" class="form-control" value="{{ payment.amount - (payment.paid_amount or 0) }} ر.س" disabled>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">المبلغ المدفوع</label>
-                                            <input type="number" name="paid_amount" class="form-control" 
-                                                   value="{{ payment.amount - (payment.paid_amount or 0) }}" step="0.01" max="{{ payment.amount - (payment.paid_amount or 0) }}" required>
-                                            <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز المتبقي)</small>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">تاريخ الدفع</label>
-                                            <input type="date" name="payment_date" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="bi bi-check-circle"></i> تأكيد السداد
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-coin" style="font-size:32px;display:block;"></i>
-            <p>لا توجد دفعات مسجلة لهذا العقد</p>
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-coin" style="font-size: 2rem;"></i>
+            <p class="mt-2">لا توجد دفعات مسجلة لهذا العقد</p>
         </div>
         {% endif %}
     </div>
 </div>
 
 <!-- ===== المرفقات ===== -->
-<div class="card mt-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">📎 المرفقات ({{ contract_attachments|length }})</h5>
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-paperclip"></i> المرفقات ({{ contract_attachments|length }})</h5>
+        <button class="btn btn-sm btn-light" data-bs-toggle="collapse" data-bs-target="#uploadAttachment">
+            <i class="bi bi-upload"></i> رفع مرفق
+        </button>
     </div>
     <div class="card-body">
-        <form action="/add_contract_attachment/{{ contract.id }}" 
-              method="POST" 
-              enctype="multipart/form-data" 
-              class="row g-3 mb-4">
-            <div class="col-md-5">
-                <label class="form-label">رفع مرفق إضافي</label>
-                <input type="file" name="attachment" class="form-control" required>
+        <!-- نموذج رفع مرفق -->
+        <div class="collapse mb-3" id="uploadAttachment">
+            <div class="bg-light p-3 rounded">
+                <form action="/add_contract_attachment/{{ contract.id }}" method="POST" enctype="multipart/form-data" class="row g-3">
+                    <div class="col-md-5">
+                        <input type="file" name="attachment" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" name="description" class="form-control" placeholder="وصف المرفق">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-upload"></i> رفع
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="col-md-4">
-                <label class="form-label">الوصف</label>
-                <input type="text" name="description" class="form-control" placeholder="وصف المرفق">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="bi bi-upload"></i> رفع
-                </button>
-            </div>
-        </form>
+        </div>
 
+        <!-- قائمة المرفقات -->
         {% if contract_attachments %}
         <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+            <table class="table table-modern mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -313,16 +297,12 @@
                         <td>{{ att.uploaded_by_name }}</td>
                         <td>{{ att.created_at[:16] }}</td>
                         <td>
-                            <a href="/download_contract_attachment/{{ att.id }}" 
-                               class="btn btn-sm btn-info">
-                                <i class="bi bi-download"></i> تحميل
+                            <a href="/download_contract_attachment/{{ att.id }}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-download"></i>
                             </a>
-                            <form action="/delete_contract_attachment/{{ att.id }}" 
-                                  method="POST" 
-                                  style="display:inline-block;"
-                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا المرفق؟')">
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="bi bi-trash"></i> حذف
+                            <form action="/delete_contract_attachment/{{ att.id }}" method="POST" style="display:inline-block;">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('تأكيد الحذف؟')">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </form>
                         </td>
@@ -332,11 +312,119 @@
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-paperclip" style="font-size:32px;display:block;"></i>
-            <p>لا توجد مرفقات لهذا العقد</p>
+        <div class="text-center py-3 text-muted">
+            <i class="bi bi-paperclip" style="font-size: 2rem;"></i>
+            <p class="mt-2">لا توجد مرفقات لهذا العقد</p>
         </div>
         {% endif %}
     </div>
 </div>
+
+<!-- ===== مودال سداد الدفعة ===== -->
+{% for payment in contract_payments %}
+{% if payment.status != 'مدفوعة' %}
+<div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">رقم الدفعة</label>
+                            <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">قيمة الدفعة</label>
+                            <input type="text" class="form-control" value="{{ payment.amount }} ر.س" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">المدفوع حالياً</label>
+                            <input type="text" class="form-control" value="{{ payment.paid_amount or 0 }} ر.س" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">المتبقي</label>
+                            <input type="text" class="form-control" value="{{ payment.amount - (payment.paid_amount or 0) }} ر.س" disabled>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">المبلغ المدفوع <span class="text-danger">*</span></label>
+                            <input type="number" name="paid_amount" class="form-control" 
+                                   value="{{ payment.amount - (payment.paid_amount or 0) }}" 
+                                   step="0.01" max="{{ payment.amount - (payment.paid_amount or 0) }}" required>
+                            <small class="text-muted">يجب أن لا يتجاوز المتبقي</small>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                            <input type="date" name="payment_date" class="form-control" 
+                                   value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> تأكيد السداد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<style>
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.info-grid .info-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-grid .info-value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+.table-modern {
+    font-size: 14px;
+}
+
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 {% endblock %}

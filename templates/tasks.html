@@ -1,25 +1,53 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-list-task"></i> {% if get_lang() == 'en' %}Training List{% else %}قائمة التدريبات{% endif %}</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-list-task text-primary"></i> {% if get_lang() == 'en' %}Training List{% else %}قائمة التدريبات{% endif %}</h2>
     <div>
         {% if session.user_role != 'مراقب' %}
         <a href="/add_task" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> {% if get_lang() == 'en' %}New Training{% else %}تدريب جديد{% endif %}
+            <i class="bi bi-plus-circle"></i> تدريب جديد
         </a>
         {% endif %}
     </div>
 </div>
 
-<!-- ===== خانة البحث ===== -->
+<!-- ===== إحصائيات ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card-mini bg-primary">
+            <div class="stat-value">{{ tasks|length }}</div>
+            <div class="stat-label">إجمالي التدريبات</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card-mini bg-success">
+            <div class="stat-value">{{ tasks|selectattr('status', 'equalto', 'مكتملة')|list|length }}</div>
+            <div class="stat-label">مكتملة</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card-mini bg-warning">
+            <div class="stat-value">{{ tasks|selectattr('status', 'equalto', 'قيد التنفيذ')|list|length }}</div>
+            <div class="stat-label">قيد التنفيذ</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card-mini bg-danger">
+            <div class="stat-value">{{ tasks|selectattr('status', 'equalto', 'متأخرة')|list|length }}</div>
+            <div class="stat-label">متأخرة</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== بحث ===== -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="/tasks/search" class="row g-3">
             <div class="col-md-10">
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control" 
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0" 
                            placeholder="ابحث باسم العميل..." 
                            value="{{ search_term or '' }}">
                 </div>
@@ -44,147 +72,114 @@
 </div>
 
 <!-- ===== قائمة التدريبات ===== -->
-{% if tasks %}
-<div class="table-responsive">
-    <table class="table table-hover table-striped">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>عنوان التدريب</th>
-                <th>اسم العميل</th>
-                <th>المسؤول</th>
-                <th>الحالة</th>
-                <th>نسبة الإنجاز</th>
-                <th>تاريخ الاستحقاق</th>
-                <th>الدفعة المرتبطة</th>
-                <th>المدة</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for task in tasks %}
-            <tr id="task-row-{{ task.id }}">
-                <td>{{ loop.index }}</td>
-                <td>
-                    <a href="/task/{{ task.id }}" class="text-decoration-none fw-bold">
-                        {{ task.title }}
-                    </a>
-                    {% if task.description %}
-                    <br><small class="text-muted">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</small>
-                    {% endif %}
-                    {% if task.task_group %}
-                    <br><span class="badge bg-info">{{ task.task_group }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="/client_tasks/{{ task.client_id }}" class="text-decoration-none">
-                        {{ task.client_name }}
-                    </a>
-                </td>
-                <td>{{ task.assigned_name }}</td>
-                <td>
-                    <span class="badge 
-                        {% if task.status == 'مكتملة' %}bg-success
-                        {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
-                        {% elif task.status == 'متأخرة' %}bg-danger
-                        {% else %}bg-secondary{% endif %}">
-                        {{ task.status }}
-                    </span>
-                </td>
-                <td>
-                    <div class="progress" style="min-width:80px;">
-                        <div class="progress-bar {% if task.completion_percentage == 100 %}bg-success{% endif %}" 
-                             role="progressbar" 
-                             style="width:{{ task.completion_percentage }}%;">
-                            {{ task.completion_percentage }}%
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    {% set due_date_str = task.due_date %}
-                    {% set today_str = today.strftime('%Y-%m-%d') %}
-                    {% if due_date_str < today_str and task.status != 'مكتملة' %}
-                    <span class="text-danger"><i class="bi bi-clock"></i> {{ task.due_date }}</span>
-                    {% else %}
-                    {{ task.due_date }}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if task.contract_payment_id %}
-                        <span class="badge bg-info" title="مرتبط بدفعة عقد">
-                            <i class="bi bi-link"></i> دفعة {{ task.contract_payment_id }}
-                        </span>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <small>
-                        المتوقعة: {{ task.estimated_duration or 0 }} ساعة<br>
-                        الفعلية: {{ task.actual_duration or 0 }} ساعة
-                    </small>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <a href="/edit_task/{{ task.id }}" class="btn btn-warning" title="تعديل">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <a href="/update_task_status_form/{{ task.id }}" class="btn btn-primary" title="تحديث الحالة">
-                            <i class="bi bi-arrow-repeat"></i>
-                        </a>
-                        <a href="/add_note_form/{{ task.id }}" class="btn btn-info" title="ملاحظة">
-                            <i class="bi bi-chat"></i>
-                        </a>
-                        {% if session.user_role != 'مراقب' %}
-                        <button class="btn btn-danger" onclick="deleteTask({{ task.id }})" title="حذف">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- ===== إحصائيات ===== -->
-<div class="card mt-4">
-    <div class="card-body">
-        <div class="row text-center">
-            <div class="col-3">
-                <h6 class="text-muted">إجمالي التدريبات</h6>
-                <h4>{{ tasks|length }}</h4>
-            </div>
-            <div class="col-3">
-                <h6 class="text-success">مكتملة</h6>
-                <h4 class="text-success">{{ tasks|selectattr('status', 'equalto', 'مكتملة')|list|length }}</h4>
-            </div>
-            <div class="col-3">
-                <h6 class="text-warning">قيد التنفيذ</h6>
-                <h4 class="text-warning">{{ tasks|selectattr('status', 'equalto', 'قيد التنفيذ')|list|length }}</h4>
-            </div>
-            <div class="col-3">
-                <h6 class="text-danger">متأخرة</h6>
-                <h4 class="text-danger">{{ tasks|selectattr('status', 'equalto', 'متأخرة')|list|length }}</h4>
-            </div>
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>عنوان التدريب</th>
+                        <th>اسم العميل</th>
+                        <th>المسؤول</th>
+                        <th>الحالة</th>
+                        <th>نسبة الإنجاز</th>
+                        <th>تاريخ الاستحقاق</th>
+                        <th>الدفعة المرتبطة</th>
+                        <th>المدة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/task/{{ task.id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ task.title }}
+                            </a>
+                            {% if task.description %}
+                            <br><small class="text-muted">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                            {% if task.task_group %}
+                            <br><span class="badge bg-secondary">{{ task.task_group }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/client_tasks/{{ task.client_id }}" class="text-decoration-none">
+                                {{ task.client_name }}
+                            </a>
+                        </td>
+                        <td>{{ task.assigned_name }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if task.status == 'مكتملة' %}bg-success
+                                {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
+                                {% elif task.status == 'متأخرة' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="min-width:80px; height:8px;">
+                                <div class="progress-bar {% if task.completion_percentage == 100 %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width:{{ task.completion_percentage }}%;">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ task.completion_percentage }}%</small>
+                        </td>
+                        <td>
+                            {% set due_date_str = task.due_date %}
+                            {% set today_str = today.strftime('%Y-%m-%d') %}
+                            {% if due_date_str < today_str and task.status != 'مكتملة' %}
+                            <span class="text-danger"><i class="bi bi-clock"></i> {{ task.due_date }}</span>
+                            {% else %}
+                            {{ task.due_date }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if task.contract_payment_id %}
+                                <span class="badge bg-info" title="مرتبط بدفعة عقد">
+                                    <i class="bi bi-link"></i> دفعة {{ task.contract_payment_id }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>
+                                متوقعة: {{ task.estimated_duration or 0 }} ساعة<br>
+                                فعلية: {{ task.actual_duration or 0 }} ساعة
+                            </small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/edit_task/{{ task.id }}" class="btn btn-outline-warning" title="تعديل">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="/update_task_status_form/{{ task.id }}" class="btn btn-outline-primary" title="تحديث الحالة">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </a>
+                                <a href="/add_note_form/{{ task.id }}" class="btn btn-outline-info" title="ملاحظة">
+                                    <i class="bi bi-chat"></i>
+                                </a>
+                                {% if session.user_role != 'مراقب' %}
+                                <button class="btn btn-outline-danger" onclick="deleteTask({{ task.id }})" title="حذف">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-{% else %}
-<div class="alert alert-info text-center">
-    <i class="bi bi-inbox" style="font-size:48px;display:block;"></i>
-    <h4>{% if search_term %}لا توجد تدريبات للعميل "{{ search_term }}"{% else %}لا توجد تدريبات{% endif %}</h4>
-    <p>{% if search_term %}جرب البحث باسم آخر{% else %}ابدأ بإضافة أول تدريب!{% endif %}</p>
-    {% if session.user_role != 'مراقب' and not search_term %}
-    <a href="/add_task" class="btn btn-primary mt-2">➕ إضافة تدريب جديد</a>
-    {% endif %}
-</div>
-{% endif %}
-
 <script>
-// ===== حذف التدريب =====
 function deleteTask(taskId) {
     if (confirm('⚠️ هل أنت متأكد من حذف هذا التدريب؟\n\nهذا الإجراء لا يمكن التراجع عنه!')) {
         var form = document.createElement('form');
@@ -197,11 +192,57 @@ function deleteTask(taskId) {
 </script>
 
 <style>
-.btn-group {
-    gap: 3px;
+.stat-card-mini {
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    text-align: center;
 }
+
+.stat-card-mini .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.stat-card-mini .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.table-modern {
+    font-size: 14px;
+}
+
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+
 .btn-group .btn {
     border-radius: 8px !important;
+    margin: 0 2px;
+}
+
+.progress {
+    border-radius: 50px;
+    background: #e2e8f0;
+}
+
+.progress-bar {
+    border-radius: 50px;
 }
 </style>
 {% endblock %}
