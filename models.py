@@ -13,14 +13,14 @@ if not os.path.exists('/app/data'):
 
 def get_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    # ✅ زيادة timeout وتحسين الأداء
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    # استخدام isolation_level=None لتجنب القفل التلقائي
+    conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level=None)
     conn.row_factory = sqlite3.Row
-    # ===== تحسين الأداء وتجنب القفل =====
+    # ===== تحسين الأداء =====
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('PRAGMA synchronous=NORMAL')
     conn.execute('PRAGMA cache_size=10000')
-    conn.execute('PRAGMA busy_timeout=10000')
+    conn.execute('PRAGMA busy_timeout=30000')
     return conn
 
 def hash_password(password):
@@ -188,7 +188,7 @@ def init_db():
         )
     """)
     
-    # ===== جدول أنواع المديولات (جديد) =====
+    # ===== جدول أنواع المديولات =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS module_types (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,7 +200,7 @@ def init_db():
         )
     """)
     
-    # ===== جدول ربط العقود بالمديولات (جديد) =====
+    # ===== جدول ربط العقود بالمديولات =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contract_modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
