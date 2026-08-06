@@ -1,6 +1,6 @@
 # app.py
 import os
-from flask import Flask, render_template, redirect, url_for, session, flash, jsonify, request, Blueprint
+from flask import Flask, render_template, redirect, url_for, session, flash, jsonify, request
 from config import Config
 from models import init_db, get_db
 from utils import get_company_settings, get_lang, t, log_activity
@@ -19,24 +19,13 @@ os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'contracts'), exist_ok=Tru
 # ===== قاعدة البيانات =====
 init_db()
 
-# ===== تعريف Blueprints =====
-auth_bp = Blueprint('auth', __name__, url_prefix='/')
-users_bp = Blueprint('users', __name__, url_prefix='/')
-clients_bp = Blueprint('clients', __name__, url_prefix='/')
-trainers_bp = Blueprint('trainers', __name__, url_prefix='/trainers')
-tasks_bp = Blueprint('tasks', __name__, url_prefix='/')
-contracts_bp = Blueprint('contracts', __name__, url_prefix='/')
-payments_bp = Blueprint('payments', __name__, url_prefix='/')
-modules_bp = Blueprint('modules', __name__, url_prefix='/')
-meetings_bp = Blueprint('meetings', __name__, url_prefix='/')
-reports_bp = Blueprint('reports', __name__, url_prefix='/')
-settings_bp = Blueprint('settings', __name__, url_prefix='/')
-backups_bp = Blueprint('backups', __name__, url_prefix='/')
-
-# ===== استيراد الـ Routes =====
-from routes import auth, users, clients, trainers, tasks, contracts, payments, modules, meetings, reports, settings, backups
-
 # ===== تسجيل Blueprints =====
+from routes import (
+    auth_bp, users_bp, clients_bp, trainers_bp, tasks_bp,
+    contracts_bp, payments_bp, modules_bp, meetings_bp,
+    reports_bp, settings_bp, backups_bp
+)
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(clients_bp)
@@ -297,6 +286,12 @@ def show_routes():
     for rule in app.url_map.iter_rules():
         routes.append(f"{rule.endpoint}: {rule.rule}")
     return "<br>".join(sorted(routes))
+
+
+# ===== مسار اختبار =====
+@app.route('/test')
+def test():
+    return "✅ التطبيق شغال!"
 
 
 # ===== تشغيل التطبيق =====
