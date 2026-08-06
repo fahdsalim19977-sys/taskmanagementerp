@@ -35,13 +35,13 @@
                 </p>
                 <p><strong>القيمة:</strong> {{ contract.contract_value }} ر.س</p>
                 <p><strong>حالة الدفع:</strong>
-    <span class="badge 
-        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
-        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
-        {% else %}bg-danger{% endif %}">
-        {{ contract.payment_status }}
-    </span>
-</p>
+                    <span class="badge 
+                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.payment_status }}
+                    </span>
+                </p>
             </div>
         </div>
     </div>
@@ -89,6 +89,46 @@
     </div>
 </div>
 
+<!-- ===== المديولات المرتبطة ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-grid"></i> المديولات المرتبطة ({{ contract_modules|length }})</h5>
+    </div>
+    <div class="card-body">
+        {% if contract_modules %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم المديول</th>
+                        <th>الوصف</th>
+                        <th>السعر (ر.س)</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for module in contract_modules %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ module.module_name }}</strong></td>
+                        <td>{{ module.module_description or '-' }}</td>
+                        <td>{{ module.price }}</td>
+                        <td>{{ module.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-grid" style="font-size:32px;display:block;"></i>
+            <p>لا توجد مديولات مرتبطة بهذا العقد</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- ===== دفعات العقد ===== -->
 <div class="card mt-4">
     <div class="card-header bg-success text-white">
@@ -112,7 +152,7 @@
                 </div>
             </div>
         </div>
-        
+
         {% if contract_payments %}
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
@@ -197,9 +237,9 @@
                                             <small class="text-muted">أدخل المبلغ المدفوع (يجب أن لا يتجاوز المتبقي)</small>
                                         </div>
                                         <div class="mb-3">
-    <label class="form-label">تاريخ الدفع</label>
-    <input type="date" name="payment_date" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
-</div>
+                                            <label class="form-label">تاريخ الدفع</label>
+                                            <input type="date" name="payment_date" class="form-control" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+                                        </div>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>

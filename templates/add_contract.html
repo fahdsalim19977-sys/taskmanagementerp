@@ -29,7 +29,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
@@ -40,12 +40,12 @@
                             <input type="text" name="title" class="form-control" required>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">الوصف</label>
                         <textarea name="description" class="form-control" rows="3"></textarea>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
@@ -56,7 +56,7 @@
                             <input type="date" name="end_date" class="form-control" required>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">قيمة العقد (ر.س)</label>
@@ -72,13 +72,49 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">ملاحظات</label>
                         <textarea name="notes" class="form-control" rows="2"></textarea>
                     </div>
 
-                    <!-- ===== قسم جدولة الدفعات ===== -->
+                    <!-- ===== اختيار المديولات ===== -->
+                    <div class="card mt-3 mb-3 border border-info">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-grid"></i> المديولات المرتبطة</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-info-circle"></i> اختر المديولات المرتبطة بهذا العقد (يمكنك اختيار أكثر من مديول)
+                            </div>
+
+                            <div class="row">
+                                {% for module in module_types %}
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="module_ids" value="{{ module.id }}" id="module{{ module.id }}">
+                                        <label class="form-check-label" for="module{{ module.id }}">
+                                            <strong>{{ module.name }}</strong>
+                                            {% if module.price > 0 %}
+                                            <span class="badge bg-success">{{ module.price }} ر.س</span>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            {% if not module_types %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                لا توجد أنواع مديولات متاحة. قم بإضافة أنواع المديولات من شاشة
+                                <a href="/module_types" target="_blank">أنواع المديولات</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- ===== جدولة الدفعات ===== -->
                     <div class="card mt-3 mb-3 border border-success">
                         <div class="card-header bg-success text-white">
                             <h5 class="mb-0"><i class="bi bi-calendar-event"></i> جدولة الدفعات</h5>
@@ -127,7 +163,7 @@
                         </div>
                     </div>
 
-                    <!-- ===== قسم رفع المرفقات ===== -->
+                    <!-- ===== المرفقات ===== -->
                     <div class="card mt-3 mb-3 border border-primary">
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0"><i class="bi bi-paperclip"></i> المرفقات</h5>
@@ -136,7 +172,7 @@
                             <div class="alert alert-secondary">
                                 <i class="bi bi-info-circle"></i> يمكنك رفع ملفات متعددة (PDF, Word, Excel, صور)
                             </div>
-                            
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">اختر ملفات</label>
@@ -150,7 +186,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-success w-100">
                         <i class="bi bi-check-circle"></i> إضافة العقد
                     </button>
@@ -167,14 +203,14 @@ function updateInstallments() {
     const tbody = document.getElementById('installmentsBody');
     const baseDate = new Date();
     baseDate.setMonth(baseDate.getMonth() + 1);
-    
+
     let html = '';
     for (let i = 1; i <= count; i++) {
         const amount = (totalAmount / count).toFixed(2);
         const dueDate = new Date(baseDate);
         dueDate.setMonth(dueDate.getMonth() + (i - 1));
         const dateStr = dueDate.toISOString().split('T')[0];
-        
+
         html += `
             <tr>
                 <td>${i}</td>
