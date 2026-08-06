@@ -43,7 +43,7 @@ def add_task():
         return redirect(url_for('auth.login'))
     if session['user_role'] == 'مراقب':
         flash('⛔ ليس لديك صلاحية لإضافة مهام', 'danger')
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     conn = get_db()
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
@@ -94,7 +94,7 @@ def add_task():
         
         flash('✅ تم إضافة التدريب بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة تدريب', f'أضاف {title}')
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     return render_template('add_task.html', 
                          clients=clients, 
@@ -127,7 +127,7 @@ def task_details(task_id):
     if not task:
         flash('❌ التدريب غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     updates = conn.execute('''
         SELECT task_updates.*, users.name as user_name
@@ -156,17 +156,17 @@ def edit_task(task_id):
     if not task:
         flash('❌ التدريب غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     user_role = session['user_role']
     if user_role == 'مراقب':
         flash('⛔ ليس لديك صلاحية لتعديل التدريبات', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
         flash('⛔ يمكنك تعديل تدريباتك فقط', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
@@ -200,7 +200,7 @@ def edit_task(task_id):
         
         flash('✅ تم تحديث التدريب بنجاح', 'success')
         log_activity(session['user_id'], 'تعديل تدريب', f'عدل {title}')
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     conn.close()
     return render_template('edit_task.html', task=task, clients=clients, trainers=trainers)
@@ -233,7 +233,7 @@ def update_task_status(task_id):
         if not task:
             flash('❌ التدريب غير موجود', 'danger')
             conn.close()
-            return redirect(url_for('tasks_bp.tasks'))
+            return redirect(url_for('tasks.tasks'))  # ✅ تغيير
         
         print(f"📋 معلومات التدريب:")
         print(f"   العنوان: {task['title']}")
@@ -342,7 +342,7 @@ def update_task_status(task_id):
         conn.close()
     
     flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
-    return redirect(request.referrer or url_for('tasks_bp.tasks'))
+    return redirect(request.referrer or url_for('tasks.tasks'))  # ✅ تغيير
 
 
 @tasks_bp.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
@@ -356,7 +356,7 @@ def update_task_status_form(task_id):
     
     if not task:
         flash('❌ التدريب غير موجود', 'danger')
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     if request.method == 'POST':
         return redirect(url_for('update_task_status', task_id=task_id))
@@ -380,7 +380,6 @@ def add_note(task_id):
             filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
         else:
             filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        # ✅ استخدام current_app بدلاً من app
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         attachment_path = file_path
@@ -395,7 +394,7 @@ def add_note(task_id):
     
     flash('📝 تم إضافة الملاحظة بنجاح', 'success')
     log_activity(session['user_id'], 'إضافة ملاحظة', f'أضاف ملاحظة للتدريب {task_id}')
-    return redirect(request.referrer or url_for('tasks_bp.tasks'))
+    return redirect(request.referrer or url_for('tasks.tasks'))  # ✅ تغيير
 
 
 @tasks_bp.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
@@ -415,7 +414,6 @@ def add_note_form(task_id):
                 filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
             else:
                 filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            # ✅ استخدام current_app بدلاً من app
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             attachment_path = file_path
@@ -429,7 +427,7 @@ def add_note_form(task_id):
         conn.close()
         
         flash('📝 تم إضافة الملاحظة بنجاح', 'success')
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     return render_template('add_note.html', task_id=task_id)
 
@@ -444,17 +442,17 @@ def delete_task(task_id):
     if not task:
         flash('❌ التدريب غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     user_role = session['user_role']
     if user_role == 'مراقب':
         flash('⛔ ليس لديك صلاحية لحذف التدريبات', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
         flash('⛔ يمكنك حذف تدريباتك فقط', 'danger')
         conn.close()
-        return redirect(url_for('tasks_bp.tasks'))
+        return redirect(url_for('tasks.tasks'))  # ✅ تغيير
     
     conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
     conn.commit()
@@ -462,7 +460,7 @@ def delete_task(task_id):
     
     flash('✅ تم حذف التدريب بنجاح', 'success')
     log_activity(session['user_id'], 'حذف تدريب', f'حذف تدريب رقم {task_id}')
-    return redirect(url_for('tasks_bp.tasks'))
+    return redirect(url_for('tasks.tasks'))  # ✅ تغيير
 
 
 @tasks_bp.route('/tasks/search')
@@ -514,4 +512,4 @@ def group_tasks():
     conn.close()
     
     flash(f'✅ تم تجميع مهام العميل تحت مجموعة "{group_name}"', 'success')
-    return redirect(url_for('clients.clients_tasks', client_id=client_id))
+    return redirect(url_for('clients.client_tasks', client_id=client_id))  # ✅ تغيير
