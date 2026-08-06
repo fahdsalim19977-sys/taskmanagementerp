@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-search text-primary"></i> نتائج البحث</h2>
+    <div>
+        <span class="badge bg-primary">{{ total_results }} نتيجة</span>
+        <a href="/" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- ===== كلمة البحث ===== -->
+<div class="alert alert-info">
+    <i class="bi bi-search"></i>
+    بحث عن: <strong>"{{ query }}"</strong>
+</div>
+
+<!-- ===== إجمالي النتائج ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-primary">
+            <div class="stat-value">{{ results.clients|length }}</div>
+            <div class="stat-label">عملاء</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-success">
+            <div class="stat-value">{{ results.contracts|length }}</div>
+            <div class="stat-label">عقود</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-warning">
+            <div class="stat-value">{{ results.payments|length }}</div>
+            <div class="stat-label">مدفوعات</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-info">
+            <div class="stat-value">{{ results.tasks|length }}</div>
+            <div class="stat-label">تدريبات</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-secondary">
+            <div class="stat-value">{{ results.trainers|length }}</div>
+            <div class="stat-label">مدربين</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card-mini bg-dark">
+            <div class="stat-value">{{ total_results }}</div>
+            <div class="stat-label">إجمالي</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== نتائج البحث ===== -->
+
+<!-- ===== العملاء ===== -->
+{% if results.clients %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-people"></i> العملاء ({{ results.clients|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم العميل</th>
+                        <th>الشركة</th>
+                        <th>الهاتف</th>
+                        <th>البريد</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in results.clients %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/client_tasks/{{ client.id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ client.name }}
+                            </a>
+                        </td>
+                        <td>{{ client.company_name or '-' }}</td>
+                        <td>{{ client.phone or '-' }}</td>
+                        <td>{{ client.email or '-' }}</td>
+                        <td>
+                            <a href="/client_tasks/{{ client.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== العقود ===== -->
+{% if results.contracts %}
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> العقود ({{ results.contracts|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم العقد</th>
+                        <th>العنوان</th>
+                        <th>العميل</th>
+                        <th>الشركة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in results.contracts %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/contract/{{ contract.id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ contract.contract_number }}
+                            </a>
+                        </td>
+                        <td>{{ contract.title }}</td>
+                        <td>{{ contract.client_name }}</td>
+                        <td>{{ contract.company_name or '-' }}</td>
+                        <td>
+                            <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== المدفوعات ===== -->
+{% if results.payments %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-coin"></i> المدفوعات ({{ results.payments|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>العميل</th>
+                        <th>الشركة</th>
+                        <th>المبلغ</th>
+                        <th>تاريخ الدفع</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in results.payments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ payment.client_name }}</td>
+                        <td>{{ payment.company_name or '-' }}</td>
+                        <td><span class="fw-bold text-success">{{ payment.amount }} ر.س</span></td>
+                        <td>{{ payment.payment_date }}</td>
+                        <td>
+                            <a href="/client_payments/{{ payment.client_id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== التدريبات ===== -->
+{% if results.tasks %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-list-task"></i> التدريبات ({{ results.tasks|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>العنوان</th>
+                        <th>العميل</th>
+                        <th>الشركة</th>
+                        <th>المدرب</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الاستحقاق</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in results.tasks %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/task/{{ task.id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ task.title }}
+                            </a>
+                        </td>
+                        <td>{{ task.client_name }}</td>
+                        <td>{{ task.company_name or '-' }}</td>
+                        <td>{{ task.trainer_name or '-' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if task.status == 'مكتملة' %}bg-success
+                                {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
+                                {% elif task.status == 'متأخرة' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </td>
+                        <td>{{ task.due_date }}</td>
+                        <td>
+                            <a href="/task/{{ task.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== المدربين ===== -->
+{% if results.trainers %}
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-person-badge"></i> المدربين ({{ results.trainers|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الاسم</th>
+                        <th>الهاتف</th>
+                        <th>البريد</th>
+                        <th>التخصص</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trainer in results.trainers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/trainer/{{ trainer.id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ trainer.name }}
+                            </a>
+                        </td>
+                        <td>{{ trainer.phone or '-' }}</td>
+                        <td>{{ trainer.email or '-' }}</td>
+                        <td>{{ trainer.specialty or '-' }}</td>
+                        <td>
+                            <a href="/trainer/{{ trainer.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== لا توجد نتائج ===== -->
+{% if total_results == 0 %}
+<div class="text-center py-5">
+    <i class="bi bi-search" style="font-size: 4rem; color: #ccc;"></i>
+    <h4 class="mt-3 text-muted">لا توجد نتائج</h4>
+    <p class="text-muted">لم يتم العثور على أي نتائج لـ <strong>"{{ query }}"</strong></p>
+    <a href="/" class="btn btn-primary">↩️ العودة للرئيسية</a>
+</div>
+{% endif %}
+
+<style>
+.stat-card-mini {
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    text-align: center;
+}
+.stat-card-mini .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card-mini .stat-label { font-size: 0.8rem; opacity: 0.8; }
+.table-modern { font-size: 14px; }
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-modern tbody tr:hover { background: #f8fafc; }
+</style>
+{% endblock %}
