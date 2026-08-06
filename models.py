@@ -14,7 +14,6 @@ if not os.path.exists('/app/data'):
 def get_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -91,7 +90,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول tasks مع العمود الجديد =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +105,7 @@ def init_db():
             meeting_id INTEGER,
             estimated_duration INTEGER DEFAULT 0,
             actual_duration INTEGER DEFAULT 0,
-            contract_payment_id INTEGER,  -- ✅ العمود الجديد
+            contract_payment_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id),
@@ -117,17 +115,6 @@ def init_db():
         )
     """)
     
-    # ===== إضافة عمود contract_payment_id إذا كان الجدول موجوداً مسبقاً =====
-    try:
-        cursor.execute("ALTER TABLE tasks ADD COLUMN contract_payment_id INTEGER")
-        print("✅ تم إضافة عمود contract_payment_id إلى جدول tasks")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e):
-            print("ℹ️ عمود contract_payment_id موجود مسبقاً في جدول tasks")
-        else:
-            print(f"❌ خطأ: {e}")
-    
-    # ===== باقي الجداول =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS task_updates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,6 +179,33 @@ def init_db():
             reminder_time DATETIME NOT NULL,
             sent INTEGER DEFAULT 0,
             FOREIGN KEY (meeting_id) REFERENCES meetings(id)
+        )
+    """)
+    
+    # ===== جدول أنواع المديولات (جديد) =====
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS module_types (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            price REAL DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # ===== جدول ربط العقود بالمديولات (جديد) =====
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contract_modules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contract_id INTEGER NOT NULL,
+            module_type_id INTEGER NOT NULL,
+            quantity INTEGER DEFAULT 1,
+            price REAL DEFAULT 0,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (contract_id) REFERENCES client_contracts(id) ON DELETE CASCADE,
+            FOREIGN KEY (module_type_id) REFERENCES module_types(id)
         )
     """)
     
@@ -327,7 +341,17 @@ def init_db():
         )
     """)
     
-    # ===== إضافة عمود favicon_path =====
+    # ===== إضافة عمود contract_payment_id إذا لم يكن موجوداً =====
+    try:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN contract_payment_id INTEGER")
+        print("✅ تم إضافة عمود contract_payment_id إلى جدول tasks")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e):
+            print("ℹ️ عمود contract_payment_id موجود مسبقاً في جدول tasks")
+        else:
+            print(f"❌ خطأ: {e}")
+    
+    # ===== إضافة عمود favicon_path إذا لم يكن موجوداً =====
     try:
         cursor.execute("ALTER TABLE company_settings ADD COLUMN favicon_path TEXT")
         print("✅ تم إضافة عمود favicon_path")
@@ -388,6 +412,19 @@ def init_db():
             ('عقد مقاولات', 'عقد أعمال مقاولات وإنشاءات'),
             ('عقد توريد', 'عقد توريد مواد أو معدات'),
             ('عقد تدريب', 'عقد تقديم دورات تدريبية')
+        """)
+    
+    # ===== أنواع المديولات الافتراضية =====
+    cursor.execute("SELECT COUNT(*) as count FROM module_types")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO module_types (name, description, price)
+            VALUES 
+            ('نظام إدارة الموارد البشرية', 'نظام متكامل لإدارة الموظفين والرواتب', 15000),
+            ('نظام المحاسبة', 'نظام محاسبي متكامل مع التقارير المالية', 20000),
+            ('نظام إدارة العملاء CRM', 'نظام لإدارة علاقات العملاء والمبيعات', 12000),
+            ('نظام إدارة المشاريع', 'نظام لتخطيط ومتابعة المشاريع', 18000),
+            ('نظام نقاط البيع POS', 'نظام نقاط بيع متكامل مع المخزون', 10000)
         """)
     
     conn.commit()

@@ -1628,162 +1628,79 @@ def client_payments(client_id):
                          stats=stats)
 
 # ============================================================
-# المديولات
+# أنواع المديولات
 # ============================================================
-@app.route('/all_modules')
-def all_modules():
+@app.route('/module_types')
+def module_types():
+    """عرض جميع أنواع المديولات"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db()
-    modules = conn.execute('''
-        SELECT client_modules.*, 
-               clients.name as client_name,
-               clients.company_name
-        FROM client_modules
-        LEFT JOIN clients ON client_modules.client_id = clients.id
-        ORDER BY client_modules.created_at DESC
-    ''').fetchall()
+    types = conn.execute('SELECT * FROM module_types ORDER BY name').fetchall()
     conn.close()
-    return render_template('all_modules.html', modules=modules)
+    return render_template('module_types.html', types=types)
 
-@app.route('/add_module_global', methods=['GET', 'POST'])
-def add_module_global():
+@app.route('/add_module_type', methods=['POST'])
+def add_module_type():
+    """إضافة نوع مديول جديد"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    conn = get_db()
-    clients = conn.execute('SELECT id, name FROM clients ORDER BY name').fetchall()
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
     
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form.get('description', '')
-        client_id = request.form.get('client_id') or None
-        price = request.form.get('price', 0)
-        status = request.form['status']
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        
-        conn.execute('''
-            INSERT INTO client_modules (client_id, name, description, price, status, start_date, end_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (client_id, name, description, price, status, start_date, end_date))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم إضافة المديول بنجاح', 'success')
-        log_activity(session['user_id'], 'إضافة مديول', f'أضاف {name}')
-        return redirect(url_for('all_modules'))
-    
-    conn.close()
-    return render_template('add_module_global.html', clients=clients)
-
-@app.route('/client_modules/<int:client_id>')
-def client_modules(client_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+    if not name:
+        flash('❌ اسم المديول مطلوب', 'danger')
+        return redirect(url_for('module_types'))
     
     conn = get_db()
-    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
-    if not client:
-        flash('❌ العميل غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('clients'))
-    
-    modules = conn.execute('SELECT * FROM client_modules WHERE client_id = ? ORDER BY created_at DESC', (client_id,)).fetchall()
-    conn.close()
-    return render_template('client_modules.html', client=client, modules=modules)
-
-@app.route('/add_module/<int:client_id>', methods=['GET', 'POST'])
-def add_module(client_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
-    if not client:
-        flash('❌ العميل غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('clients'))
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form.get('description', '')
-        price = request.form.get('price', 0)
-        status = request.form['status']
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        
-        conn.execute('''
-            INSERT INTO client_modules (client_id, name, description, price, status, start_date, end_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (client_id, name, description, price, status, start_date, end_date))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم إضافة المديول بنجاح', 'success')
-        log_activity(session['user_id'], 'إضافة مديول', f'أضاف {name} للعميل {client["name"]}')
-        return redirect(url_for('client_modules', client_id=client_id))
-    
-    conn.close()
-    return render_template('add_module.html', client=client)
-
-@app.route('/edit_module/<int:module_id>', methods=['GET', 'POST'])
-def edit_module(module_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    module = conn.execute('SELECT * FROM client_modules WHERE id = ?', (module_id,)).fetchone()
-    if not module:
-        flash('❌ المديول غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('all_modules'))
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form.get('description', '')
-        price = request.form.get('price', 0)
-        status = request.form['status']
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        
-        conn.execute('''
-            UPDATE client_modules SET 
-                name = ?, description = ?, price = ?, status = ?, 
-                start_date = ?, end_date = ?
-            WHERE id = ?
-        ''', (name, description, price, status, start_date, end_date, module_id))
-        conn.commit()
-        conn.close()
-        
-        flash('✅ تم تحديث المديول بنجاح', 'success')
-        log_activity(session['user_id'], 'تحديث مديول', f'حدث {name}')
-        return redirect(url_for('client_modules', client_id=module['client_id']))
-    
-    conn.close()
-    return render_template('edit_module.html', module=module)
-
-@app.route('/delete_module/<int:module_id>', methods=['POST'])
-def delete_module(module_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    module = conn.execute('SELECT * FROM client_modules WHERE id = ?', (module_id,)).fetchone()
-    if not module:
-        flash('❌ المديول غير موجود', 'danger')
-        conn.close()
-        return redirect(url_for('all_modules'))
-    
-    client_id = module['client_id']
-    conn.execute('DELETE FROM client_modules WHERE id = ?', (module_id,))
+    conn.execute('''
+        INSERT INTO module_types (name, description, price)
+        VALUES (?, ?, ?)
+    ''', (name, description, price))
     conn.commit()
     conn.close()
     
-    flash('✅ تم حذف المديول بنجاح', 'success')
-    log_activity(session['user_id'], 'حذف مديول', f'حذف {module["name"]}')
-    return redirect(url_for('client_modules', client_id=client_id))
+    flash('✅ تم إضافة نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types'))
+
+@app.route('/edit_module_type/<int:type_id>', methods=['POST'])
+def edit_module_type(type_id):
+    """تعديل نوع مديول"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
+    is_active = request.form.get('is_active', '1')
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE module_types SET name = ?, description = ?, price = ?, is_active = ?
+        WHERE id = ?
+    ''', (name, description, price, is_active, type_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types'))
+
+@app.route('/delete_module_type/<int:type_id>', methods=['POST'])
+def delete_module_type(type_id):
+    """حذف نوع مديول"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    conn.execute('DELETE FROM module_types WHERE id = ?', (type_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types'))
 
 # ============================================================
 # عقود العملاء
@@ -1817,6 +1734,7 @@ def add_contract():
     conn = get_db()
     clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
     contract_types = conn.execute('SELECT id, name FROM contract_types WHERE is_active = 1 ORDER BY name').fetchall()
+    module_types = conn.execute('SELECT id, name, price FROM module_types WHERE is_active = 1 ORDER BY name').fetchall()
     
     if request.method == 'POST':
         client_id = request.form['client_id']
@@ -1832,13 +1750,16 @@ def add_contract():
         total_amount = request.form.get('total_amount', 0)
         attachment_description = request.form.get('attachment_description', '')
         
+        # اختيار المديولات
+        module_ids = request.form.getlist('module_ids')
+        
         check = conn.execute('SELECT * FROM client_contracts WHERE contract_number = ?', (contract_number,)).fetchone()
         if check:
             flash('❌ رقم العقد موجود مسبقاً', 'danger')
             conn.close()
-            return render_template('add_contract.html', clients=clients, contract_types=contract_types)
+            return render_template('add_contract.html', clients=clients, contract_types=contract_types, module_types=module_types)
         
-        # إدراج العقد مع payment_status = 'غير مدفوع'
+        # إدراج العقد
         cursor = conn.execute('''
             INSERT INTO client_contracts 
             (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
@@ -1847,6 +1768,18 @@ def add_contract():
         ''', (client_id, contract_type_id, contract_number, title, description, start_date, end_date, 
               contract_value, total_amount, status, notes, session['user_id']))
         contract_id = cursor.lastrowid
+        
+        # ===== ربط المديولات بالعقد =====
+        for module_id in module_ids:
+            if module_id:
+                # جلب سعر المديول
+                module = conn.execute('SELECT price FROM module_types WHERE id = ?', (module_id,)).fetchone()
+                price = module['price'] if module else 0
+                
+                conn.execute('''
+                    INSERT INTO contract_modules (contract_id, module_type_id, price)
+                    VALUES (?, ?, ?)
+                ''', (contract_id, module_id, price))
         
         # إنشاء الدفعات
         installment_count = int(request.form.get('installment_count', 0))
@@ -1892,7 +1825,10 @@ def add_contract():
         return redirect(url_for('contracts'))
     
     conn.close()
-    return render_template('add_contract.html', clients=clients, contract_types=contract_types)
+    return render_template('add_contract.html', 
+                         clients=clients, 
+                         contract_types=contract_types,
+                         module_types=module_types)
 
 @app.route('/edit_contract/<int:contract_id>', methods=['GET', 'POST'])
 def edit_contract(contract_id):
@@ -2054,6 +1990,17 @@ def contract_details(contract_id):
         conn.close()
         return redirect(url_for('contracts'))
     
+    # ===== جلب المديولات المرتبطة =====
+    contract_modules = conn.execute('''
+        SELECT contract_modules.*, 
+               module_types.name as module_name,
+               module_types.description as module_description
+        FROM contract_modules
+        JOIN module_types ON contract_modules.module_type_id = module_types.id
+        WHERE contract_modules.contract_id = ?
+        ORDER BY module_types.name
+    ''', (contract_id,)).fetchall()
+    
     attachments = conn.execute('''
         SELECT contract_attachments.*, users.name as uploaded_by_name
         FROM contract_attachments
@@ -2072,6 +2019,7 @@ def contract_details(contract_id):
     
     return render_template('contract_details.html', 
                          contract=contract,
+                         contract_modules=contract_modules,
                          contract_attachments=attachments,
                          contract_payments=payments)
 
