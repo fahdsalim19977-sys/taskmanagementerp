@@ -275,6 +275,16 @@ def internal_server_error(e):
     flash('❌ حدث خطأ في السيرفر. يرجى المحاولة مرة أخرى.', 'danger')
     return redirect(url_for('index'))
 
+@app.route('/trainers-test')
+def trainers_test():
+    return "Trainers route is working! (test)"
+
+@app.route('/trainers-direct')
+def trainers_direct():
+    from routes.trainers import trainers_bp
+    # هذا مجرد اختبار
+    return "Direct import test"
+
 # ===== تشغيل التطبيق =====
 if __name__ == '__main__':
     print("🚀 جاري تشغيل السيرفر...")
