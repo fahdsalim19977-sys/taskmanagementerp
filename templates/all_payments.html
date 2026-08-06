@@ -1,68 +1,57 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-coin"></i> المدفوعات</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-coin text-primary"></i> المدفوعات</h2>
     <div>
         <a href="/add_payment_global" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> إضافة دفعة جديدة
+            <i class="bi bi-plus-circle"></i> إضافة دفعة
         </a>
         <a href="/export_all_payments_excel" class="btn btn-success">
-            <i class="bi bi-file-excel"></i> تصدير Excel
+            <i class="bi bi-file-excel"></i> Excel
         </a>
-        <button onclick="window.print()" class="btn btn-primary">
+        <button onclick="window.print()" class="btn btn-outline-secondary">
             <i class="bi bi-printer"></i> طباعة
         </button>
-        <a href="/clients" class="btn btn-secondary">
-            <i class="bi bi-arrow-right"></i> العملاء
-        </a>
     </div>
 </div>
 
 <!-- ===== إحصائيات ===== -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <h6>إجمالي المدفوع</h6>
-                <h3>{{ stats.total_paid or 0 }} ر.س</h3>
-            </div>
+        <div class="stat-card-mini bg-primary">
+            <div class="stat-value">{{ stats.total_count or 0 }}</div>
+            <div class="stat-label">عدد المدفوعات</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-dark">
-            <div class="card-body text-center">
-                <h6>معلق</h6>
-                <h3>{{ stats.total_pending or 0 }} ر.س</h3>
-            </div>
+        <div class="stat-card-mini bg-success">
+            <div class="stat-value">{{ stats.total_paid or 0 }} ر.س</div>
+            <div class="stat-label">إجمالي المدفوع</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-danger text-white">
-            <div class="card-body text-center">
-                <h6>متأخر</h6>
-                <h3>{{ stats.total_overdue or 0 }} ر.س</h3>
-            </div>
+        <div class="stat-card-mini bg-warning">
+            <div class="stat-value">{{ stats.total_pending or 0 }} ر.س</div>
+            <div class="stat-label">معلق</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body text-center">
-                <h6>عدد المدفوعات</h6>
-                <h3>{{ stats.total_count or 0 }}</h3>
-            </div>
+        <div class="stat-card-mini bg-danger">
+            <div class="stat-value">{{ stats.total_overdue or 0 }} ر.س</div>
+            <div class="stat-label">متأخر</div>
         </div>
     </div>
 </div>
 
-<!-- ===== خانة البحث ===== -->
+<!-- ===== بحث ===== -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="/all_payments" class="row g-3">
             <div class="col-md-10">
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control" 
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0" 
                            placeholder="ابحث باسم العميل أو الشركة..." 
                            value="{{ search_term or '' }}">
                 </div>
@@ -86,82 +75,71 @@
     </div>
 </div>
 
-<!-- ===== جدول المدفوعات (بدون عمود طريقة الدفع) ===== -->
-{% if payments %}
-<div class="table-responsive">
-    <table class="table table-hover table-striped">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>العميل</th>
-                <th>الشركة</th>
-                <th>المدرب المسؤول</th>
-                <th>المبلغ</th>
-                <th>تاريخ الدفع</th>
-                <th>تاريخ الاستحقاق</th>
-                <th>الملاحظات</th>
-                <th>الحالة</th>
-                <th>رقم الفاتورة</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for payment in payments %}
-            <tr>
-                <td>{{ payment.id }}</td>
-                <td>
-                    <a href="/client_payments/{{ payment.client_id }}" class="text-decoration-none fw-bold">
-                        {{ payment.client_name }}
-                    </a>
-                </td>
-                <td>{{ payment.company_name or '-' }}</td>
-                <td>
-                    {% if payment.trainer_names %}
-                        {{ payment.trainer_names }}
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td><strong>{{ payment.amount }} ر.س</strong></td>
-                <td>{{ payment.payment_date }}</td>
-                <td>{{ payment.due_date or '-' }}</td>
-                <td>
-                    {% if payment.notes %}
-                        <span title="{{ payment.notes }}">{{ payment.notes[:50] }}{% if payment.notes|length > 50 %}...{% endif %}</span>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="badge 
-                        {% if payment.status == 'مدفوع' %}bg-success
-                        {% elif payment.status == 'معلق' %}bg-warning text-dark
-                        {% else %}bg-danger{% endif %}">
-                        {{ payment.status }}
-                    </span>
-                </td>
-                <td>{{ payment.invoice_number or '-' }}</td>
-                <td>
-                    <a href="/edit_payment/{{ payment.id }}" class="btn btn-sm btn-info">
-    <i class="bi bi-pencil"></i>
-</a>
-                    <button class="btn btn-sm btn-danger" onclick="deletePayment({{ payment.id }})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- ===== قائمة المدفوعات ===== -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>العميل</th>
+                        <th>الشركة</th>
+                        <th>المبلغ</th>
+                        <th>تاريخ الدفع</th>
+                        <th>تاريخ الاستحقاق</th>
+                        <th>الحالة</th>
+                        <th>رقم الفاتورة</th>
+                        <th>ملاحظات</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <a href="/client_payments/{{ payment.client_id }}" class="fw-bold text-primary text-decoration-none">
+                                {{ payment.client_name }}
+                            </a>
+                        </td>
+                        <td>{{ payment.company_name or '-' }}</td>
+                        <td><span class="fw-bold">{{ payment.amount }} ر.س</span></td>
+                        <td>{{ payment.payment_date }}</td>
+                        <td>{{ payment.due_date or '-' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if payment.status == 'مدفوع' %}bg-success
+                                {% elif payment.status == 'معلق' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ payment.status }}
+                            </span>
+                        </td>
+                        <td>{{ payment.invoice_number or '-' }}</td>
+                        <td>
+                            {% if payment.notes %}
+                            <span title="{{ payment.notes }}">{{ payment.notes[:30] }}{% if payment.notes|length > 30 %}...{% endif %}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/edit_payment/{{ payment.id }}" class="btn btn-outline-info">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-outline-danger" onclick="deletePayment({{ payment.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-{% else %}
-<div class="alert alert-info text-center">
-    <i class="bi bi-coin" style="font-size:48px;display:block;"></i>
-    <h4>{% if search_term %}لا توجد نتائج للبحث "{{ search_term }}"{% else %}لا توجد مدفوعات مسجلة{% endif %}</h4>
-    <p>{% if search_term %}جرب البحث باسم آخر{% else %}قم بإضافة مدفوعات من صفحة العميل{% endif %}</p>
-    <a href="/clients" class="btn btn-primary mt-2">➡️ الذهاب للعملاء</a>
-</div>
-{% endif %}
 
 <script>
 function deletePayment(paymentId) {
@@ -176,10 +154,28 @@ function deletePayment(paymentId) {
 </script>
 
 <style>
-@media print {
-    .btn, .navbar, .footer { display: none !important; }
-    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
-    body { background: white !important; }
+.stat-card-mini {
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    text-align: center;
 }
+.stat-card-mini .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card-mini .stat-label { font-size: 0.8rem; opacity: 0.8; }
+.table-modern { font-size: 14px; }
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-modern tbody tr:hover { background: #f8fafc; }
+.btn-group .btn { border-radius: 8px !important; margin: 0 2px; }
 </style>
 {% endblock %}

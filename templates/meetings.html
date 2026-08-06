@@ -1,60 +1,142 @@
 ﻿{% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-calendar-event"></i> المواعيد والاجتماعات</h2>
-    <a href="/add_meeting" class="btn btn-primary"><i class="bi bi-plus-circle"></i> موعد جديد</a>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-calendar-event text-primary"></i> المواعيد</h2>
+    <a href="/add_meeting" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> موعد جديد
+    </a>
 </div>
 
-<!-- المواعيد القادمة -->
-<h4 class="mb-3"><i class="bi bi-calendar-check text-success"></i> المواعيد القادمة</h4>
-{% if upcoming %}
-<div class="row">
-    {% for meeting in upcoming %}
-    <div class="col-md-6 mb-3">
-        <div class="card border-success">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <h5 class="card-title">{{ meeting.title }}</h5>
-                    <span class="badge bg-success">مجدول</span>
-                </div>
-                <p class="card-text">
-                    <i class="bi bi-person"></i> {{ meeting.client_name }}<br>
-                    <i class="bi bi-clock"></i> {{ meeting.meeting_date[:16] }}<br>
-                    <i class="bi bi-hourglass-split"></i> {{ meeting.duration }} دقيقة<br>
-                    {% if meeting.location %}<i class="bi bi-geo-alt"></i> {{ meeting.location }}<br>{% endif %}
-                    {% if meeting.meeting_link %}<i class="bi bi-link"></i> <a href="{{ meeting.meeting_link }}" target="_blank">رابط الاجتماع</a>{% endif %}
-                </p>
-                <a href="/meeting/{{ meeting.id }}" class="btn btn-sm btn-info">التفاصيل</a>
-            </div>
-        </div>
+<!-- ===== المواعيد القادمة ===== -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar-check"></i> المواعيد القادمة</h5>
     </div>
-    {% endfor %}
-</div>
-{% else %}
-<div class="alert alert-info">لا توجد مواعيد قادمة</div>
-{% endif %}
-
-<!-- المواعيد السابقة -->
-<h4 class="mb-3 mt-4"><i class="bi bi-calendar-x text-danger"></i> المواعيد السابقة</h4>
-{% if past %}
-<div class="table-responsive">
-    <table class="table table-hover">
-        <thead><tr><th>العنوان</th><th>العميل</th><th>التاريخ</th><th>الحالة</th><th></th></tr></thead>
-        <tbody>
-            {% for meeting in past %}
-            <tr>
-                <td>{{ meeting.title }}</td>
-                <td>{{ meeting.client_name }}</td>
-                <td>{{ meeting.meeting_date[:16] }}</td>
-                <td><span class="badge {% if meeting.status == 'تم' %}bg-success{% elif meeting.status == 'ملغي' %}bg-danger{% else %}bg-secondary{% endif %}">{{ meeting.status }}</span></td>
-                <td><a href="/meeting/{{ meeting.id }}" class="btn btn-sm btn-info">تفاصيل</a></td>
-            </tr>
+    <div class="card-body">
+        {% if upcoming %}
+        <div class="row g-3">
+            {% for meeting in upcoming %}
+            <div class="col-md-6">
+                <div class="meeting-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="fw-bold mb-1">{{ meeting.title }}</h6>
+                            <span class="badge bg-success">مجدول</span>
+                            <p class="text-muted small mt-1 mb-0">
+                                <i class="bi bi-person"></i> {{ meeting.client_name }}
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">
+                                <i class="bi bi-clock"></i> {{ meeting.meeting_date[:16] }}
+                            </small>
+                            <small class="text-muted d-block">
+                                <i class="bi bi-hourglass-split"></i> {{ meeting.duration }} دقيقة
+                            </small>
+                            {% if meeting.meeting_link %}
+                            <a href="{{ meeting.meeting_link }}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                <i class="bi bi-link"></i> رابط
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="/meeting/{{ meeting.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> تفاصيل
+                        </a>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+        {% else %}
+        <div class="text-center py-3 text-muted">
+            <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+            <p class="mt-2">لا توجد مواعيد قادمة</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% else %}
-<div class="alert alert-secondary">لا توجد مواعيد سابقة</div>
-{% endif %}
+
+<!-- ===== المواعيد السابقة ===== -->
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar-x"></i> المواعيد السابقة</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if past %}
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>العنوان</th>
+                        <th>العميل</th>
+                        <th>التاريخ</th>
+                        <th>المدة</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for meeting in past %}
+                    <tr>
+                        <td><span class="fw-bold">{{ meeting.title }}</span></td>
+                        <td>{{ meeting.client_name }}</td>
+                        <td>{{ meeting.meeting_date[:16] }}</td>
+                        <td>{{ meeting.duration }} دقيقة</td>
+                        <td>
+                            <span class="badge 
+                                {% if meeting.status == 'تم' %}bg-success
+                                {% elif meeting.status == 'ملغي' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ meeting.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="/meeting/{{ meeting.id }}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-3 text-muted">
+            <i class="bi bi-calendar-x" style="font-size: 2rem;"></i>
+            <p class="mt-2">لا توجد مواعيد سابقة</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.meeting-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    border-right: 4px solid #22c55e;
+    transition: all 0.3s ease;
+}
+.meeting-card:hover {
+    background: #f1f5f9;
+    transform: translateX(-4px);
+}
+.table-modern { font-size: 14px; }
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-modern tbody tr:hover { background: #f8fafc; }
+</style>
 {% endblock %}
