@@ -4,7 +4,9 @@
 <!-- ===== عنوان الصفحة ===== -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
     <div>
-        <h2 class="fw-bold" style="color: #1a237e;"><i class="bi bi-grid-1x2-fill text-primary"></i> نظرة عامة</h2>
+        <h2 class="fw-bold" style="color: #0F172A;">
+            <i class="bi bi-grid-1x2-fill text-primary"></i> نظرة عامة
+        </h2>
         <p class="text-muted mb-0">مرحباً بعودتك، {{ session.user_name }} 👋</p>
     </div>
     <div>
@@ -14,235 +16,96 @@
     </div>
 </div>
 
-<!-- ===== بطاقات العقود ===== -->
+<!-- ===== بطاقات الإحصائيات ===== -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-lg-6 col-md-6">
         <a href="/contracts" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #1a237e, #283593); cursor: pointer;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #0F172A, #1E293B);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="stat-label-v2">إجمالي العقود</span>
-                        <h2 class="stat-number-v2">{{ total_contracts or 0 }}</h2>
+                        <span class="stat-label">إجمالي العقود</span>
+                        <h2 class="stat-number">{{ total_contracts or 0 }}</h2>
                     </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                    <div class="stat-icon">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">عرض جميع العقود <i class="bi bi-arrow-left"></i></span>
+                <div class="stat-footer">
+                    <span class="stat-link">عرض الكل <i class="bi bi-arrow-left"></i></span>
                 </div>
             </div>
         </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
         <a href="/contracts/filter/paid_full" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #1e7e34, #28a745); cursor: pointer;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #065f46, #059669);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="stat-label-v2">مدفوعة بالكامل</span>
-                        <h2 class="stat-number-v2">{{ contracts_paid_full or 0 }}</h2>
+                        <span class="stat-label">مدفوعة بالكامل</span>
+                        <h2 class="stat-number">{{ contracts_paid_full or 0 }}</h2>
                     </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                    <div class="stat-icon">
                         <i class="bi bi-check-circle-fill"></i>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <span class="stat-sub-v2">نسبة: {{ contracts_paid_percent or 0 }}%</span>
+                <div class="stat-footer">
+                    <span class="stat-sub">نسبة: {{ contracts_paid_percent or 0 }}%</span>
                 </div>
             </div>
         </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
         <a href="/contracts/filter/partial" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #e6a800, #f9a825); cursor: pointer;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #92400e, #d97706);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="stat-label-v2">مدفوعة جزئياً</span>
-                        <h2 class="stat-number-v2">{{ contracts_partial or 0 }}</h2>
+                        <span class="stat-label">مدفوعة جزئياً</span>
+                        <h2 class="stat-number">{{ contracts_partial or 0 }}</h2>
                     </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                    <div class="stat-icon">
                         <i class="bi bi-clock-history"></i>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <span class="stat-sub-v2">متبقي: {{ contracts_partial_due or 0 }} ر.س</span>
+                <div class="stat-footer">
+                    <span class="stat-sub">متبقي: {{ contracts_partial_due or 0 }} ر.س</span>
                 </div>
             </div>
         </a>
     </div>
     <div class="col-xl-3 col-lg-6 col-md-6">
         <a href="/contracts/filter/unpaid" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #b71c1c, #dc3545); cursor: pointer;">
+            <div class="stat-card" style="background: linear-gradient(135deg, #991b1b, #dc2626);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="stat-label-v2">غير مدفوعة</span>
-                        <h2 class="stat-number-v2">{{ contracts_unpaid or 0 }}</h2>
+                        <span class="stat-label">غير مدفوعة</span>
+                        <h2 class="stat-number">{{ contracts_unpaid or 0 }}</h2>
                     </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
+                    <div class="stat-icon">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <span class="stat-sub-v2">قيمة: {{ contracts_unpaid_amount or 0 }} ر.س</span>
+                <div class="stat-footer">
+                    <span class="stat-sub">قيمة: {{ contracts_unpaid_amount or 0 }} ر.س</span>
                 </div>
             </div>
         </a>
     </div>
 </div>
 
-<!-- ===== بطاقات التدريبات ===== -->
+<!-- ===== الدفعات المستحقة ===== -->
 <div class="row g-3 mb-4">
-    <div class="col-xl-3 col-lg-6 col-md-6">
-        <a href="/tasks" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #283593, #3949ab); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">إجمالي التدريبات</span>
-                        <h2 class="stat-number-v2">{{ total_tasks or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-list-task"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">عرض الكل <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-        <a href="/tasks" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #00695c, #00897b); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">مكتملة</span>
-                        <h2 class="stat-number-v2">{{ completed_tasks or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-check2-circle"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-sub-v2">
-                        نسبة: {% if total_tasks > 0 %}{{ (completed_tasks / total_tasks * 100)|round(1) }}{% else %}0{% endif %}%
-                    </span>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-        <a href="/tasks" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #e65100, #fb8c00); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">قيد التنفيذ</span>
-                        <h2 class="stat-number-v2">{{ in_progress or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">عرض الكل <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6">
-        <a href="/tasks" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #880e4f, #e91e63); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">متأخرة</span>
-                        <h2 class="stat-number-v2">{{ overdue_tasks or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-clock-fill"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">عرض الكل <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
-
-<!-- ===== بطاقات العملاء والإيرادات والمواعيد ===== -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-4 col-lg-6">
-        <a href="/clients" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #4a148c, #7b1fa2); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">العملاء</span>
-                        <h2 class="stat-number-v2">{{ total_clients or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">إدارة العملاء <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-xl-4 col-lg-6">
-        <a href="/revenue_report" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #006064, #00acc1); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">إجمالي الإيرادات</span>
-                        <h2 class="stat-number-v2">{{ total_revenue or 0 }} ر.س</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">تقرير الإيرادات <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-xl-4 col-lg-6">
-        <a href="/meetings" class="text-decoration-none">
-            <div class="stat-card-v2" style="background: linear-gradient(135deg, #1a1a2e, #16213e); cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="stat-label-v2">المواعيد القادمة</span>
-                        <h2 class="stat-number-v2">{{ upcoming_meetings or 0 }}</h2>
-                    </div>
-                    <div class="stat-icon-v2" style="background: rgba(255,255,255,0.15);">
-                        <i class="bi bi-calendar-event-fill"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <span class="stat-link-v2">عرض المواعيد <i class="bi bi-arrow-left"></i></span>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
-
-<!-- ===== الدفعات المستحقة هذا الشهر ===== -->
-<div class="row g-4 mt-2">
     <div class="col-md-12">
         <div class="card">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-calendar-event"></i> الدفعات المستحقة هذا الشهر ({{ current_month }})</h5>
-                <div>
-                    <span class="badge bg-dark me-2">إجمالي المطلوب: {{ total_due_this_month }} ر.س</span>
-                    <a href="/contracts" class="btn btn-sm btn-dark">عرض الكل</a>
-                </div>
+                <span class="badge bg-dark">إجمالي المطلوب: {{ total_due_this_month }} ر.س</span>
             </div>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+            <div class="card-body" style="max-height: 350px; overflow-y: auto;">
                 {% if due_this_month %}
                     {% for payment in due_this_month %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div class="payment-item">
                         <div>
-                            <a href="/contract/{{ payment.contract_id }}" class="text-decoration-none text-dark fw-bold">
+                            <a href="/contract/{{ payment.contract_id }}" class="fw-bold text-dark text-decoration-none">
                                 {{ payment.contract_number }}
                             </a>
                             <span class="badge bg-secondary ms-1">{{ payment.client_name }}</span>
@@ -251,14 +114,7 @@
                                 <i class="bi bi-coin text-warning"></i> 
                                 الدفعة {{ payment.installment_number }}: 
                                 <strong>{{ payment.amount }} ر.س</strong>
-                                {% if payment.paid_amount > 0 %}
-                                (مدفوع: {{ payment.paid_amount }} ر.س)
-                                {% endif %}
-                                <span class="badge 
-                                    {% if payment.due_date < datetime.now().strftime('%Y-%m-%d') %}bg-danger
-                                    {% else %}bg-warning text-dark{% endif %} ms-1">
-                                    مستحقة
-                                </span>
+                                <span class="badge bg-warning text-dark ms-1">مستحقة</span>
                             </small>
                         </div>
                         <div class="text-end">
@@ -266,7 +122,7 @@
                                 <i class="bi bi-calendar3"></i> {{ payment.due_date }}
                             </small>
                             <a href="/contract/{{ payment.contract_id }}" class="btn btn-sm btn-outline-primary mt-1">
-                                <i class="bi bi-eye"></i> عرض
+                                <i class="bi bi-eye"></i>
                             </a>
                         </div>
                     </div>
@@ -282,71 +138,25 @@
     </div>
 </div>
 
-<!-- ===== الدفعات المتأخرة ===== -->
-<div class="row g-4 mt-2">
+<!-- ===== آخر العقود ===== -->
+<div class="row g-3">
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> الدفعات المتأخرة</h5>
-                <a href="/contracts" class="btn btn-sm btn-light">عرض الكل</a>
-            </div>
-            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                {% if overdue_payments %}
-                    {% for payment in overdue_payments %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                        <div>
-                            <a href="/contract/{{ payment.contract_id }}" class="text-decoration-none text-dark fw-bold">
-                                {{ payment.contract_number }}
-                            </a>
-                            <span class="badge bg-secondary ms-1">{{ payment.client_name }}</span>
-                            <br>
-                            <small>
-                                <i class="bi bi-coin text-danger"></i> 
-                                الدفعة {{ payment.installment_number }}: 
-                                <strong>{{ payment.amount }} ر.س</strong>
-                                <span class="badge bg-danger ms-1">متأخرة</span>
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            <small class="text-muted d-block">
-                                <i class="bi bi-calendar3"></i> {{ payment.due_date }}
-                            </small>
-                            <a href="/contract/{{ payment.contract_id }}" class="btn btn-sm btn-outline-danger mt-1">
-                                <i class="bi bi-eye"></i> عرض
-                            </a>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="text-center py-3">
-                    <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
-                    <p class="text-muted mt-2">🎉 لا توجد دفعات متأخرة!</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===== آخر العقود والمهام المتأخرة ===== -->
-<div class="row g-4 mt-2">
-    <div class="col-xl-6">
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> آخر العقود</h5>
                 <a href="/contracts" class="btn btn-sm btn-light">عرض الكل</a>
             </div>
-            <div class="card-body" style="max-height: 380px; overflow-y: auto;">
+            <div class="card-body" style="max-height: 350px; overflow-y: auto;">
                 {% if recent_contracts %}
                     {% for contract in recent_contracts %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div class="contract-item">
                         <div>
-                            <a href="/contract/{{ contract.id }}" class="text-decoration-none text-dark fw-bold">
+                            <a href="/contract/{{ contract.id }}" class="fw-bold text-dark text-decoration-none">
                                 {{ contract.contract_number }}
                             </a>
                             <span class="badge bg-secondary ms-1">{{ contract.client_name }}</span>
                             <br>
-                            <small class="text-muted">
+                            <small>
                                 <i class="bi bi-coin"></i> {{ contract.total_amount or contract.contract_value }} ر.س
                                 <span class="badge 
                                     {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
@@ -358,54 +168,16 @@
                         </div>
                         <div class="text-end">
                             <small class="text-muted d-block">{{ contract.created_at[:10] }}</small>
-                            <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-outline-primary">
+                            <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-outline-primary mt-1">
                                 <i class="bi bi-eye"></i>
                             </a>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
+                <div class="text-center py-3">
+                    <i class="bi bi-file-earmark-text text-muted" style="font-size: 2.5rem;"></i>
                     <p class="text-muted mt-2">لا توجد عقود مسجلة</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-6">
-        <div class="card">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-exclamation-circle"></i> المهام المتأخرة</h5>
-                <a href="/tasks" class="btn btn-sm btn-light">عرض الكل</a>
-            </div>
-            <div class="card-body" style="max-height: 380px; overflow-y: auto;">
-                {% if overdue_list %}
-                    {% for task in overdue_list %}
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                        <div>
-                            <a href="/task/{{ task.id }}" class="text-decoration-none text-dark fw-bold">
-                                {{ task.title }}
-                            </a>
-                            <span class="badge bg-secondary ms-1">{{ task.client_name }}</span>
-                            <br>
-                            <small>
-                                <i class="bi bi-person text-info"></i> {{ task.assigned_name }}
-                                <span class="badge bg-danger ms-1">متأخرة</span>
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            <small class="text-muted d-block">{{ task.due_date }}</small>
-                            <a href="/task/{{ task.id }}" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                    <p class="text-muted mt-2">🎉 لا توجد مهام متأخرة!</p>
                 </div>
                 {% endif %}
             </div>
@@ -414,21 +186,22 @@
 </div>
 
 <style>
-/* ===== البطاقات ===== */
-.stat-card-v2 {
+/* ===== بطاقات الإحصائيات ===== */
+.stat-card {
     border-radius: 16px;
-    padding: 1.5rem 1.2rem;
+    padding: 1.5rem;
     color: white;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    cursor: pointer;
     height: 100%;
 }
-.stat-card-v2:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
 }
 
-.stat-label-v2 {
+.stat-label {
     font-size: 0.8rem;
     opacity: 0.8;
     font-weight: 500;
@@ -436,50 +209,68 @@
     margin-bottom: 4px;
 }
 
-.stat-number-v2 {
+.stat-number {
     font-size: 2rem;
     font-weight: 700;
     margin: 0;
     line-height: 1.2;
 }
 
-.stat-icon-v2 {
+.stat-icon {
     width: 48px;
     height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(255,255,255,0.15);
     font-size: 1.5rem;
 }
 
-.stat-link-v2 {
-    color: rgba(255,255,255,0.8);
+.stat-footer {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.stat-link {
+    color: rgba(255,255,255,0.7);
     text-decoration: none;
     font-size: 0.8rem;
     transition: all 0.3s ease;
 }
-.stat-link-v2:hover {
+
+.stat-link:hover {
     color: white;
-    text-decoration: none;
 }
 
-.stat-sub-v2 {
+.stat-sub {
     font-size: 0.75rem;
     opacity: 0.75;
 }
 
-/* ===== البطاقات (Cards) ===== */
+/* ===== عناصر القائمة ===== */
+.payment-item,
+.contract-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.payment-item:last-child,
+.contract-item:last-child {
+    border-bottom: none;
+}
+
+/* ===== البطاقات ===== */
 .card {
     border: none;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     background: white;
-    height: 100%;
     overflow: hidden;
-}
-.card:hover {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
 }
 
 .card-header {
@@ -491,23 +282,23 @@
     width: 5px;
 }
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #f1f5f9;
     border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb {
-    background: #1a237e;
+    background: #2563EB;
     border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #0d1445;
+    background: #1d4ed8;
 }
 
 /* ===== التجاوب ===== */
 @media (max-width: 768px) {
-    .stat-number-v2 {
+    .stat-number {
         font-size: 1.5rem;
     }
-    .stat-card-v2 {
+    .stat-card {
         padding: 1rem;
     }
 }
