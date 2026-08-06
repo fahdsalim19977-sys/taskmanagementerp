@@ -50,7 +50,6 @@ def add_task():
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
     meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
     
-    # جلب الدفعات المتاحة للربط
     available_payments = conn.execute('''
         SELECT contract_payments.*, 
                client_contracts.contract_number,
@@ -221,7 +220,6 @@ def update_task_status(task_id):
     conn = get_db()
     
     try:
-        # جلب معلومات التدريب
         task = conn.execute('''
             SELECT tasks.*, clients.name as client_name 
             FROM tasks 
@@ -263,20 +261,18 @@ def update_task_status(task_id):
                         UPDATE contract_payments 
                         SET status = 'متأخرة', 
                             due_date = date('now'),
-                            notes = COALESCE(notes, '') || ' | تم التدريب على: ' || ?
+                            notes = COALESCE(notes, '') || 'تم التدريب على: ' || ?
                         WHERE id = ?
                     ''', (training_title, payment_id))
                     
                     # ===== تحديث حالة العقد =====
                     contract_id = payment['contract_id']
                     
-                    # التحقق من وجود دفعات متأخرة أخرى
                     has_overdue = conn.execute('''
                         SELECT COUNT(*) as count FROM contract_payments 
                         WHERE contract_id = ? AND status = 'متأخرة'
                     ''', (contract_id,)).fetchone()['count'] > 0
                     
-                    # تحديث حالة العقد
                     if has_overdue:
                         payment_status = 'مدفوع جزئيا'
                     else:
