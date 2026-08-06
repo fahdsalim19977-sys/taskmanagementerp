@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-grid"></i> أنواع المديولات</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleTypeModal">
+        <i class="bi bi-plus-circle"></i> إضافة نوع مديول
+    </button>
+</div>
+
+<!-- ===== قائمة الأنواع ===== -->
+<div class="card">
+    <div class="card-body">
+        {% if types %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الاسم</th>
+                        <th>الوصف</th>
+                        <th>السعر (ر.س)</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الإضافة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type in types %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ type.name }}</strong></td>
+                        <td>{{ type.description or '-' }}</td>
+                        <td>{{ type.price }}</td>
+                        <td>
+                            {% if type.is_active %}
+                            <span class="badge bg-success">نشط</span>
+                            {% else %}
+                            <span class="badge bg-secondary">غير نشط</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ type.created_at[:10] }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editModuleTypeModal{{ type.id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form action="/delete_module_type/{{ type.id }}" method="POST" style="display:inline-block;">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('تأكيد الحذف؟')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- ===== مودال تعديل ===== -->
+                    <div class="modal fade" id="editModuleTypeModal{{ type.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="/edit_module_type/{{ type.id }}" method="POST">
+                                    <div class="modal-header bg-info text-white">
+                                        <h5 class="modal-title">تعديل نوع المديول</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                            <input type="text" name="name" class="form-control" value="{{ type.name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">الوصف</label>
+                                            <textarea name="description" class="form-control" rows="2">{{ type.description or '' }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">السعر (ر.س)</label>
+                                            <input type="number" name="price" class="form-control" value="{{ type.price }}" step="0.01">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">الحالة</label>
+                                            <select name="is_active" class="form-select">
+                                                <option value="1" {% if type.is_active %}selected{% endif %}>نشط</option>
+                                                <option value="0" {% if not type.is_active %}selected{% endif %}>غير نشط</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                        <button type="submit" class="btn btn-primary">حفظ</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-grid" style="font-size:48px;display:block;"></i>
+            <h4>لا توجد أنواع مديولات</h4>
+            <p>قم بإضافة نوع مديول جديد</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== مودال إضافة نوع جديد ===== -->
+<div class="modal fade" id="addModuleTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/add_module_type" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> إضافة نوع مديول جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="مثال: نظام إدارة الموارد البشرية">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="وصف المديول"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">السعر (ر.س)</label>
+                        <input type="number" name="price" class="form-control" value="0" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل المديول</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">اسم المديول <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" value="{{ module.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="3">{{ module.description or '' }}</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">السعر (ج.م)</label>
+                            <input type="number" name="price" class="form-control" value="{{ module.price }}" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="نشط" {% if module.status == 'نشط' %}selected{% endif %}>نشط</option>
+                                <option value="قيد التطوير" {% if module.status == 'قيد التطوير' %}selected{% endif %}>قيد التطوير</option>
+                                <option value="مكتمل" {% if module.status == 'مكتمل' %}selected{% endif %}>مكتمل</option>
+                                <option value="متوقف" {% if module.status == 'متوقف' %}selected{% endif %}>متوقف</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ البداية</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ module.start_date or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ النهاية</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ module.end_date or '' }}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

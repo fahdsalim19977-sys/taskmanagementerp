@@ -1,0 +1,144 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-text"></i> تفاصيل المهمة</h2>
+    <div>
+        <a href="/tasks" class="btn btn-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+        <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> طباعة</button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{{ task.title }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-tag"></i> الحالة:</strong>
+                        <span class="badge {% if task.status == 'مكتملة' %}bg-success{% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark{% elif task.status == 'متأخرة' %}bg-danger{% else %}bg-secondary{% endif %}">{{ task.status }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-flag"></i> الأولوية:</strong>
+                        <span class="badge {% if task.priority == 'عالية' %}bg-danger{% elif task.priority == 'متوسطة' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ task.priority }}</span>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-person"></i> العميل:</strong>
+                        <a href="/client_tasks/{{ task.client_id }}" class="text-decoration-none">{{ task.client_name }}</a>
+                        {% if task.client_company %}<br><small class="text-muted">{{ task.client_company }}</small>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-person-gear"></i> المسؤول:</strong>
+                        {{ task.assigned_name }}<br><small class="text-muted">{{ task.assigned_email }}</small>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-calendar"></i> تاريخ الاستحقاق:</strong>
+                        {{ task.due_date }}
+                        {% if task.due_date < today.strftime('%Y-%m-%d') and task.status != 'مكتملة' %}
+                        <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> متأخرة!</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="bi bi-clock"></i> المدة:</strong>
+                        متوقعة: {{ task.estimated_duration or 0 }} ساعة<br>فعلية: {{ task.actual_duration or 0 }} ساعة
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong><i class="bi bi-folder"></i> المجموعة:</strong>
+                    {% if task.task_group %}<span class="badge bg-info">{{ task.task_group }}</span>{% else %}<span class="text-muted">بدون مجموعة</span>{% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong><i class="bi bi-percent"></i> نسبة الإنجاز:</strong>
+                    <div class="progress" style="height:30px;">
+                        <div class="progress-bar {% if task.completion_percentage == 100 %}bg-success{% endif %}" 
+                             role="progressbar" style="width:{{ task.completion_percentage }}%;">{{ task.completion_percentage }}%</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong><i class="bi bi-file-text"></i> الوصف:</strong>
+                    <p class="border p-3 rounded bg-light">{{ task.description or 'لا يوجد وصف' }}</p>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header bg-info text-white"><i class="bi bi-person"></i> معلومات العميل</div>
+                    <div class="card-body">
+                        <p><strong>الاسم:</strong> {{ task.client_name }}</p>
+                        {% if task.client_phone %}<p><strong>الهاتف:</strong> {{ task.client_phone }}</p>{% endif %}
+                        {% if task.client_email %}<p><strong>البريد:</strong> {{ task.client_email }}</p>{% endif %}
+                        {% if task.client_address %}<p><strong>العنوان:</strong> {{ task.client_address }}</p>{% endif %}
+                        {% if task.client_company %}<p><strong>الشركة:</strong> {{ task.client_company }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white"><i class="bi bi-chat"></i> الملاحظات والملفات</div>
+            <div class="card-body" style="max-height:500px;overflow-y:auto;">
+                {% if updates %}
+                    {% for update in updates %}
+                    <div class="border-bottom mb-3 pb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ update.user_name }}</strong>
+                            <small class="text-muted">{{ update.created_at[:16] if update.created_at else '' }}</small>
+                        </div>
+                        <p class="mb-1">{{ update.note or 'لا يوجد نص' }}</p>
+                        {% if update.attachment_path %}
+                        <a href="/download/{{ update.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-paperclip"></i> تحميل الملف</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted text-center">لا توجد ملاحظات</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header bg-warning"><i class="bi bi-plus-circle"></i> إضافة ملاحظة</div>
+            <div class="card-body">
+                <form method="POST" action="/add_note/{{ task.id }}" enctype="multipart/form-data">
+                    <div class="mb-2"><textarea name="note" class="form-control" rows="2" placeholder="اكتب ملاحظتك..."></textarea></div>
+                    <div class="mb-2"><input type="file" name="attachment" class="form-control form-control-sm"></div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-save"></i> إضافة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5><i class="bi bi-download"></i> تصدير المهمة</h5>
+                <a href="/export_task_pdf/{{ task.id }}" class="btn btn-danger"><i class="bi bi-file-pdf"></i> تصدير PDF</a>
+                <a href="/export_task_excel/{{ task.id }}" class="btn btn-success"><i class="bi bi-file-excel"></i> تصدير Excel</a>
+                <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> طباعة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .navbar, .footer, .no-print { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    body { background: white !important; }
+}
+</style>
+{% endblock %}

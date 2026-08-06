@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة دفعة جديدة - {{ client.name }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                            <input type="number" name="amount" class="form-control" required step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المديول</label>
+                            <select name="module_id" class="form-select">
+                                <option value="">بدون مديول</option>
+                                {% for module in modules %}
+                                <option value="{{ module.id }}">{{ module.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                            <input type="date" name="payment_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الاستحقاق</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">طريقة الدفع</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="نقدي">نقدي</option>
+                                <option value="تحويل بنكي">تحويل بنكي</option>
+                                <option value="شيك">شيك</option>
+                                <option value="بطاقة ائتمان">بطاقة ائتمان</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="مدفوع">مدفوع</option>
+                                <option value="معلق">معلق</option>
+                                <option value="متأخر">متأخر</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم الفاتورة</label>
+                            <input type="text" name="invoice_number" class="form-control" placeholder="INV-001">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">دفعات</label>
+                            <div class="form-check">
+                                <input type="checkbox" name="is_installment" class="form-check-input" id="isInstallment" value="1" onchange="toggleInstallment()">
+                                <label class="form-check-label" for="isInstallment">دفع على دفعات</label>
+                            </div>
+                            <input type="number" name="installment_count" class="form-control mt-2" id="installmentCount" value="2" min="2" max="12" style="display:none;">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+    <label class="form-label">ملاحظات</label>
+    <textarea name="notes" class="form-control" rows="3" placeholder="أدخل ملاحظات إضافية..."></textarea>
+</div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> إضافة الدفعة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleInstallment() {
+    var checkbox = document.getElementById('isInstallment');
+    var countInput = document.getElementById('installmentCount');
+    if (checkbox.checked) {
+        countInput.style.display = 'block';
+    } else {
+        countInput.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

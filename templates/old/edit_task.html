@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل التدريب</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">العميل <span class="text-danger">*</span></label>
+                            <select name="client_id" class="form-select" required>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}" {% if client.id == task.client_id %}selected{% endif %}>
+                                    {{ client.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+    <label class="form-label">المدرب المسؤول <span class="text-danger">*</span></label>
+    <select name="assigned_to" class="form-select" required>
+        {% for trainer in trainers %}
+        <option value="{{ trainer.id }}" {% if trainer.id == task.assigned_to %}selected{% endif %}>
+            {{ trainer.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">عنوان التدريب <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" value="{{ task.title }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea name="description" class="form-control" rows="3">{{ task.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">تاريخ الاستحقاق <span class="text-danger">*</span></label>
+                            <input type="date" name="due_date" class="form-control" value="{{ task.due_date }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">الأولوية</label>
+                            <select name="priority" class="form-select">
+                                <option value="منخفضة" {% if task.priority == 'منخفضة' %}selected{% endif %}>🟢 منخفضة</option>
+                                <option value="متوسطة" {% if task.priority == 'متوسطة' %}selected{% endif %}>🟡 متوسطة</option>
+                                <option value="عالية" {% if task.priority == 'عالية' %}selected{% endif %}>🔴 عالية</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">المدة المتوقعة (ساعات)</label>
+                            <input type="number" name="estimated_duration" class="form-control" 
+                                   value="{{ task.estimated_duration or 0 }}" min="0" step="0.5">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">مجموعة التدريب</label>
+                        <input type="text" name="task_group" class="form-control" value="{{ task.task_group or '' }}" 
+                               placeholder="اسم المجموعة (اختياري)">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

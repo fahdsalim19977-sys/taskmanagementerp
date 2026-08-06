@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> تعديل العميل</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ client.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">اسم الشركة</label>
+                            <input type="text" name="company_name" class="form-control" value="{{ client.company_name or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ client.phone or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">البريد الإلكتروني</label>
+                            <input type="email" name="email" class="form-control" value="{{ client.email or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">العنوان</label>
+                        <input type="text" name="address" class="form-control" value="{{ client.address or '' }}">
+                    </div>
+                    
+                    <!-- ===== اختيار المدربين (Dropdown مع Checkboxes) ===== -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-person-badge"></i> المدربين المسؤولين</label>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" 
+                                    type="button" id="trainerDropdown" 
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    style="border-radius: 12px; padding: 10px 16px; min-height: 48px; background: white;">
+                                <span id="selectedTrainersText" style="color: #6c757d;">اختر المدربين</span>
+                            </button>
+                            <ul class="dropdown-menu w-100 p-2" aria-labelledby="trainerDropdown" 
+                                style="max-height: 200px; overflow-y: auto; border-radius: 12px; border: 2px solid #e0e0e0; box-shadow: 0 8px 30px rgba(0,0,0,0.1);">
+                                {% if trainers %}
+                                    {% for trainer in trainers %}
+                                    <li>
+                                        <div class="form-check">
+                                            <input class="form-check-input trainer-checkbox" type="checkbox" 
+                                                   name="trainer_ids" value="{{ trainer.id }}" 
+                                                   id="trainer{{ trainer.id }}"
+                                                   {% if trainer.id in current_trainer_ids %}checked{% endif %}
+                                                   onchange="updateTrainerSelection()">
+                                            <label class="form-check-label" for="trainer{{ trainer.id }}">
+                                                {{ trainer.name }}
+                                            </label>
+                                        </div>
+                                    </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">⚠️ لا يوجد مدربين</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <small class="text-muted">💡 اختر مدرب واحد أو أكثر من القائمة</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ client.notes or '' }}</textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> حفظ التغييرات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateTrainerSelection() {
+    var checkboxes = document.querySelectorAll('.trainer-checkbox:checked');
+    var textElement = document.getElementById('selectedTrainersText');
+    
+    if (checkboxes.length === 0) {
+        textElement.textContent = 'اختر المدربين';
+        textElement.style.color = '#6c757d';
+    } else {
+        var names = [];
+        checkboxes.forEach(function(cb) {
+            var label = document.querySelector('label[for="' + cb.id + '"]');
+            names.push(label.textContent.trim());
+        });
+        textElement.textContent = names.join(', ');
+        textElement.style.color = '#1a237e';
+        textElement.style.fontWeight = '500';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateTrainerSelection();
+});
+</script>
+
+<style>
+.btn-outline-secondary {
+    border: 2px solid #e0e0e0 !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-outline-secondary:hover {
+    border-color: #1a237e !important;
+    background: #f8f9fa !important;
+}
+
+.btn-outline-secondary:focus {
+    border-color: #1a237e !important;
+    box-shadow: 0 0 0 4px rgba(26, 35, 126, 0.1) !important;
+}
+
+.dropdown-menu {
+    padding: 8px !important;
+}
+
+.dropdown-menu .form-check {
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.dropdown-menu .form-check:hover {
+    background: #f0f2f5 !important;
+}
+
+.dropdown-menu .form-check-input {
+    margin-left: 0 !important;
+}
+
+.dropdown-menu .form-check-input:checked {
+    background-color: #1a237e !important;
+    border-color: #1a237e !important;
+}
+
+.dropdown-menu .form-check-label {
+    font-size: 14px !important;
+    color: #333 !important;
+    cursor: pointer !important;
+}
+
+.dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #1a237e;
+    border-radius: 10px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #0d1445;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up-arrow"></i> تقرير الإيرادات</h2>
+    <div>
+        <a href="/export_revenue_excel" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> تصدير Excel
+        </a>
+        <a href="/export_revenue_pdf" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> تصدير PDF
+        </a>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> طباعة
+        </button>
+        <a href="/reports" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- إجمالي الإيرادات -->
+<div class="row g-4 mb-4">
+    <div class="col-md-12">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5>إجمالي الإيرادات</h5>
+                <h1>{{ total_revenue }} ر.س</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- الإيرادات حسب العميل -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-people"></i> الإيرادات حسب العميل</h5>
+    </div>
+    <div class="card-body">
+        {% if revenue_by_client %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم العميل</th>
+                        <th>عدد المدفوعات</th>
+                        <th>إجمالي المدفوع</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in revenue_by_client %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ client.name }}</strong></td>
+                        <td><span class="badge bg-primary">{{ client.count }}</span></td>
+                        <td><span class="badge bg-success">{{ client.total }} ر.س</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">لا توجد إيرادات مسجلة</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- الإيرادات حسب الشهر -->
+<div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar"></i> الإيرادات حسب الشهر</h5>
+    </div>
+    <div class="card-body">
+        {% if revenue_by_month %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>الشهر</th>
+                        <th>إجمالي الإيرادات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month in revenue_by_month %}
+                    <tr>
+                        <td>{{ month.month }}</td>
+                        <td><span class="badge bg-success">{{ month.total }} ر.س</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">لا توجد إيرادات مسجلة</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .navbar, .footer { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    body { background: white !important; }
+}
+</style>
+{% endblock %}

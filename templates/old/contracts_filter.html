@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> {{ filter_title }}</h2>
+    <div>
+        <a href="/contracts" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> جميع العقود
+        </a>
+        <a href="/" class="btn btn-primary">
+            <i class="bi bi-house"></i> الرئيسية
+        </a>
+    </div>
+</div>
+
+<!-- ===== إحصائيات سريعة ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي العقود</h6>
+                <h3>{{ contracts|length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6>إجمالي القيمة</h6>
+                <h3>{{ contracts|sum(attribute='total_amount')|round(2) }} ر.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h6>المدفوع</h6>
+                <h3>{{ contracts|sum(attribute='paid_amount')|round(2) }} ر.س</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h6>المتبقي</h6>
+                <h3>
+                    {% set total = contracts|sum(attribute='total_amount') %}
+                    {% set paid = contracts|sum(attribute='paid_amount') %}
+                    {{ (total - paid)|round(2) }} ر.س
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== قائمة العقود ===== -->
+{% if contracts %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>رقم العقد</th>
+                <th>نوع العقد</th>
+                <th>العنوان</th>
+                <th>العميل</th>
+                <th>القيمة الإجمالية</th>
+                <th>المدفوع</th>
+                <th>المتبقي</th>
+                <th>حالة الدفع</th>
+                <th>حالة العقد</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contract in contracts %}
+            <tr>
+                <td>{{ contract.id }}</td>
+                <td>
+                    <a href="/contract/{{ contract.id }}" class="text-decoration-none fw-bold">
+                        {{ contract.contract_number }}
+                    </a>
+                </td>
+                <td>{{ contract.contract_type_name or '-' }}</td>
+                <td>{{ contract.title }}</td>
+                <td>
+                    <a href="/client_tasks/{{ contract.client_id }}" class="text-decoration-none">
+                        {{ contract.client_name }}
+                    </a>
+                </td>
+                <td>{{ contract.total_amount or contract.contract_value }} ر.س</td>
+                <td>{{ contract.paid_amount or 0 }} ر.س</td>
+                <td>
+                    {% set total = contract.total_amount or contract.contract_value %}
+                    {% set paid = contract.paid_amount or 0 %}
+                    {{ (total - paid)|round(2) }} ر.س
+                </td>
+                <td>
+                    <span class="badge 
+                        {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                        {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.payment_status }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge 
+                        {% if contract.status == 'نشط' %}bg-success
+                        {% elif contract.status == 'معلق' %}bg-warning text-dark
+                        {% elif contract.status == 'منتهي' %}bg-secondary
+                        {% else %}bg-danger{% endif %}">
+                        {{ contract.status }}
+                    </span>
+                </td>
+                <td>
+                    <a href="/contract/{{ contract.id }}" class="btn btn-sm btn-primary" title="تفاصيل">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-file-earmark-text" style="font-size:48px;display:block;"></i>
+    <h4>لا توجد عقود في هذه الفئة</h4>
+    <p>لم يتم العثور على عقود {{ filter_title }}</p>
+    <a href="/contracts" class="btn btn-primary mt-2">➡️ عرض جميع العقود</a>
+</div>
+{% endif %}
+{% endblock %}

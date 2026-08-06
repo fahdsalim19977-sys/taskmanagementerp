@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة دفعة جديدة</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- ===== اختيار العميل ===== -->
+                    <div class="mb-3">
+                        <label class="form-label">العميل <span class="text-danger">*</span></label>
+                        <select name="client_id" class="form-select" required id="clientSelect" onchange="updateClientInfo()">
+                            <option value="">-- اختر العميل --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" data-company="{{ client.company_name or '' }}">
+                                {{ client.name }} {% if client.company_name %}({{ client.company_name }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- ===== معلومات العميل ===== -->
+                    <div class="card mb-3" id="clientInfo" style="display:none;">
+                        <div class="card-header bg-info text-white">
+                            <i class="bi bi-person"></i> معلومات العميل
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>الاسم:</strong> <span id="clientNameDisplay">-</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>الشركة:</strong> <span id="clientCompanyDisplay">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== المديول (اختياري) ===== -->
+                    <div class="mb-3">
+                        <label class="form-label">المديول</label>
+                        <select name="module_id" class="form-select">
+                            <option value="">بدون مديول</option>
+                            {% for module in modules %}
+                            <option value="{{ module.id }}">{{ module.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                            <input type="number" name="amount" class="form-control" required step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                            <input type="date" name="payment_date" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ الاستحقاق</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">طريقة الدفع</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="نقدي">نقدي</option>
+                                <option value="تحويل بنكي">تحويل بنكي</option>
+                                <option value="شيك">شيك</option>
+                                <option value="بطاقة ائتمان">بطاقة ائتمان</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="مدفوع">مدفوع</option>
+                                <option value="معلق">معلق</option>
+                                <option value="متأخر">متأخر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">رقم الفاتورة</label>
+                            <input type="text" name="invoice_number" class="form-control" placeholder="INV-001">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_installment" class="form-check-input" id="isInstallment" value="1" onchange="toggleInstallment()">
+                            <label class="form-check-label" for="isInstallment">دفع على دفعات</label>
+                        </div>
+                        <input type="number" name="installment_count" class="form-control mt-2" id="installmentCount" value="2" min="2" max="12" style="display:none;">
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle"></i> إضافة الدفعة
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===== رجوع ===== -->
+        <div class="mt-3">
+            <a href="/all_payments" class="btn btn-secondary">
+                <i class="bi bi-arrow-right"></i> رجوع إلى المدفوعات
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== عرض معلومات العميل عند الاختيار =====
+function updateClientInfo() {
+    const select = document.getElementById('clientSelect');
+    const clientInfo = document.getElementById('clientInfo');
+    const clientNameDisplay = document.getElementById('clientNameDisplay');
+    const clientCompanyDisplay = document.getElementById('clientCompanyDisplay');
+    
+    if (select.value) {
+        const selectedOption = select.options[select.selectedIndex];
+        clientNameDisplay.textContent = selectedOption.text.split(' (')[0];
+        clientCompanyDisplay.textContent = selectedOption.getAttribute('data-company') || '-';
+        clientInfo.style.display = 'block';
+    } else {
+        clientInfo.style.display = 'none';
+    }
+}
+
+// ===== إظهار/إخفاء عدد الدفعات =====
+function toggleInstallment() {
+    const checkbox = document.getElementById('isInstallment');
+    const countInput = document.getElementById('installmentCount');
+    if (checkbox.checked) {
+        countInput.style.display = 'block';
+    } else {
+        countInput.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
