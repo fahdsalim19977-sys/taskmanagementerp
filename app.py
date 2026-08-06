@@ -38,6 +38,9 @@ app.register_blueprint(meetings_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(backups_bp)
+@app.route('/test')
+def test():
+    return "✅ التطبيق شغال!"
 
 # ===== دوال السياق =====
 @app.context_processor
@@ -277,6 +280,14 @@ def page_not_found(e):
 def internal_server_error(e):
     flash('❌ حدث خطأ في السيرفر. يرجى المحاولة مرة أخرى.', 'danger')
     return redirect(url_for('index'))
+    
+# ===== Debug: عرض كل المسارات المسجلة =====
+@app.route('/show-routes')
+def show_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append(f"{rule.endpoint}: {rule.rule}")
+    return "<br>".join(sorted(routes))    
 
 
 # ===== تشغيل التطبيق =====
