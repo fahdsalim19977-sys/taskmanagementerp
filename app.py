@@ -313,7 +313,52 @@ def delete_trainer_page(trainer_id):
 
 
 # ============================================================
-# ===== أنواع العقود - مسارات مباشرة =====
+# ===== مهام العميل =====
+# ============================================================
+
+@app.route('/client_tasks/<int:client_id>')
+def client_tasks_page(client_id):
+    """عرض مهام عميل معين"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # جلب بيانات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    # جلب مهام العميل
+    tasks = conn.execute('''
+        SELECT tasks.*, trainers.name as assigned_name
+        FROM tasks
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    # إحصائيات المهام
+    stats = {
+        'total': len(tasks),
+        'completed': len([t for t in tasks if t['status'] == 'مكتملة']),
+        'in_progress': len([t for t in tasks if t['status'] == 'قيد التنفيذ']),
+        'overdue': len([t for t in tasks if t['status'] == 'متأخرة']),
+        'not_started': len([t for t in tasks if t['status'] == 'لم تبدأ'])
+    }
+    
+    return render_template('client_tasks.html', 
+                         client=client, 
+                         tasks=tasks, 
+                         stats=stats,
+                         today=datetime.now().date())
+
+
+# ============================================================
+# ===== أنواع العقود والموديولات - مسارات مباشرة =====
 # ============================================================
 
 @app.route('/contract_types')
@@ -394,10 +439,6 @@ def delete_contract_type(type_id):
     flash('✅ تم حذف نوع العقد بنجاح', 'success')
     return redirect(url_for('contract_types_page'))
 
-
-# ============================================================
-# ===== أنواع المديولات - مسارات مباشرة =====
-# ============================================================
 
 @app.route('/module_types')
 def module_types_page():
