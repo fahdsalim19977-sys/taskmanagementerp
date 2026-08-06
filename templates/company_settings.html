@@ -161,27 +161,111 @@
             </div>
         </div>
 
-        <!-- ===== تنظيف قاعدة البيانات ===== -->
-        <div class="card mb-4 border-danger">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="bi bi-eraser"></i> تنظيف قاعدة البيانات</h5>
+        <!-- ===== إعادة ضبط الترقيم ===== -->
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> إعادة ضبط الترقيم</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    <strong>تحذير:</strong> هذا الإجراء سيعيد ضبط الترقيم لجميع الجداول. لا يؤثر على البيانات نفسها.
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>معلومات:</strong> هذا الإجراء سيعيد ضبط الترقيم لجميع الجداول. لا يؤثر على البيانات نفسها.
                     <br>
                     <small>سيتم إعادة ضبط الترقيم للجداول: العقود، العملاء، المدفوعات، المهام، المدربين، وغيرها</small>
                 </div>
                 <form method="POST" action="/reset_sequence">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('⚠️ هل أنت متأكد من إعادة ضبط الترقيم؟')">
+                    <button type="submit" class="btn btn-warning w-100" onclick="return confirm('⚠️ هل أنت متأكد من إعادة ضبط الترقيم؟')">
                         <i class="bi bi-arrow-counterclockwise"></i> إعادة ضبط الترقيم
                     </button>
                 </form>
             </div>
         </div>
+
+        <!-- ===== مسح جميع البيانات ===== -->
+        <div class="card mb-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> ⚠️ مسح جميع البيانات</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle fs-4 me-2"></i>
+                    <strong>تحذير شديد!</strong> هذا الإجراء سيحذف <strong>جميع البيانات</strong> من النظام بشكل نهائي.
+                    <br>
+                    <small>سيتم حذف: العقود، العملاء، المدفوعات، المهام، المدربين، المواعيد، المديولات، والإشعارات.</small>
+                </div>
+                
+                <!-- ===== زر فتح المودال ===== -->
+                <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteAllDataModal">
+                    <i class="bi bi-trash3"></i> مسح جميع البيانات
+                </button>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- ===== مودال تأكيد مسح جميع البيانات ===== -->
+<div class="modal fade" id="deleteAllDataModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> ⚠️ تأكيد مسح جميع البيانات</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>أنت على وشك حذف جميع البيانات!</strong>
+                    <ul class="mt-2 mb-0">
+                        <li>العقود ودفعاتها</li>
+                        <li>العملاء</li>
+                        <li>المدفوعات</li>
+                        <li>المهام والتدريبات</li>
+                        <li>المدربين</li>
+                        <li>المواعيد</li>
+                        <li>المديولات</li>
+                        <li>الإشعارات</li>
+                        <li>سجل النشاطات</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        للتأكيد، اكتب <span class="text-danger">"تأكيد"</span> في الحقل أدناه:
+                    </label>
+                    <input type="text" id="confirmDeleteInput" class="form-control" 
+                           placeholder="اكتب تأكيد هنا..." 
+                           oninput="toggleDeleteButton()">
+                </div>
+                
+                <form method="POST" action="/delete_all_data" id="deleteAllForm">
+                    <input type="hidden" name="confirm_text" id="confirmText">
+                    <button type="submit" id="confirmDeleteBtn" class="btn btn-danger w-100" disabled>
+                        <i class="bi bi-trash3"></i> نعم، احذف جميع البيانات
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== تفعيل زر الحذف عند كتابة "تأكيد" =====
+function toggleDeleteButton() {
+    var input = document.getElementById('confirmDeleteInput');
+    var btn = document.getElementById('confirmDeleteBtn');
+    var hiddenInput = document.getElementById('confirmText');
+    
+    if (input.value.trim() === 'تأكيد') {
+        btn.disabled = false;
+        hiddenInput.value = input.value.trim();
+    } else {
+        btn.disabled = true;
+        hiddenInput.value = '';
+    }
+}
+</script>
 
 <style>
 .logo-preview {
