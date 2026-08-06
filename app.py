@@ -162,6 +162,7 @@ def index():
                          recent_activity=recent_activity,
                          settings=settings)
 
+
 # ============================================================
 # ===== المدربين - مسارات مباشرة (بدون Blueprint) =====
 # ============================================================
@@ -174,9 +175,9 @@ def trainers_page():
     
     conn = get_db()
     trainers = conn.execute('''
-        SELECT t.*, COUNT(c.id) as client_count 
+        SELECT t.*, COUNT(ct.client_id) as client_count 
         FROM trainers t
-        LEFT JOIN clients c ON c.trainer_id = t.id
+        LEFT JOIN client_trainers ct ON t.id = ct.trainer_id
         GROUP BY t.id
         ORDER BY t.name
     ''').fetchall()
@@ -202,7 +203,13 @@ def trainer_details_page(trainer_id):
         conn.close()
         return "المدرب غير موجود", 404
     
-    clients = conn.execute('SELECT * FROM clients WHERE trainer_id = ? ORDER BY name', (trainer_id,)).fetchall()
+    clients = conn.execute('''
+        SELECT c.* 
+        FROM clients c
+        JOIN client_trainers ct ON c.id = ct.client_id
+        WHERE ct.trainer_id = ?
+        ORDER BY c.name
+    ''', (trainer_id,)).fetchall()
     conn.close()
     
     return render_template('trainer_details.html', trainer=trainer, clients=clients)
@@ -288,7 +295,7 @@ def delete_trainer_page(trainer_id):
     
     conn = get_db()
     
-    clients = conn.execute('SELECT COUNT(*) as count FROM clients WHERE trainer_id = ?', (trainer_id,)).fetchone()
+    clients = conn.execute('SELECT COUNT(*) as count FROM client_trainers WHERE trainer_id = ?', (trainer_id,)).fetchone()
     
     if clients['count'] > 0:
         flash('لا يمكن حذف المدرب لأنه مرتبط بعملاء', 'error')
@@ -300,7 +307,7 @@ def delete_trainer_page(trainer_id):
     conn.close()
     
     flash('تم حذف المدرب بنجاح', 'success')
-    return redirect(url_for('trainers_page'))                         
+    return redirect(url_for('trainers_page'))
 
 
 # ===== البحث الشامل =====
