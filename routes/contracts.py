@@ -1,12 +1,14 @@
 # routes/contracts.py
-from flask import render_template, request, redirect, url_for, session, flash, send_file
+from flask import render_template, request, redirect, url_for, session, flash, send_file, current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
 from models import get_db
 from routes import contracts_bp
 from utils import log_activity, get_company_settings
-from config import Config
+
+# ✅ تم حذف from config import Config
+# ✅ تم إضافة current_app
 
 @contracts_bp.route('/contracts')
 def contracts():
@@ -28,6 +30,7 @@ def contracts():
     ''').fetchall()
     conn.close()
     return render_template('contracts.html', contracts=contracts_list)
+
 
 @contracts_bp.route('/add_contract', methods=['GET', 'POST'])
 def add_contract():
@@ -100,7 +103,8 @@ def add_contract():
                     filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
                 else:
                     filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
+                # ✅ استخدام current_app بدلاً من app
+                attachments_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
                 os.makedirs(attachments_folder, exist_ok=True)
                 file_path = os.path.join(attachments_folder, filename)
                 file.save(file_path)
@@ -117,10 +121,11 @@ def add_contract():
         conn.close()
         flash(f'✅ تم إضافة العقد بنجاح مع {uploaded_count} مرفق و {installment_count} دفعة', 'success')
         log_activity(session['user_id'], 'إضافة عقد', f'أضاف عقد {contract_number}')
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅ تغيير من contracts_bp.contracts إلى contracts.contracts
     
     conn.close()
     return render_template('add_contract.html', clients=clients, contract_types=contract_types, module_types=module_types)
+
 
 @contracts_bp.route('/edit_contract/<int:contract_id>', methods=['GET', 'POST'])
 def edit_contract(contract_id):
@@ -132,7 +137,7 @@ def edit_contract(contract_id):
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     clients = conn.execute('SELECT id, name, company_name FROM clients ORDER BY name').fetchall()
     contract_types = conn.execute('SELECT id, name FROM contract_types WHERE is_active = 1 ORDER BY name').fetchall()
@@ -216,7 +221,7 @@ def edit_contract(contract_id):
         
         flash('✅ تم تحديث العقد بنجاح', 'success')
         log_activity(session['user_id'], 'تحديث عقد', f'حدث عقد {contract_number}')
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     contract_payments = conn.execute('''
         SELECT * FROM contract_payments WHERE contract_id = ? ORDER BY installment_number ASC
@@ -229,6 +234,7 @@ def edit_contract(contract_id):
                          contract_types=contract_types,
                          contract_payments=contract_payments)
 
+
 @contracts_bp.route('/delete_contract/<int:contract_id>', methods=['POST'])
 def delete_contract(contract_id):
     if 'user_id' not in session:
@@ -239,7 +245,7 @@ def delete_contract(contract_id):
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     conn.execute('DELETE FROM client_contracts WHERE id = ?', (contract_id,))
     conn.commit()
@@ -247,7 +253,8 @@ def delete_contract(contract_id):
     
     flash('✅ تم حذف العقد بنجاح', 'success')
     log_activity(session['user_id'], 'حذف عقد', f'حذف عقد {contract["contract_number"]}')
-    return redirect(url_for('contracts_bp.contracts'))
+    return redirect(url_for('contracts.contracts'))  # ✅
+
 
 @contracts_bp.route('/contract/<int:contract_id>')
 def contract_details(contract_id):
@@ -274,7 +281,7 @@ def contract_details(contract_id):
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     contract_modules = conn.execute('''
         SELECT contract_modules.*, 
@@ -308,6 +315,7 @@ def contract_details(contract_id):
                          contract_attachments=attachments,
                          contract_payments=payments)
 
+
 @contracts_bp.route('/print_contract/<int:contract_id>')
 def print_contract(contract_id):
     if 'user_id' not in session:
@@ -333,7 +341,7 @@ def print_contract(contract_id):
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     payments = conn.execute('''
         SELECT * FROM contract_payments 
@@ -349,6 +357,7 @@ def print_contract(contract_id):
                          contract_payments=payments,
                          settings=settings,
                          today=datetime.now().date())
+
 
 @contracts_bp.route('/print_all_contracts')
 def print_all_contracts():
@@ -376,6 +385,7 @@ def print_all_contracts():
                          settings=settings,
                          today=datetime.now().date())
 
+
 @contracts_bp.route('/contracts/filter/<status>')
 def contracts_filter(status):
     if 'user_id' not in session:
@@ -390,7 +400,7 @@ def contracts_filter(status):
     status_text = status_map.get(status, '')
     if not status_text:
         flash('❌ حالة غير صحيحة', 'danger')
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     conn = get_db()
     contracts_list = conn.execute('''
@@ -419,6 +429,7 @@ def contracts_filter(status):
                          filter_title=titles.get(status, ''),
                          filter_status=status)
 
+
 # ===== مرفقات العقود =====
 
 @contracts_bp.route('/add_contract_attachment/<int:contract_id>', methods=['POST'])
@@ -431,18 +442,18 @@ def add_contract_attachment(contract_id):
     if not contract:
         flash('❌ العقد غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     if 'attachment' not in request.files:
         flash('❌ لم يتم اختيار ملف', 'danger')
         conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
+        return redirect(url_for('contracts.contract_details', contract_id=contract_id))  # ✅
     
     file = request.files['attachment']
     if file.filename == '':
         flash('❌ لم يتم اختيار ملف', 'danger')
         conn.close()
-        return redirect(url_for('contract_details', contract_id=contract_id))
+        return redirect(url_for('contracts.contract_details', contract_id=contract_id))  # ✅
     
     description = request.form.get('description', '')
     
@@ -453,7 +464,8 @@ def add_contract_attachment(contract_id):
     else:
         filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
-    attachments_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
+    # ✅ استخدام current_app بدلاً من app
+    attachments_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'contracts', str(contract_id))
     os.makedirs(attachments_folder, exist_ok=True)
     file_path = os.path.join(attachments_folder, filename)
     file.save(file_path)
@@ -470,7 +482,8 @@ def add_contract_attachment(contract_id):
     
     flash('✅ تم رفع المرفق بنجاح', 'success')
     log_activity(session['user_id'], 'رفع مرفق عقد', f'رفع {filename} للعقد {contract["contract_number"]}')
-    return redirect(url_for('contract_details', contract_id=contract_id))
+    return redirect(url_for('contracts.contract_details', contract_id=contract_id))  # ✅
+
 
 @contracts_bp.route('/download_contract_attachment/<int:attachment_id>')
 def download_contract_attachment(attachment_id):
@@ -482,7 +495,7 @@ def download_contract_attachment(attachment_id):
     if not attachment:
         flash('❌ المرفق غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     conn.close()
     
@@ -492,7 +505,8 @@ def download_contract_attachment(attachment_id):
                        download_name=attachment['file_name'])
     else:
         flash('❌ الملف غير موجود على السيرفر', 'danger')
-        return redirect(request.referrer or url_for('contracts_bp.contracts'))
+        return redirect(request.referrer or url_for('contracts.contracts'))  # ✅
+
 
 @contracts_bp.route('/delete_contract_attachment/<int:attachment_id>', methods=['POST'])
 def delete_contract_attachment(attachment_id):
@@ -504,7 +518,7 @@ def delete_contract_attachment(attachment_id):
     if not attachment:
         flash('❌ المرفق غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     if os.path.exists(attachment['file_path']):
         try:
@@ -518,7 +532,8 @@ def delete_contract_attachment(attachment_id):
     
     flash('✅ تم حذف المرفق بنجاح', 'success')
     log_activity(session['user_id'], 'حذف مرفق عقد', f'حذف {attachment["file_name"]}')
-    return redirect(request.referrer or url_for('contracts_bp.contracts'))
+    return redirect(request.referrer or url_for('contracts.contracts'))  # ✅
+
 
 @contracts_bp.route('/mark_payment_paid/<int:payment_id>', methods=['POST'])
 def mark_payment_paid(payment_id):
@@ -531,7 +546,7 @@ def mark_payment_paid(payment_id):
     if not payment:
         flash('❌ الدفعة غير موجودة', 'danger')
         conn.close()
-        return redirect(url_for('contracts_bp.contracts'))
+        return redirect(url_for('contracts.contracts'))  # ✅
     
     current_paid = payment['paid_amount'] or 0
     paid_amount = request.form.get('paid_amount', 0)
@@ -549,12 +564,12 @@ def mark_payment_paid(payment_id):
     if paid_amount > current_remaining:
         flash(f'❌ المبلغ المدفوع ({paid_amount} ر.س) لا يمكن أن يتجاوز المتبقي ({current_remaining} ر.س)', 'danger')
         conn.close()
-        return redirect(request.referrer or url_for('contracts_bp.contracts'))
+        return redirect(request.referrer or url_for('contracts.contracts'))  # ✅
     
     if paid_amount <= 0:
         flash('❌ المبلغ المدفوع يجب أن يكون أكبر من صفر', 'danger')
         conn.close()
-        return redirect(request.referrer or url_for('contracts_bp.contracts'))
+        return redirect(request.referrer or url_for('contracts.contracts'))  # ✅
     
     new_paid_amount = current_paid + paid_amount
     
@@ -611,4 +626,4 @@ def mark_payment_paid(payment_id):
     
     flash(f'✅ تم تسجيل دفعة بقيمة {paid_amount} ر.س بنجاح', 'success')
     log_activity(session['user_id'], 'تسجيل دفعة', f'تم استلام {paid_amount} ر.س للدفعة {payment["installment_number"]}')
-    return redirect(request.referrer or url_for('contracts_bp.contracts'))
+    return redirect(request.referrer or url_for('contracts.contracts'))  # ✅
