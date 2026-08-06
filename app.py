@@ -2726,7 +2726,7 @@ def upload_favicon():
         log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
     
     return redirect(url_for('company_settings'))
-    
+
 # ============================================================
 # إعادة ضبط الترقيم
 # ============================================================
@@ -2832,6 +2832,86 @@ def upload_logo():
         log_activity(session['user_id'], 'رفع شعار', f'رفع {filename}')
     
     return redirect(url_for('company_settings'))
+# ============================================================
+# مسح جميع البيانات
+# ============================================================
+@app.route('/delete_all_data', methods=['POST'])
+def delete_all_data():
+    """حذف جميع البيانات من النظام (للمدير فقط)"""
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    # التحقق من تأكيد المستخدم
+    confirm_text = request.form.get('confirm_text', '')
+    if confirm_text != 'تأكيد':
+        flash('❌ لم تقم بتأكيد الحذف بشكل صحيح', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    try:
+        conn = get_db()
+        
+        # ===== 1. عمل نسخة احتياطية قبل الحذف =====
+        backup_dir = '/app/data/backups/'
+        os.makedirs(backup_dir, exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f"backup_before_delete_{timestamp}.db"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        db_path = '/app/data/tasks.db'
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+            print(f"✅ نسخة احتياطية قبل الحذف: {backup_name}")
+        
+        # ===== 2. حذف البيانات من جميع الجداول =====
+        tables = [
+            'contract_payments',      # دفعات العقود
+            'contract_attachments',   # مرفقات العقود
+            'contract_modules',       # ربط العقود بالمديولات
+            'client_contracts',       # العقود
+            'client_payments',        # المدفوعات
+            'payment_installments',   # دفعات المدفوعات
+            'client_modules',         # مديولات العملاء
+            'task_updates',           # تحديثات المهام
+            'tasks',                  # المهام
+            'meeting_reminders',      # تذكيرات المواعيد
+            'meetings',               # المواعيد
+            'client_trainers',        # ربط العملاء بالمدربين
+            'clients',                # العملاء
+            'trainers',               # المدربين
+            'notifications',          # الإشعارات
+            'activity_log',           # سجل النشاطات
+            'login_attempts',         # محاولات تسجيل الدخول
+        ]
+        
+        for table in tables:
+            try:
+                conn.execute(f"DELETE FROM {table}")
+                print(f"✅ تم مسح جدول: {table}")
+            except sqlite3.OperationalError as e:
+                if 'no such table' in str(e):
+                    print(f"⚠️ الجدول {table} غير موجود")
+                else:
+                    print(f"❌ خطأ في {table}: {e}")
+        
+        # ===== 3. إعادة ضبط الترقيم =====
+        for table in tables:
+            try:
+                conn.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
+            except:
+                pass
+        
+        conn.commit()
+        conn.close()
+        
+        flash(f'✅ تم مسح جميع البيانات بنجاح! (نسخة احتياطية: {backup_name})', 'success')
+        log_activity(session['user_id'], 'مسح جميع البيانات', f'تم مسح جميع البيانات، النسخة الاحتياطية: {backup_name}')
+        
+    except Exception as e:
+        flash(f'❌ خطأ أثناء مسح البيانات: {str(e)}', 'danger')
+        print(f"❌ خطأ: {e}")
+    
+    return redirect(url_for('company_settings'))    
 
 # ============================================================
 # نظام الإشعارات التلقائية
