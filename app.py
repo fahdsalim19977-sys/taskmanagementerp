@@ -163,6 +163,101 @@ def index():
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
+                         
+@app.route('/global_search')
+def global_search():
+    """بحث شامل في جميع الجداول"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    query = request.args.get('q', '').strip()
+    if not query:
+        flash('❌ يرجى إدخال كلمة بحث', 'warning')
+        return redirect(url_for('index'))
+    
+    conn = get_db()
+    results = {
+        'clients': [],
+        'contracts': [],
+        'payments': [],
+        'tasks': [],
+        'trainers': []
+    }
+    
+    search_term = f'%{query}%'
+    
+    # ===== البحث في العملاء =====
+    clients = conn.execute('''
+        SELECT id, name, company_name, phone, email, 'client' as type
+        FROM clients
+        WHERE name LIKE ? OR company_name LIKE ? OR phone LIKE ? OR email LIKE ?
+        LIMIT 20
+    ''', (search_term, search_term, search_term, search_term)).fetchall()
+    results['clients'] = clients
+    
+    # ===== البحث في العقود =====
+    contracts = conn.execute('''
+        SELECT client_contracts.id, client_contracts.contract_number, client_contracts.title,
+               clients.name as client_name, clients.company_name,
+               'contract' as type
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        WHERE client_contracts.contract_number LIKE ? 
+           OR client_contracts.title LIKE ?
+           OR clients.name LIKE ?
+           OR clients.company_name LIKE ?
+        LIMIT 20
+    ''', (search_term, search_term, search_term, search_term)).fetchall()
+    results['contracts'] = contracts
+    
+    # ===== البحث في المدفوعات =====
+    payments = conn.execute('''
+        SELECT client_payments.id, client_payments.amount, client_payments.payment_date,
+               clients.name as client_name, clients.company_name,
+               'payment' as type
+        FROM client_payments
+        JOIN clients ON client_payments.client_id = clients.id
+        WHERE clients.name LIKE ? 
+           OR clients.company_name LIKE ?
+           OR client_payments.invoice_number LIKE ?
+        LIMIT 20
+    ''', (search_term, search_term, search_term)).fetchall()
+    results['payments'] = payments
+    
+    # ===== البحث في التدريبات =====
+    tasks = conn.execute('''
+        SELECT tasks.id, tasks.title, tasks.status, tasks.due_date,
+               clients.name as client_name, clients.company_name,
+               trainers.name as trainer_name,
+               'task' as type
+        FROM tasks
+        JOIN clients ON tasks.client_id = clients.id
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        WHERE clients.name LIKE ? 
+           OR clients.company_name LIKE ?
+           OR tasks.title LIKE ?
+           OR trainers.name LIKE ?
+        LIMIT 20
+    ''', (search_term, search_term, search_term, search_term)).fetchall()
+    results['tasks'] = tasks
+    
+    # ===== البحث في المدربين =====
+    trainers = conn.execute('''
+        SELECT id, name, phone, email, specialty, 'trainer' as type
+        FROM trainers
+        WHERE name LIKE ? OR phone LIKE ? OR email LIKE ? OR specialty LIKE ?
+        LIMIT 20
+    ''', (search_term, search_term, search_term, search_term)).fetchall()
+    results['trainers'] = trainers
+    
+    conn.close()
+    
+    total_results = sum(len(v) for v in results.values())
+    
+    return render_template('global_search.html', 
+                         results=results, 
+                         query=query,
+                         total_results=total_results)                         
 
 # ===== Health Check =====
 @app.route('/health')
