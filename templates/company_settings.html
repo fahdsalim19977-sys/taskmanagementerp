@@ -160,6 +160,26 @@
                 </div>
             </div>
         </div>
+
+        <!-- ===== تنظيف قاعدة البيانات ===== -->
+        <div class="card mb-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-eraser"></i> تنظيف قاعدة البيانات</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>تحذير:</strong> هذا الإجراء سيعيد ضبط الترقيم لجميع الجداول. لا يؤثر على البيانات نفسها.
+                    <br>
+                    <small>سيتم إعادة ضبط الترقيم للجداول: العقود، العملاء، المدفوعات، المهام، المدربين، وغيرها</small>
+                </div>
+                <form method="POST" action="/reset_sequence">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('⚠️ هل أنت متأكد من إعادة ضبط الترقيم؟')">
+                        <i class="bi bi-arrow-counterclockwise"></i> إعادة ضبط الترقيم
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
