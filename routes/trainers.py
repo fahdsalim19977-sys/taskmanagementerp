@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import get_db
+from models import get_db  # ✅ استخدم get_db بدلاً من get_db_connection
 import sqlite3
 
 # إنشاء Blueprint للمدربين
@@ -8,7 +8,7 @@ trainers_bp = Blueprint('trainers', __name__, url_prefix='/trainers')
 # ===== عرض قائمة المدربين =====
 @trainers_bp.route('/')
 def index():
-    conn = get_db_connection()
+    conn = get_db()  # ✅ استخدم get_db()
     # جلب المدربين مع عدد العملاء لكل مدرب
     trainers = conn.execute('''
         SELECT t.*, COUNT(c.id) as client_count 
@@ -29,7 +29,7 @@ def index():
 # ===== عرض تفاصيل مدرب =====
 @trainers_bp.route('/<int:trainer_id>')
 def details(trainer_id):
-    conn = get_db_connection()
+    conn = get_db()  # ✅ استخدم get_db()
     
     # جلب بيانات المدرب
     trainer = conn.execute(
@@ -66,7 +66,7 @@ def add():
             flash('اسم المدرب مطلوب', 'error')
             return render_template('add_trainer.html')
         
-        conn = get_db_connection()
+        conn = get_db()  # ✅ استخدم get_db()
         conn.execute('''
             INSERT INTO trainers (name, phone, email, specialty, notes, is_active)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -82,7 +82,7 @@ def add():
 # ===== تعديل مدرب =====
 @trainers_bp.route('/edit/<int:trainer_id>', methods=['GET', 'POST'])
 def edit(trainer_id):
-    conn = get_db_connection()
+    conn = get_db()  # ✅ استخدم get_db()
     trainer = conn.execute(
         'SELECT * FROM trainers WHERE id = ?', 
         (trainer_id,)
@@ -121,7 +121,7 @@ def edit(trainer_id):
 # ===== حذف مدرب =====
 @trainers_bp.route('/delete/<int:trainer_id>', methods=['POST'])
 def delete(trainer_id):
-    conn = get_db_connection()
+    conn = get_db()  # ✅ استخدم get_db()
     
     # التحقق من وجود عملاء مرتبطين
     clients = conn.execute(
