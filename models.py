@@ -13,8 +13,14 @@ if not os.path.exists('/app/data'):
 
 def get_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=10)
+    # ✅ زيادة timeout وتحسين الأداء
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    # ===== تحسين الأداء وتجنب القفل =====
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA cache_size=10000')
+    conn.execute('PRAGMA busy_timeout=10000')
     return conn
 
 def hash_password(password):
