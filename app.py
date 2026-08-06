@@ -50,7 +50,9 @@ def utility_processor():
         'settings': settings
     }
 
+# ============================================================
 # ===== الصفحة الرئيسية =====
+# ============================================================
 @app.route('/')
 def index():
     if 'user_id' not in session:
@@ -164,7 +166,7 @@ def index():
 
 
 # ============================================================
-# ===== المدربين - مسارات مباشرة (بدون Blueprint) =====
+# ===== المدربين - مسارات مباشرة =====
 # ============================================================
 
 @app.route('/trainers')
@@ -310,7 +312,178 @@ def delete_trainer_page(trainer_id):
     return redirect(url_for('trainers_page'))
 
 
+# ============================================================
+# ===== أنواع العقود - مسارات مباشرة =====
+# ============================================================
+
+@app.route('/contract_types')
+def contract_types_page():
+    """عرض أنواع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    types = conn.execute('SELECT * FROM contract_types ORDER BY name').fetchall()
+    conn.close()
+    return render_template('contract_types.html', types=types)
+
+
+@app.route('/add_contract_type', methods=['POST'])
+def add_contract_type():
+    """إضافة نوع عقد جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    
+    if not name:
+        flash('❌ اسم نوع العقد مطلوب', 'danger')
+        return redirect(url_for('contract_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO contract_types (name, description)
+        VALUES (?, ?)
+    ''', (name, description))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم إضافة نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))
+
+
+@app.route('/edit_contract_type/<int:type_id>', methods=['POST'])
+def edit_contract_type(type_id):
+    """تعديل نوع عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    is_active = 1 if request.form.get('is_active') else 0
+    
+    if not name:
+        flash('❌ اسم نوع العقد مطلوب', 'danger')
+        return redirect(url_for('contract_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE contract_types 
+        SET name = ?, description = ?, is_active = ?
+        WHERE id = ?
+    ''', (name, description, is_active, type_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))
+
+
+@app.route('/delete_contract_type/<int:type_id>', methods=['POST'])
+def delete_contract_type(type_id):
+    """حذف نوع عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    conn.execute('DELETE FROM contract_types WHERE id = ?', (type_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))
+
+
+# ============================================================
+# ===== أنواع المديولات - مسارات مباشرة =====
+# ============================================================
+
+@app.route('/module_types')
+def module_types_page():
+    """عرض أنواع المديولات"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    types = conn.execute('SELECT * FROM module_types ORDER BY name').fetchall()
+    conn.close()
+    return render_template('module_types.html', types=types)
+
+
+@app.route('/add_module_type', methods=['POST'])
+def add_module_type():
+    """إضافة نوع مديول جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
+    
+    if not name:
+        flash('❌ اسم المديول مطلوب', 'danger')
+        return redirect(url_for('module_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO module_types (name, description, price)
+        VALUES (?, ?, ?)
+    ''', (name, description, price))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم إضافة نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+@app.route('/edit_module_type/<int:type_id>', methods=['POST'])
+def edit_module_type(type_id):
+    """تعديل نوع مديول"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
+    is_active = 1 if request.form.get('is_active') else 0
+    
+    if not name:
+        flash('❌ اسم المديول مطلوب', 'danger')
+        return redirect(url_for('module_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE module_types 
+        SET name = ?, description = ?, price = ?, is_active = ?
+        WHERE id = ?
+    ''', (name, description, price, is_active, type_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+@app.route('/delete_module_type/<int:type_id>', methods=['POST'])
+def delete_module_type(type_id):
+    """حذف نوع مديول"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    conn.execute('DELETE FROM module_types WHERE id = ?', (type_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+# ============================================================
 # ===== البحث الشامل =====
+# ============================================================
+
 @app.route('/global_search')
 def global_search():
     """بحث شامل في جميع الجداول"""
@@ -407,13 +580,19 @@ def global_search():
                          total_results=total_results)
 
 
+# ============================================================
 # ===== Health Check =====
+# ============================================================
+
 @app.route('/health')
 def health():
     return jsonify({"status": "ok", "message": "Application is running"}), 200
 
 
+# ============================================================
 # ===== معالج الأخطاء =====
+# ============================================================
+
 @app.errorhandler(404)
 def page_not_found(e):
     settings = get_company_settings()
@@ -426,7 +605,10 @@ def internal_server_error(e):
     return redirect(url_for('index'))
 
 
+# ============================================================
 # ===== مسارات اختبار =====
+# ============================================================
+
 @app.route('/trainers-test')
 def trainers_test():
     return "Trainers route is working! (test)"
@@ -438,7 +620,10 @@ def trainers_direct():
     return "Direct import test"
 
 
+# ============================================================
 # ===== تشغيل التطبيق =====
+# ============================================================
+
 if __name__ == '__main__':
     print("🚀 جاري تشغيل السيرفر...")
     print("📍 افتح المتصفح على: http://127.0.0.1:5000")
