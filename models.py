@@ -398,14 +398,15 @@ def init_db():
             ('viewer1', 'خالد مراقب', 'khalid@company.com', ?, 'مراقب')
         """, (hash_password('1234'), hash_password('1234')))
     
+    # ===== المدربين الافتراضيين (مع is_active = 1) =====
     cursor.execute("SELECT COUNT(*) as count FROM trainers")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
-            INSERT INTO trainers (name, phone, email, specialty, notes)
+            INSERT INTO trainers (name, phone, email, specialty, notes, is_active)
             VALUES 
-            ('أحمد سليمان', '0551234567', 'ahmed@trainer.com', 'تدريب تقني', 'مدرب معتمد'),
-            ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة'),
-            ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير')
+            ('أحمد سليمان', '0551234567', 'ahmed@trainer.com', 'تدريب تقني', 'مدرب معتمد', 1),
+            ('نورة القحطاني', '0552345678', 'noura@trainer.com', 'مهارات قيادية', 'مدربة معتمدة', 1),
+            ('خالد المالكي', '0553456789', 'khalid@trainer.com', 'تطوير برمجيات', 'متخصص في التطوير', 1)
         """)
     
     # ===== أنواع العقود الافتراضية =====

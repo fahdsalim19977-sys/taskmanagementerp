@@ -10,20 +10,13 @@ def log_activity(user_id, action, details=None, retries=5):
     for attempt in range(retries):
         try:
             conn = get_db()
-            # تعيين timeout عالي
             conn.execute('PRAGMA busy_timeout = 30000')
-            
-            # بدء المعاملة
             cursor = conn.cursor()
             cursor.execute('BEGIN IMMEDIATE')
-            
-            # تنفيذ الإدراج
             cursor.execute(
                 'INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)',
                 (user_id, action, details)
             )
-            
-            # إغلاق كل شيء بشكل صحيح
             conn.commit()
             cursor.close()
             conn.close()
@@ -84,6 +77,7 @@ def get_company_settings():
 
 
 def get_trainers():
+    """جلب المدربين النشطين فقط"""
     conn = get_db()
     conn.execute('PRAGMA busy_timeout = 10000')
     trainers = conn.execute('''
