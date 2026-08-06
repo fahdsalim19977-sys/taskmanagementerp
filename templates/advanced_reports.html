@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2><i class="bi bi-graph-up-arrow text-primary"></i> تقارير متقدمة</h2>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-secondary">
+            <i class="bi bi-printer"></i> طباعة
+        </button>
+    </div>
+</div>
+
+<!-- ===== توقعات الإيرادات ===== -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-graph-up"></i> توقعات الإيرادات للشهور القادمة</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern">
+                <thead>
+                    <tr>
+                        <th>الشهر</th>
+                        <th>المتوقع (ر.س)</th>
+                        <th>المدفوع (ر.س)</th>
+                        <th>المتبقي (ر.س)</th>
+                        <th>نسبة التحصيل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month in revenue_forecast %}
+                    <tr>
+                        <td><span class="fw-bold">{{ month.month }}</span></td>
+                        <td>{{ month.expected }}</td>
+                        <td class="text-success">{{ month.paid }}</td>
+                        <td class="text-danger">{{ month.remaining }}</td>
+                        <td>
+                            <div class="progress" style="height:8px; width:100px;">
+                                <div class="progress-bar bg-success" style="width:{{ month.percentage }}%;"></div>
+                            </div>
+                            <small>{{ month.percentage }}%</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== أفضل العملاء ===== -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-trophy"></i> أفضل العملاء (حسب الإنفاق)</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم العميل</th>
+                        <th>عدد العقود</th>
+                        <th>إجمالي الإنفاق</th>
+                        <th>المدفوع</th>
+                        <th>المتبقي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in top_clients %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><span class="fw-bold">{{ client.name }}</span></td>
+                        <td>{{ client.contracts_count }}</td>
+                        <td>{{ client.total_amount }} ر.س</td>
+                        <td class="text-success">{{ client.paid_amount }} ر.س</td>
+                        <td class="text-danger">{{ client.remaining }} ر.س</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== أداء المدربين ===== -->
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-person-badge"></i> أداء المدربين</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-modern">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم المدرب</th>
+                        <th>عدد العملاء</th>
+                        <th>عدد التدريبات</th>
+                        <th>المكتملة</th>
+                        <th>نسبة الإنجاز</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trainer in trainer_performance %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><span class="fw-bold">{{ trainer.name }}</span></td>
+                        <td>{{ trainer.clients_count }}</td>
+                        <td>{{ trainer.tasks_count }}</td>
+                        <td>{{ trainer.completed_tasks }}</td>
+                        <td>
+                            <div class="progress" style="height:8px; width:100px;">
+                                <div class="progress-bar {% if trainer.completion_rate > 70 %}bg-success{% elif trainer.completion_rate > 40 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     style="width:{{ trainer.completion_rate }}%;">
+                                </div>
+                            </div>
+                            <small>{{ trainer.completion_rate }}%</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.table-modern { font-size: 14px; }
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-modern tbody tr:hover { background: #f8fafc; }
+.progress { border-radius: 50px; background: #e2e8f0; }
+.progress-bar { border-radius: 50px; }
+</style>
+{% endblock %}

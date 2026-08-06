@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- ===== عنوان الصفحة ===== -->
+<!-- ===== العنوان ===== -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
     <div>
         <h2 class="fw-bold" style="color: #0F172A;">
@@ -14,6 +14,39 @@
             <i class="bi bi-calendar3 me-1"></i> {{ datetime.now().strftime('%Y-%m-%d') }}
         </span>
     </div>
+</div>
+
+<!-- ===== التنبيهات ===== -->
+<div class="alerts-container mb-4">
+    {% if overdue_payments %}
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-circle fs-4 me-2"></i>
+        <div>
+            <strong>تنبيه!</strong> هناك <strong>{{ overdue_payments|length }}</strong> دفعة متأخرة.
+            <a href="/contracts" class="alert-link">عرض الدفعات المتأخرة</a>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if due_this_month %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-clock-history fs-4 me-2"></i>
+        <div>
+            <strong>تنبيه!</strong> هناك <strong>{{ due_this_month|length }}</strong> دفعة مستحقة هذا الشهر بقيمة <strong>{{ total_due_this_month }} ر.س</strong>.
+            <a href="/contracts" class="alert-link">عرض الدفعات المستحقة</a>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if overdue_tasks > 0 %}
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <i class="bi bi-clock-fill fs-4 me-2"></i>
+        <div>
+            <strong>تنبيه!</strong> هناك <strong>{{ overdue_tasks }}</strong> تدريب متأخر.
+            <a href="/tasks" class="alert-link">عرض التدريبات المتأخرة</a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ===== بطاقات الإحصائيات ===== -->
@@ -195,12 +228,10 @@
     cursor: pointer;
     height: 100%;
 }
-
 .stat-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.15);
 }
-
 .stat-label {
     font-size: 0.8rem;
     opacity: 0.8;
@@ -208,14 +239,12 @@
     display: block;
     margin-bottom: 4px;
 }
-
 .stat-number {
     font-size: 2rem;
     font-weight: 700;
     margin: 0;
     line-height: 1.2;
 }
-
 .stat-icon {
     width: 48px;
     height: 48px;
@@ -226,24 +255,20 @@
     background: rgba(255,255,255,0.15);
     font-size: 1.5rem;
 }
-
 .stat-footer {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid rgba(255,255,255,0.1);
 }
-
 .stat-link {
     color: rgba(255,255,255,0.7);
     text-decoration: none;
     font-size: 0.8rem;
     transition: all 0.3s ease;
 }
-
 .stat-link:hover {
     color: white;
 }
-
 .stat-sub {
     font-size: 0.75rem;
     opacity: 0.75;
@@ -258,7 +283,6 @@
     padding: 12px 0;
     border-bottom: 1px solid #f1f5f9;
 }
-
 .payment-item:last-child,
 .contract-item:last-child {
     border-bottom: none;
@@ -272,7 +296,6 @@
     background: white;
     overflow: hidden;
 }
-
 .card-header {
     border-radius: 16px 16px 0 0 !important;
 }

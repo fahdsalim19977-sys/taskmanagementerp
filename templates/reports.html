@@ -13,11 +13,15 @@
         <a href="/export_excel" class="btn btn-success">
             <i class="bi bi-file-excel"></i> Excel
         </a>
+        <a href="/export_contracts_report_excel" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> تقرير العقود
+        </a>
     </div>
 </div>
 
 <!-- ===== بطاقات التقارير ===== -->
 <div class="row g-4">
+
     <!-- ===== تقرير العقود ===== -->
     <div class="col-md-4">
         <div class="report-card">
@@ -101,9 +105,25 @@
             </a>
         </div>
     </div>
+
+    <!-- ===== تقرير متقدم ===== -->
+    <div class="col-md-4">
+        <div class="report-card">
+            <div class="report-icon" style="color: #8b5cf6;">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <h5 class="fw-bold mt-2">تقارير متقدمة</h5>
+            <p class="text-muted small">توقعات الإيرادات، أفضل العملاء، أداء المدربين</p>
+            <a href="/advanced_reports" class="btn btn-purple w-100 mt-2">
+                <i class="bi bi-eye"></i> عرض
+            </a>
+        </div>
+    </div>
+
 </div>
 
 <style>
+/* ===== بطاقات التقارير ===== */
 .report-card {
     background: white;
     border-radius: 16px;
@@ -121,6 +141,8 @@
     font-size: 3rem;
     display: block;
 }
+
+/* ===== أزرار ===== */
 .btn-purple {
     background: #8b5cf6;
     color: white;
@@ -147,6 +169,12 @@
 .btn-cyan:hover {
     background: #0891b2;
     color: white;
+}
+
+/* ===== تنسيقات الطباعة ===== */
+@media print {
+    .btn, .navbar, .footer, .no-print { display: none !important; }
+    .report-card { box-shadow: none !important; border: 1px solid #ddd !important; }
 }
 </style>
 {% endblock %}
