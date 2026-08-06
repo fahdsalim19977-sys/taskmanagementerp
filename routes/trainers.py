@@ -6,7 +6,7 @@ import sqlite3
 trainers_bp = Blueprint('trainers', __name__, url_prefix='/trainers')
 
 # ===== عرض قائمة المدربين =====
-@trainers_bp.route('')
+@trainers_bp.route('/')
 def index():
     conn = get_db()  # ✅ استخدم get_db()
     # جلب المدربين مع عدد العملاء لكل مدرب
