@@ -78,40 +78,46 @@
                         <textarea name="notes" class="form-control" rows="2"></textarea>
                     </div>
 
-                    <!-- ===== اختيار المديولات ===== -->
-                    <div class="card mt-3 mb-3 border border-info">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0"><i class="bi bi-grid"></i> المديولات المرتبطة</h5>
+                    <!-- ===== اختيار المديولات (نفس شكل اختيار المدربين) ===== -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-grid"></i> المديولات المرتبطة</label>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" 
+                                    type="button" id="moduleDropdown" 
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    style="border-radius: 12px; padding: 10px 16px; min-height: 48px; background: white;">
+                                <span id="selectedModulesText" style="color: #6c757d;">اختر المديولات</span>
+                            </button>
+                            <ul class="dropdown-menu w-100 p-2" aria-labelledby="moduleDropdown" 
+                                style="max-height: 200px; overflow-y: auto; border-radius: 12px; border: 2px solid #e0e0e0; box-shadow: 0 8px 30px rgba(0,0,0,0.1);">
+                                {% if module_types %}
+                                    {% for module in module_types %}
+                                    <li>
+                                        <div class="form-check">
+                                            <input class="form-check-input module-checkbox" type="checkbox" 
+                                                   name="module_ids" value="{{ module.id }}" 
+                                                   id="module{{ module.id }}"
+                                                   onchange="updateModuleSelection()">
+                                            <label class="form-check-label" for="module{{ module.id }}">
+                                                {{ module.name }}
+                                                {% if module.price > 0 %}
+                                                <span class="badge bg-success ms-1">{{ module.price }} ر.س</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">⚠️ لا توجد أنواع مديولات</li>
+                                {% endif %}
+                            </ul>
                         </div>
-                        <div class="card-body">
-                            <div class="alert alert-secondary">
-                                <i class="bi bi-info-circle"></i> اختر المديولات المرتبطة بهذا العقد (يمكنك اختيار أكثر من مديول)
-                            </div>
-
-                            <div class="row">
-                                {% for module in module_types %}
-                                <div class="col-md-6 col-lg-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="module_ids" value="{{ module.id }}" id="module{{ module.id }}">
-                                        <label class="form-check-label" for="module{{ module.id }}">
-                                            <strong>{{ module.name }}</strong>
-                                            {% if module.price > 0 %}
-                                            <span class="badge bg-success">{{ module.price }} ر.س</span>
-                                            {% endif %}
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-
-                            {% if not module_types %}
-                            <div class="alert alert-warning mt-2">
-                                <i class="bi bi-exclamation-triangle"></i>
-                                لا توجد أنواع مديولات متاحة. قم بإضافة أنواع المديولات من شاشة
-                                <a href="/module_types" target="_blank">أنواع المديولات</a>
-                            </div>
-                            {% endif %}
-                        </div>
+                        <small class="text-muted">💡 اختر مديول واحد أو أكثر من القائمة</small>
+                        {% if not module_types %}
+                        <br>
+                        <a href="/module_types" class="btn btn-sm btn-info mt-1">➕ إضافة أنواع مديولات</a>
+                        {% endif %}
                     </div>
 
                     <!-- ===== جدولة الدفعات ===== -->
@@ -197,6 +203,27 @@
 </div>
 
 <script>
+// ===== تحديث النص المعروض لاختيار المديولات =====
+function updateModuleSelection() {
+    var checkboxes = document.querySelectorAll('.module-checkbox:checked');
+    var textElement = document.getElementById('selectedModulesText');
+    
+    if (checkboxes.length === 0) {
+        textElement.textContent = 'اختر المديولات';
+        textElement.style.color = '#6c757d';
+    } else {
+        var names = [];
+        checkboxes.forEach(function(cb) {
+            var label = document.querySelector('label[for="' + cb.id + '"]');
+            names.push(label.textContent.trim());
+        });
+        textElement.textContent = names.join(', ');
+        textElement.style.color = '#1a237e';
+        textElement.style.fontWeight = '500';
+    }
+}
+
+// ===== تحديث جدولة الدفعات =====
 function updateInstallments() {
     const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
     const count = parseInt(document.getElementById('installmentCount').value) || 1;
@@ -229,8 +256,77 @@ function updateInstallments() {
     tbody.innerHTML = html;
 }
 
+// ===== عند تحميل الصفحة =====
 document.addEventListener('DOMContentLoaded', function() {
+    updateModuleSelection();
     updateInstallments();
 });
 </script>
+
+<style>
+/* ===== تنسيق الزر ===== */
+.btn-outline-secondary {
+    border: 2px solid #e0e0e0 !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-outline-secondary:hover {
+    border-color: #1a237e !important;
+    background: #f8f9fa !important;
+}
+
+.btn-outline-secondary:focus {
+    border-color: #1a237e !important;
+    box-shadow: 0 0 0 4px rgba(26, 35, 126, 0.1) !important;
+}
+
+/* ===== تنسيق القائمة ===== */
+.dropdown-menu {
+    padding: 8px !important;
+}
+
+.dropdown-menu .form-check {
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.dropdown-menu .form-check:hover {
+    background: #f0f2f5 !important;
+}
+
+.dropdown-menu .form-check-input {
+    margin-left: 0 !important;
+}
+
+.dropdown-menu .form-check-input:checked {
+    background-color: #1a237e !important;
+    border-color: #1a237e !important;
+}
+
+.dropdown-menu .form-check-label {
+    font-size: 14px !important;
+    color: #333 !important;
+    cursor: pointer !important;
+}
+
+/* ===== تنسيق الـ Scrollbar ===== */
+.dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #1a237e;
+    border-radius: 10px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #0d1445;
+}
+</style>
 {% endblock %}
