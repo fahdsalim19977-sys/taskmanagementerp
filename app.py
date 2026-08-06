@@ -1,6 +1,6 @@
 # app.py
 import os
-from flask import Flask, render_template, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, session, flash, jsonify, request
 from config import Config
 from models import init_db, get_db
 from utils import get_company_settings, get_lang, t, log_activity
