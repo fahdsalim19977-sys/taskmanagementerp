@@ -22,6 +22,7 @@ def clients():
     conn.close()
     return render_template('clients.html', clients=clients_list)
 
+
 @clients_bp.route('/add_client', methods=['GET', 'POST'])
 def add_client():
     if 'user_id' not in session:
@@ -55,9 +56,10 @@ def add_client():
         
         flash('✅ تم إضافة العميل بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة عميل', f'أضاف {name}')
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     return render_template('add_client.html', trainers=trainers)
+
 
 @clients_bp.route('/edit_client/<int:client_id>', methods=['GET', 'POST'])
 def edit_client(client_id):
@@ -69,7 +71,7 @@ def edit_client(client_id):
     if not client:
         flash('❌ العميل غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     current_trainers = conn.execute('SELECT trainer_id FROM client_trainers WHERE client_id = ?', 
                                   (client_id,)).fetchall()
@@ -101,24 +103,25 @@ def edit_client(client_id):
         
         flash('✅ تم تحديث العميل بنجاح', 'success')
         log_activity(session['user_id'], 'تحديث عميل', f'حدث {name}')
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     conn.close()
     return render_template('edit_client.html', client=client, trainers=trainers, 
                          current_trainer_ids=current_trainer_ids)
 
+
 @clients_bp.route('/delete_client/<int:client_id>', methods=['POST'])
 def delete_client(client_id):
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     conn = get_db()
     client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
     if not client:
         flash('❌ العميل غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     conn.execute('DELETE FROM clients WHERE id = ?', (client_id,))
     conn.execute('DELETE FROM client_trainers WHERE client_id = ?', (client_id,))
@@ -127,4 +130,4 @@ def delete_client(client_id):
     
     flash('✅ تم حذف العميل بنجاح', 'success')
     log_activity(session['user_id'], 'حذف عميل', f'حذف عميل رقم {client_id}')
-    return redirect(url_for('clients_bp.clients'))
+    return redirect(url_for('clients.clients'))
