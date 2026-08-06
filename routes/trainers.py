@@ -1,55 +1,51 @@
+# routes/trainers.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import get_db  # ✅ استخدم get_db بدلاً من get_db_connection
+from models import get_db
 import sqlite3
 
-# إنشاء Blueprint للمدربين
 trainers_bp = Blueprint('trainers', __name__, url_prefix='/trainers')
 
 # ===== عرض قائمة المدربين =====
 @trainers_bp.route('/')
 def index():
-    conn = get_db()  # ✅ استخدم get_db()
-    # جلب المدربين مع عدد العملاء لكل مدرب
+    conn = get_db()
     trainers = conn.execute('''
-        SELECT t.*, COUNT(c.id) as client_count 
+        SELECT t.*, COUNT(ct.client_id) as client_count 
         FROM trainers t
-        LEFT JOIN clients c ON c.trainer_id = t.id
+        LEFT JOIN client_trainers ct ON t.id = ct.trainer_id
         GROUP BY t.id
         ORDER BY t.name
     ''').fetchall()
     conn.close()
     
-    # تحويل client_count إلى int إذا كان None
     for trainer in trainers:
         if trainer['client_count'] is None:
             trainer['client_count'] = 0
     
     return render_template('trainers.html', trainers=trainers)
 
+
 # ===== عرض تفاصيل مدرب =====
 @trainers_bp.route('/<int:trainer_id>')
 def details(trainer_id):
-    conn = get_db()  # ✅ استخدم get_db()
-    
-    # جلب بيانات المدرب
-    trainer = conn.execute(
-        'SELECT * FROM trainers WHERE id = ?', 
-        (trainer_id,)
-    ).fetchone()
+    conn = get_db()
+    trainer = conn.execute('SELECT * FROM trainers WHERE id = ?', (trainer_id,)).fetchone()
     
     if not trainer:
         conn.close()
         return "المدرب غير موجود", 404
     
-    # جلب العملاء المرتبطين بالمدرب
-    clients = conn.execute(
-        'SELECT * FROM clients WHERE trainer_id = ? ORDER BY name',
-        (trainer_id,)
-    ).fetchall()
-    
+    clients = conn.execute('''
+        SELECT c.* 
+        FROM clients c
+        JOIN client_trainers ct ON c.id = ct.client_id
+        WHERE ct.trainer_id = ?
+        ORDER BY c.name
+    ''', (trainer_id,)).fetchall()
     conn.close()
     
     return render_template('trainer_details.html', trainer=trainer, clients=clients)
+
 
 # ===== إضافة مدرب جديد =====
 @trainers_bp.route('/add', methods=['GET', 'POST'])
@@ -66,7 +62,7 @@ def add():
             flash('اسم المدرب مطلوب', 'error')
             return render_template('add_trainer.html')
         
-        conn = get_db()  # ✅ استخدم get_db()
+        conn = get_db()
         conn.execute('''
             INSERT INTO trainers (name, phone, email, specialty, notes, is_active)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -79,14 +75,12 @@ def add():
     
     return render_template('add_trainer.html')
 
+
 # ===== تعديل مدرب =====
 @trainers_bp.route('/edit/<int:trainer_id>', methods=['GET', 'POST'])
 def edit(trainer_id):
-    conn = get_db()  # ✅ استخدم get_db()
-    trainer = conn.execute(
-        'SELECT * FROM trainers WHERE id = ?', 
-        (trainer_id,)
-    ).fetchone()
+    conn = get_db()
+    trainer = conn.execute('SELECT * FROM trainers WHERE id = ?', (trainer_id,)).fetchone()
     
     if not trainer:
         conn.close()
@@ -118,16 +112,13 @@ def edit(trainer_id):
     conn.close()
     return render_template('edit_trainer.html', trainer=trainer)
 
+
 # ===== حذف مدرب =====
 @trainers_bp.route('/delete/<int:trainer_id>', methods=['POST'])
 def delete(trainer_id):
-    conn = get_db()  # ✅ استخدم get_db()
+    conn = get_db()
     
-    # التحقق من وجود عملاء مرتبطين
-    clients = conn.execute(
-        'SELECT COUNT(*) as count FROM clients WHERE trainer_id = ?',
-        (trainer_id,)
-    ).fetchone()
+    clients = conn.execute('SELECT COUNT(*) as count FROM client_trainers WHERE trainer_id = ?', (trainer_id,)).fetchone()
     
     if clients['count'] > 0:
         flash('لا يمكن حذف المدرب لأنه مرتبط بعملاء', 'error')
