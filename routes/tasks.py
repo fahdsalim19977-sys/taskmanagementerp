@@ -1,12 +1,11 @@
 # routes/tasks.py
-from flask import render_template, request, redirect, url_for, session, flash, send_file
+from flask import render_template, request, redirect, url_for, session, flash, send_file, current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
 from models import get_db
 from routes import tasks_bp
 from utils import log_activity, check_role
-from config import Config
 
 @tasks_bp.route('/tasks')
 def tasks():
@@ -36,6 +35,7 @@ def tasks():
     
     conn.close()
     return render_template('tasks.html', tasks=task_list, today=datetime.now().date())
+
 
 @tasks_bp.route('/add_task', methods=['GET', 'POST'])
 def add_task():
@@ -102,6 +102,7 @@ def add_task():
                          meetings=meetings,
                          available_payments=available_payments)
 
+
 @tasks_bp.route('/task/<int:task_id>')
 def task_details(task_id):
     if 'user_id' not in session:
@@ -137,6 +138,7 @@ def task_details(task_id):
     ''', (task_id,)).fetchall()
     conn.close()
     return render_template('task_details.html', task=task, updates=updates, today=datetime.now().date())
+
 
 @tasks_bp.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
 def edit_task(task_id):
@@ -202,6 +204,7 @@ def edit_task(task_id):
     
     conn.close()
     return render_template('edit_task.html', task=task, clients=clients, trainers=trainers)
+
 
 @tasks_bp.route('/update_task_status/<int:task_id>', methods=['POST'])
 def update_task_status(task_id):
@@ -341,6 +344,7 @@ def update_task_status(task_id):
     flash('✅ تم تحديث حالة التدريب بنجاح', 'success')
     return redirect(request.referrer or url_for('tasks_bp.tasks'))
 
+
 @tasks_bp.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
 def update_task_status_form(task_id):
     if 'user_id' not in session:
@@ -359,6 +363,7 @@ def update_task_status_form(task_id):
     
     return render_template('update_task_status.html', task=task)
 
+
 @tasks_bp.route('/add_note/<int:task_id>', methods=['POST'])
 def add_note(task_id):
     if 'user_id' not in session:
@@ -375,7 +380,8 @@ def add_note(task_id):
             filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
         else:
             filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # ✅ استخدام current_app بدلاً من app
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         attachment_path = file_path
     
@@ -390,6 +396,7 @@ def add_note(task_id):
     flash('📝 تم إضافة الملاحظة بنجاح', 'success')
     log_activity(session['user_id'], 'إضافة ملاحظة', f'أضاف ملاحظة للتدريب {task_id}')
     return redirect(request.referrer or url_for('tasks_bp.tasks'))
+
 
 @tasks_bp.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
 def add_note_form(task_id):
@@ -408,7 +415,8 @@ def add_note_form(task_id):
                 filename = f"{name_parts[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{name_parts[1]}"
             else:
                 filename = f"{filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            # ✅ استخدام current_app بدلاً من app
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             attachment_path = file_path
         
@@ -424,6 +432,7 @@ def add_note_form(task_id):
         return redirect(url_for('tasks_bp.tasks'))
     
     return render_template('add_note.html', task_id=task_id)
+
 
 @tasks_bp.route('/delete_task/<int:task_id>', methods=['POST'])
 def delete_task(task_id):
@@ -454,6 +463,7 @@ def delete_task(task_id):
     flash('✅ تم حذف التدريب بنجاح', 'success')
     log_activity(session['user_id'], 'حذف تدريب', f'حذف تدريب رقم {task_id}')
     return redirect(url_for('tasks_bp.tasks'))
+
 
 @tasks_bp.route('/tasks/search')
 def search_tasks():
@@ -489,6 +499,7 @@ def search_tasks():
     conn.close()
     return render_template('tasks.html', tasks=task_list, today=datetime.now().date(), search_term=search_term)
 
+
 @tasks_bp.route('/group_tasks', methods=['POST'])
 def group_tasks():
     if 'user_id' not in session:
@@ -503,4 +514,4 @@ def group_tasks():
     conn.close()
     
     flash(f'✅ تم تجميع مهام العميل تحت مجموعة "{group_name}"', 'success')
-    return redirect(url_for('clients_bp.client_tasks', client_id=client_id))
+    return redirect(url_for('clients.clients_tasks', client_id=client_id))
