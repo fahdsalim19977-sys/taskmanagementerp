@@ -231,13 +231,11 @@
                                 {{ payment.status }}
                             </span>
                         </td>
-                        <td>
+                        <td style="max-width:200px; font-size:12px;">
                             {% if payment.notes %}
-                            <span title="{{ payment.notes }}" style="font-size:12px;">
-                                {{ payment.notes[:40] }}{% if payment.notes|length > 40 %}...{% endif %}
-                            </span>
+                                {{ payment.notes }}
                             {% else %}
-                            <span class="text-muted">-</span>
+                                <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
