@@ -1,5 +1,10 @@
 # routes/__init__.py
 from flask import Blueprint
+import os
+import sys
+
+# ===== تأكد من أن المجلد الحالي في مسار البحث =====
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/')
 users_bp = Blueprint('users', __name__, url_prefix='/')
@@ -14,6 +19,16 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/')
 settings_bp = Blueprint('settings', __name__, url_prefix='/')
 backups_bp = Blueprint('backups', __name__, url_prefix='/')
 
-from . import auth, users, clients, trainers, tasks, contracts, payments, modules, meetings, reports, settings, backups
-#                          ^^^^^^^^
-#                          تأكد من وجودها
+# ===== استيراد الملفات =====
+from . import auth
+from . import users
+from . import clients
+from . import trainers
+from . import tasks
+from . import contracts
+from . import payments
+from . import modules
+from . import meetings
+from . import reports
+from . import settings
+from . import backups
