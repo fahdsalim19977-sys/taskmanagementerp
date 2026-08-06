@@ -2588,6 +2588,81 @@ def contract_payments_report(contract_id):
         return redirect(url_for('contracts_report'))
 
 # ============================================================
+# تقارير متقدمة
+# ============================================================
+@app.route('/advanced_reports')
+def advanced_reports():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    
+    # ===== توقعات الإيرادات =====
+    revenue_forecast = []
+    for i in range(1, 7):
+        month = (datetime.now().replace(day=1) + timedelta(days=i*30)).strftime('%Y-%m')
+        expected = conn.execute('''
+            SELECT SUM(total_amount) as total FROM client_contracts 
+            WHERE strftime('%Y-%m', end_date) = ?
+        ''', (month,)).fetchone()['total'] or 0
+        
+        paid = conn.execute('''
+            SELECT SUM(paid_amount) as total FROM client_contracts 
+            WHERE strftime('%Y-%m', end_date) = ?
+        ''', (month,)).fetchone()['total'] or 0
+        
+        remaining = expected - paid
+        percentage = round((paid / expected * 100) if expected > 0 else 0, 1)
+        
+        revenue_forecast.append({
+            'month': month,
+            'expected': expected,
+            'paid': paid,
+            'remaining': remaining,
+            'percentage': percentage
+        })
+    
+    # ===== أفضل العملاء =====
+    top_clients = conn.execute('''
+        SELECT clients.id, clients.name,
+               COUNT(client_contracts.id) as contracts_count,
+               SUM(client_contracts.total_amount) as total_amount,
+               SUM(client_contracts.paid_amount) as paid_amount
+        FROM clients
+        JOIN client_contracts ON clients.id = client_contracts.client_id
+        GROUP BY clients.id
+        ORDER BY total_amount DESC
+        LIMIT 10
+    ''').fetchall()
+    
+    for client in top_clients:
+        client['remaining'] = client['total_amount'] - client['paid_amount']
+    
+    # ===== أداء المدربين =====
+    trainer_performance = conn.execute('''
+        SELECT trainers.id, trainers.name,
+               COUNT(DISTINCT client_trainers.client_id) as clients_count,
+               COUNT(tasks.id) as tasks_count,
+               SUM(CASE WHEN tasks.status = 'مكتملة' THEN 1 ELSE 0 END) as completed_tasks
+        FROM trainers
+        LEFT JOIN client_trainers ON trainers.id = client_trainers.trainer_id
+        LEFT JOIN clients ON client_trainers.client_id = clients.id
+        LEFT JOIN tasks ON clients.id = tasks.client_id
+        GROUP BY trainers.id
+        ORDER BY tasks_count DESC
+    ''').fetchall()
+    
+    for trainer in trainer_performance:
+        trainer['completion_rate'] = round((trainer['completed_tasks'] / trainer['tasks_count'] * 100) if trainer['tasks_count'] > 0 else 0, 1)
+    
+    conn.close()
+    
+    return render_template('advanced_reports.html',
+                         revenue_forecast=revenue_forecast,
+                         top_clients=top_clients,
+                         trainer_performance=trainer_performance)        
+
+# ============================================================
 # الإشعارات
 # ============================================================
 @app.route('/notifications')
@@ -2719,6 +2794,74 @@ def upload_logo():
         log_activity(session['user_id'], 'رفع شعار', f'رفع {filename}')
     
     return redirect(url_for('company_settings'))
+
+# ============================================================
+# نظام الإشعارات التلقائية
+# ============================================================
+def check_and_send_notifications():
+    """التحقق من الدفعات المستحقة والمتأخرة وإرسال إشعارات"""
+    try:
+        conn = get_db()
+        
+        # الدفعات المستحقة خلال 3 أيام
+        upcoming = conn.execute('''
+            SELECT contract_payments.*, 
+                   client_contracts.contract_number,
+                   clients.name as client_name
+            FROM contract_payments
+            JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+            JOIN clients ON client_contracts.client_id = clients.id
+            WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
+            AND julianday(contract_payments.due_date) - julianday('now') BETWEEN 0 AND 3
+        ''').fetchall()
+        
+        for payment in upcoming:
+            # التحقق من عدم إرسال إشعار مكرر
+            existing = conn.execute('''
+                SELECT * FROM notifications 
+                WHERE user_id = 1 AND message LIKE ?
+                AND created_at > datetime('now', '-1 day')
+            ''', (f'%{payment["contract_number"]}%',)).fetchone()
+            
+            if not existing:
+                message = f'🔔 تنبيه: الدفعة رقم {payment["installment_number"]} للعقد {payment["contract_number"]} مستحقة خلال {payment["due_date"]}'
+                conn.execute('''
+                    INSERT INTO notifications (user_id, message)
+                    VALUES (?, ?)
+                ''', (1, message))
+        
+        # الدفعات المتأخرة
+        overdue = conn.execute('''
+            SELECT contract_payments.*, 
+                   client_contracts.contract_number,
+                   clients.name as client_name
+            FROM contract_payments
+            JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+            JOIN clients ON client_contracts.client_id = clients.id
+            WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
+            AND contract_payments.due_date < date('now')
+        ''').fetchall()
+        
+        for payment in overdue:
+            existing = conn.execute('''
+                SELECT * FROM notifications 
+                WHERE user_id = 1 AND message LIKE ?
+                AND created_at > datetime('now', '-1 day')
+            ''', (f'%{payment["contract_number"]}%',)).fetchone()
+            
+            if not existing:
+                message = f'⚠️ تنبيه: الدفعة رقم {payment["installment_number"]} للعقد {payment["contract_number"]} متأخرة!'
+                conn.execute('''
+                    INSERT INTO notifications (user_id, message)
+                    VALUES (?, ?)
+                ''', (1, message))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"❌ خطأ في الإشعارات: {e}")
+        return False
 
 # ============================================================
 # النسخ الاحتياطي
@@ -2891,6 +3034,7 @@ def change_password():
 @app.errorhandler(404)
 def page_not_found(e):
     settings = get_company_settings()
+    check_and_send_notifications()
     return render_template('404.html', settings=settings), 404
 
 @app.errorhandler(500)
