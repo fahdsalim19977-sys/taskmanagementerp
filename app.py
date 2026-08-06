@@ -5,6 +5,7 @@ from config import Config
 from models import init_db, get_db
 from utils import get_company_settings, get_lang, t, log_activity
 from datetime import datetime
+from trainers import trainers_bp
 
 # ===== إنشاء التطبيق =====
 app = Flask(__name__)
