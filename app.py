@@ -2726,6 +2726,44 @@ def upload_favicon():
         log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
     
     return redirect(url_for('company_settings'))
+    
+# ============================================================
+# إعادة ضبط الترقيم
+# ============================================================
+@app.route('/reset_sequence', methods=['POST'])
+def reset_sequence():
+    if not check_role(['مدير']):
+        flash('⛔ غير مصرح لك', 'danger')
+        return redirect(url_for('company_settings'))
+    
+    try:
+        conn = get_db()
+        
+        # قائمة الجداول
+        tables = [
+            'client_contracts',
+            'clients',
+            'client_payments',
+            'tasks',
+            'trainers',
+            'contract_payments',
+            'contract_attachments',
+            'client_modules',
+            'meetings'
+        ]
+        
+        for table in tables:
+            conn.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
+        
+        conn.commit()
+        conn.close()
+        
+        flash('✅ تم إعادة ضبط الترقيم لجميع الجداول بنجاح', 'success')
+        log_activity(session['user_id'], 'إعادة ضبط الترقيم', '')
+    except Exception as e:
+        flash(f'❌ خطأ: {str(e)}', 'danger')
+    
+    return redirect(url_for('company_settings'))
 
 # ============================================================
 # إعدادات الشركة
