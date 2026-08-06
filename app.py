@@ -162,6 +162,146 @@ def index():
                          recent_activity=recent_activity,
                          settings=settings)
 
+# ============================================================
+# ===== المدربين - مسارات مباشرة (بدون Blueprint) =====
+# ============================================================
+
+@app.route('/trainers')
+def trainers_page():
+    """عرض قائمة المدربين"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    trainers = conn.execute('''
+        SELECT t.*, COUNT(c.id) as client_count 
+        FROM trainers t
+        LEFT JOIN clients c ON c.trainer_id = t.id
+        GROUP BY t.id
+        ORDER BY t.name
+    ''').fetchall()
+    conn.close()
+    
+    for trainer in trainers:
+        if trainer['client_count'] is None:
+            trainer['client_count'] = 0
+    
+    return render_template('trainers.html', trainers=trainers)
+
+
+@app.route('/trainer/<int:trainer_id>')
+def trainer_details_page(trainer_id):
+    """عرض تفاصيل مدرب"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    trainer = conn.execute('SELECT * FROM trainers WHERE id = ?', (trainer_id,)).fetchone()
+    
+    if not trainer:
+        conn.close()
+        return "المدرب غير موجود", 404
+    
+    clients = conn.execute('SELECT * FROM clients WHERE trainer_id = ? ORDER BY name', (trainer_id,)).fetchall()
+    conn.close()
+    
+    return render_template('trainer_details.html', trainer=trainer, clients=clients)
+
+
+@app.route('/add_trainer', methods=['GET', 'POST'])
+def add_trainer_page():
+    """إضافة مدرب جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        specialty = request.form.get('specialty')
+        notes = request.form.get('notes')
+        is_active = 1 if request.form.get('is_active') else 0
+        
+        if not name:
+            flash('اسم المدرب مطلوب', 'error')
+            return render_template('add_trainer.html')
+        
+        conn = get_db()
+        conn.execute('''
+            INSERT INTO trainers (name, phone, email, specialty, notes, is_active)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, phone, email, specialty, notes, is_active))
+        conn.commit()
+        conn.close()
+        
+        flash('تم إضافة المدرب بنجاح', 'success')
+        return redirect(url_for('trainers_page'))
+    
+    return render_template('add_trainer.html')
+
+
+@app.route('/edit_trainer/<int:trainer_id>', methods=['GET', 'POST'])
+def edit_trainer_page(trainer_id):
+    """تعديل مدرب"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    trainer = conn.execute('SELECT * FROM trainers WHERE id = ?', (trainer_id,)).fetchone()
+    
+    if not trainer:
+        conn.close()
+        return "المدرب غير موجود", 404
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        specialty = request.form.get('specialty')
+        notes = request.form.get('notes')
+        is_active = 1 if request.form.get('is_active') else 0
+        
+        if not name:
+            flash('اسم المدرب مطلوب', 'error')
+            return render_template('edit_trainer.html', trainer=trainer)
+        
+        conn.execute('''
+            UPDATE trainers 
+            SET name = ?, phone = ?, email = ?, specialty = ?, notes = ?, is_active = ?
+            WHERE id = ?
+        ''', (name, phone, email, specialty, notes, is_active, trainer_id))
+        conn.commit()
+        conn.close()
+        
+        flash('تم تحديث المدرب بنجاح', 'success')
+        return redirect(url_for('trainer_details_page', trainer_id=trainer_id))
+    
+    conn.close()
+    return render_template('edit_trainer.html', trainer=trainer)
+
+
+@app.route('/delete_trainer/<int:trainer_id>', methods=['POST'])
+def delete_trainer_page(trainer_id):
+    """حذف مدرب"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    clients = conn.execute('SELECT COUNT(*) as count FROM clients WHERE trainer_id = ?', (trainer_id,)).fetchone()
+    
+    if clients['count'] > 0:
+        flash('لا يمكن حذف المدرب لأنه مرتبط بعملاء', 'error')
+        conn.close()
+        return redirect(url_for('trainer_details_page', trainer_id=trainer_id))
+    
+    conn.execute('DELETE FROM trainers WHERE id = ?', (trainer_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('تم حذف المدرب بنجاح', 'success')
+    return redirect(url_for('trainers_page'))                         
+
 
 # ===== البحث الشامل =====
 @app.route('/global_search')
