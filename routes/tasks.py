@@ -225,33 +225,50 @@ def update_task_status(task_id):
             conn.close()
             return redirect(url_for('tasks_bp.tasks'))
         
+        # ===== إذا كان التدريب مكتمل ولديه دفعة مرتبطة =====
         if status == 'مكتملة' and task['contract_payment_id']:
             payment_id = task['contract_payment_id']
             payment = conn.execute('SELECT * FROM contract_payments WHERE id = ?', (payment_id,)).fetchone()
             
             if payment and payment['status'] != 'مدفوعة':
+                # عنوان التدريب الفعلي
+                training_title = task['title']
+                
                 conn.execute('''
                     UPDATE contract_payments 
-                    SET status = 'مستحقة', 
-                        notes = COALESCE(notes, '') || ' | تم تفعيلها بإكمال تدريب: ' || ?
+                    SET status = 'متأخرة', 
+                        due_date = date('now'),
+                        notes = COALESCE(notes, '') || ' | تم التدريب على: ' || ?
                     WHERE id = ?
-                ''', (task['title'], payment_id))
+                ''', (training_title, payment_id))
                 
+                # ===== تحديث حالة العقد =====
                 contract_id = payment['contract_id']
-                total_paid = conn.execute('''
-                    SELECT SUM(paid_amount) as total FROM contract_payments 
-                    WHERE contract_id = ? AND status = 'مدفوعة'
-                ''', (contract_id,)).fetchone()['total'] or 0
                 
-                contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
-                total = contract['total_amount'] or 0
+                # التحقق من وجود دفعات متأخرة أخرى
+                has_overdue = conn.execute('''
+                    SELECT COUNT(*) as count FROM contract_payments 
+                    WHERE contract_id = ? AND status = 'متأخرة'
+                ''', (contract_id,)).fetchone()['count'] > 0
                 
-                if total_paid >= total:
-                    payment_status = 'مدفوع بالكامل'
-                elif total_paid > 0:
+                # تحديث حالة العقد
+                if has_overdue:
                     payment_status = 'مدفوع جزئيا'
                 else:
-                    payment_status = 'غير مدفوع'
+                    total_paid = conn.execute('''
+                        SELECT SUM(paid_amount) as total FROM contract_payments 
+                        WHERE contract_id = ? AND status = 'مدفوعة'
+                    ''', (contract_id,)).fetchone()['total'] or 0
+                    
+                    contract = conn.execute('SELECT total_amount FROM client_contracts WHERE id = ?', (contract_id,)).fetchone()
+                    total = contract['total_amount'] or 0
+                    
+                    if total_paid >= total:
+                        payment_status = 'مدفوع بالكامل'
+                    elif total_paid > 0:
+                        payment_status = 'مدفوع جزئيا'
+                    else:
+                        payment_status = 'غير مدفوع'
                 
                 conn.execute('''
                     UPDATE client_contracts 
@@ -259,8 +276,11 @@ def update_task_status(task_id):
                     WHERE id = ?
                 ''', (payment_status, contract_id))
                 
-                flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد', 'success')
+                flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد (متأخرة)', 'warning')
+                log_activity(session['user_id'], 'تفعيل دفعة من تدريب', 
+                           f'تم تفعيل دفعة {payment_id} من تدريب {task["title"]} (متأخرة)')
         
+        # ===== تحديث حالة التدريب =====
         conn.execute('''
             UPDATE tasks SET 
                 status = ?, 
