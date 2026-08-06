@@ -15,3 +15,5 @@ settings_bp = Blueprint('settings', __name__, url_prefix='/')
 backups_bp = Blueprint('backups', __name__, url_prefix='/')
 
 from . import auth, users, clients, trainers, tasks, contracts, payments, modules, meetings, reports, settings, backups
+#                          ^^^^^^^^
+#                          تأكد من وجودها
