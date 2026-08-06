@@ -31,7 +31,8 @@ def backup_database():
     except Exception as e:
         flash(f'❌ خطأ: {str(e)}', 'danger')
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
+
 
 @backups_bp.route('/download_backup')
 def download_backup():
@@ -42,34 +43,35 @@ def download_backup():
     backup_dir = '/app/data/backups/'
     if not os.path.exists(backup_dir):
         flash('❌ لا توجد نسخ احتياطية', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     backups = sorted(os.listdir(backup_dir), reverse=True)
     if not backups:
         flash('❌ لا توجد نسخ احتياطية', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     latest = os.path.join(backup_dir, backups[0])
     return send_file(latest, as_attachment=True, download_name=backups[0])
+
 
 @backups_bp.route('/restore_backup', methods=['POST'])
 def restore_backup():
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if 'backup_file' not in request.files:
         flash('❌ لم يتم اختيار ملف', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     file = request.files['backup_file']
     if file.filename == '':
         flash('❌ لم يتم اختيار ملف', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if not file.filename.endswith(('.db', '.sql', '.zip')):
         flash('❌ صيغة الملف غير مدعومة. استخدم .db أو .sql أو .zip', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     try:
         temp_path = os.path.join('/tmp', secure_filename(file.filename))
@@ -111,7 +113,8 @@ def restore_backup():
     except Exception as e:
         flash(f'❌ خطأ أثناء استعادة البيانات: {str(e)}', 'danger')
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
+
 
 @backups_bp.route('/api/backup/now')
 def api_backup_now():

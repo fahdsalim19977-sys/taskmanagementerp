@@ -14,7 +14,7 @@ from config import Config
 def company_settings():
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     conn = get_db()
     settings = conn.execute('SELECT * FROM company_settings LIMIT 1').fetchone()
@@ -38,25 +38,26 @@ def company_settings():
         
         flash('✅ تم تحديث إعدادات الشركة بنجاح', 'success')
         log_activity(session['user_id'], 'تحديث إعدادات الشركة', '')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     conn.close()
     return render_template('company_settings.html', settings=settings)
+
 
 @settings_bp.route('/upload_logo', methods=['POST'])
 def upload_logo():
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if 'logo' not in request.files:
         flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     file = request.files['logo']
     if file.filename == '':
         flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if file:
         filename = secure_filename(file.filename)
@@ -73,22 +74,23 @@ def upload_logo():
         flash('✅ تم رفع الشعار بنجاح', 'success')
         log_activity(session['user_id'], 'رفع شعار', f'رفع {filename}')
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
+
 
 @settings_bp.route('/upload_favicon', methods=['POST'])
 def upload_favicon():
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if 'favicon' not in request.files:
         flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     file = request.files['favicon']
     if file.filename == '':
         flash('❌ لم يتم اختيار صورة', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     if file:
         filename = secure_filename(file.filename)
@@ -105,13 +107,14 @@ def upload_favicon():
         flash('✅ تم رفع أيقونة الموقع بنجاح', 'success')
         log_activity(session['user_id'], 'رفع أيقونة موقع', f'رفع {filename}')
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
+
 
 @settings_bp.route('/reset_sequence', methods=['POST'])
 def reset_sequence():
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     try:
         conn = get_db()
@@ -132,19 +135,20 @@ def reset_sequence():
     except Exception as e:
         flash(f'❌ خطأ: {str(e)}', 'danger')
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
+
 
 @settings_bp.route('/delete_all_data', methods=['POST'])
 def delete_all_data():
     """حذف جميع البيانات من النظام (للمدير فقط)"""
     if not check_role(['مدير']):
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     confirm_text = request.form.get('confirm_text', '')
     if confirm_text != 'تأكيد':
         flash('❌ لم تقم بتأكيد الحذف بشكل صحيح', 'danger')
-        return redirect(url_for('settings_bp.company_settings'))
+        return redirect(url_for('settings.company_settings'))  # ✅ تغيير
     
     try:
         conn = get_db()
@@ -195,4 +199,4 @@ def delete_all_data():
         flash(f'❌ خطأ أثناء مسح البيانات: {str(e)}', 'danger')
         print(f"❌ خطأ: {e}")
     
-    return redirect(url_for('settings_bp.company_settings'))
+    return redirect(url_for('settings.company_settings'))  # ✅ تغيير
