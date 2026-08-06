@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from database import get_db_connection
+from utils.database import get_db_connection
 import sqlite3
 
 # إنشاء Blueprint للمدربين
