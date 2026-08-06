@@ -21,19 +21,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 
     <style>
-        * { font-family: 'Tajawal', sans-serif; }
+        /* ===== إعدادات عامة ===== */
+        * {
+            font-family: 'Tajawal', sans-serif;
+        }
+
         body {
-            background: #f0f2f5;
+            background: #F8FAFC;
             color: #1a1a2e;
             min-height: 100vh;
+            font-size: 15px;
+        }
+
+        h1, h2, h3, h4 {
+            font-weight: 700;
         }
 
         /* ===== Navbar ===== */
         .navbar-custom {
-            background: linear-gradient(135deg, #1a237e, #0d47a1);
-            box-shadow: 0 4px 20px rgba(26, 35, 126, 0.3);
-            padding: 0.7rem 0;
+            background: #1E293B;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 15px 0;
         }
+
         .navbar-custom .navbar-brand {
             font-weight: 800;
             font-size: 1.4rem;
@@ -42,69 +52,198 @@
             align-items: center;
             gap: 10px;
         }
+
         .navbar-custom .navbar-brand img {
-            height: 38px;
-            width: auto;
+            height: 48px;
+            border-radius: 10px;
         }
+
+        /* ===== روابط Navbar ===== */
         .navbar-custom .nav-link {
             color: rgba(255,255,255,0.85) !important;
             font-weight: 500;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 10px;
             transition: all 0.3s ease;
         }
+
         .navbar-custom .nav-link:hover {
-            color: #fff !important;
-            background: rgba(255,255,255,0.15);
-        }
-        .navbar-custom .nav-link.active {
-            color: #fff !important;
-            background: rgba(255,255,255,0.2);
+            background: #2563EB;
+            color: white !important;
+            transform: translateY(-2px);
         }
 
-        /* ===== قائمة المستخدم ===== */
+        .navbar-custom .nav-link.active {
+            color: #fff !important;
+            background: #2563EB;
+        }
+
+        .navbar-custom .nav-link i {
+            margin-left: 6px;
+        }
+
+        /* ===== Dropdown ===== */
         .dropdown-menu {
-            background: white !important;
-            border: none !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-            padding: 8px 0 !important;
-            min-width: 200px !important;
+            border: none;
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            animation: fadeDropdown 0.2s ease;
+            background: white;
+            min-width: 220px;
         }
+
+        @keyframes fadeDropdown {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
         .dropdown-item {
-            padding: 8px 20px !important;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
             color: #1a1a2e !important;
-            transition: all 0.3s ease !important;
         }
+
         .dropdown-item:hover {
-            background: rgba(26, 35, 126, 0.08) !important;
+            background: #f1f5f9;
+            transform: translateX(4px);
         }
-        .dropdown-item.text-danger:hover {
-            background: rgba(220, 53, 69, 0.1) !important;
+
+        .dropdown-item i {
+            margin-left: 8px;
         }
-        .dropdown-divider {
-            margin: 4px 0 !important;
+
+        .dropdown-toggle::after {
+            margin-right: 6px;
         }
 
         /* ===== الإشعارات ===== */
-        .notification-badge { position: relative; }
-        .notification-badge .badge-count {
+        .notification-badge {
+            position: relative;
+        }
+
+        .badge-count {
             position: absolute;
             top: -4px;
             right: -4px;
             background: #dc3545;
             color: white;
             border-radius: 50%;
-            padding: 1px 7px;
-            font-size: 10px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
             font-weight: 700;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* ===== قائمة المستخدم ===== */
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2563EB;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-avatar-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #1a1a2e;
+            font-size: 13px;
+        }
+
+        /* ===== بحث ===== */
+        .search-input {
+            border-radius: 50px !important;
+            padding: 8px 20px;
+            border: none;
+            background: rgba(255,255,255,0.12);
+            color: white;
+            transition: all 0.3s ease;
+            width: 300px;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .search-input:focus {
+            background: rgba(255,255,255,0.2);
+            box-shadow: none;
+            color: white;
+        }
+
+        /* ===== البطاقات (Cards) ===== */
+        .card {
+            border: none;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            background: #1E293B;
+            color: white;
+            padding: 20px 0;
+            margin-top: 3rem;
+        }
+
+        .footer small {
+            color: #ddd !important;
         }
 
         /* ===== التجاوب ===== */
+        @media (max-width: 992px) {
+            .search-input {
+                width: 100%;
+            }
+            .navbar-custom .nav-link:hover {
+                transform: none;
+            }
+        }
+
         @media (max-width: 768px) {
-            .navbar-custom .navbar-brand { font-size: 1.1rem; }
-            .navbar-custom .navbar-brand img { height: 30px; }
-            .dropdown-menu { min-width: 150px !important; }
+            .navbar-custom .navbar-brand {
+                font-size: 1.1rem;
+            }
+            .navbar-custom .navbar-brand img {
+                height: 36px;
+            }
+            .dropdown-menu {
+                animation: none;
+            }
         }
     </style>
 </head>
@@ -113,6 +252,8 @@
     <!-- ===== Navbar ===== -->
     <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
         <div class="container">
+
+            <!-- ===== اللوجو ===== -->
             <a class="navbar-brand" href="/">
                 {% if settings and settings.logo_path %}
                 <img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.name }}">
@@ -132,65 +273,186 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 {% if session.user_id %}
+
+                <!-- ===== شريط البحث ===== -->
+                <form class="d-flex mx-auto" action="/tasks/search" method="GET">
+                    <input class="form-control search-input" type="search"
+                           placeholder="بحث عن عميل..." name="q"
+                           aria-label="بحث">
+                </form>
+
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house"></i> {{ t('dashboard') }}</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks"><i class="bi bi-list-task"></i> التدريبات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/clients' %}active{% endif %}" href="/clients"><i class="bi bi-people"></i> العملاء</a></li>
-                    
-                    <!-- ===== أنواع المديولات ===== -->
+                    <!-- ===== الرئيسية ===== -->
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/module_types' %}active{% endif %}" href="/module_types">
-                            <i class="bi bi-grid"></i> أنواع المديولات
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                            <i class="bi bi-house"></i> {{ t('dashboard') }}
                         </a>
                     </li>
-                    
-                    <!-- ===== العقود ===== -->
+
+                    <!-- ===== الإدارة ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-folder2-open"></i> الإدارة
+                        </a>
+                        <ul class="dropdown-menu shadow-lg border-0">
+                            <li>
+                                <a class="dropdown-item" href="/clients">
+                                    <i class="bi bi-people text-primary"></i> العملاء
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/trainers">
+                                    <i class="bi bi-person-badge text-success"></i> المدربين
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/users">
+                                    <i class="bi bi-person-gear text-danger"></i> المستخدمين
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- ===== التدريبات ===== -->
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/contracts' %}active{% endif %}" href="/contracts">
+                        <a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks">
+                            <i class="bi bi-list-task"></i> التدريبات
+                        </a>
+                    </li>
+
+                    <!-- ===== العقود ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-file-earmark-text"></i> العقود
                         </a>
+                        <ul class="dropdown-menu shadow-lg border-0">
+                            <li>
+                                <a class="dropdown-item" href="/contracts">
+                                    <i class="bi bi-file-earmark-text text-primary"></i> العقود
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/contract_types">
+                                    <i class="bi bi-tags text-success"></i> أنواع العقود
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/module_types">
+                                    <i class="bi bi-grid text-warning"></i> أنواع المديولات
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    
-                    <!-- ===== أنواع العقود ===== -->
+
+                    <!-- ===== المالية ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-coin"></i> المالية
+                        </a>
+                        <ul class="dropdown-menu shadow-lg border-0">
+                            <li>
+                                <a class="dropdown-item" href="/all_payments">
+                                    <i class="bi bi-coin text-success"></i> المدفوعات
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/revenue_report">
+                                    <i class="bi bi-graph-up-arrow text-info"></i> الإيرادات
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- ===== المواعيد ===== -->
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/contract_types' %}active{% endif %}" href="/contract_types">
-                            <i class="bi bi-tags"></i> أنواع العقود
+                        <a class="nav-link {% if request.path == '/meetings' %}active{% endif %}" href="/meetings">
+                            <i class="bi bi-calendar-event"></i> المواعيد
                         </a>
                     </li>
-                    
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/all_payments' %}active{% endif %}" href="/all_payments"><i class="bi bi-coin"></i> المدفوعات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/meetings' %}active{% endif %}" href="/meetings"><i class="bi bi-calendar-event"></i> المواعيد</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports"><i class="bi bi-bar-chart"></i> التقارير</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/revenue_report' %}active{% endif %}" href="/revenue_report"><i class="bi bi-graph-up-arrow"></i> الإيرادات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/trainers' %}active{% endif %}" href="/trainers"><i class="bi bi-person-badge"></i> المدربين</a></li>
-                    
+
+                    <!-- ===== التقارير ===== -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports">
+                            <i class="bi bi-bar-chart"></i> التقارير
+                        </a>
+                    </li>
+
+                    <!-- ===== الإعدادات ===== -->
                     {% if session.user_role == 'مدير' %}
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/users' %}active{% endif %}" href="/users"><i class="bi bi-person-gear"></i> المستخدمين</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/company_settings' %}active{% endif %}" href="/company_settings"><i class="bi bi-building"></i> الإعدادات</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/company_settings' %}active{% endif %}" href="/company_settings">
+                            <i class="bi bi-gear"></i> الإعدادات
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
 
+                <!-- ===== الجانب الأيمن ===== -->
                 <ul class="navbar-nav">
-                    <li class="nav-item notification-badge">
-                        <a class="nav-link" href="/notifications"><i class="bi bi-bell"></i><span class="badge-count" id="notifCount">0</span></a>
-                    </li>
-                    <li class="nav-item"><a href="/set_lang/ar" class="nav-link">🇸🇦</a></li>
-                    <li class="nav-item"><a href="/set_lang/en" class="nav-link">🇬🇧</a></li>
 
-                    <!-- ===== قائمة المستخدم ===== -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> {{ session.user_name }}
-                            <span class="badge bg-light text-dark ms-1">{{ session.user_role }}</span>
+                    <!-- ===== الإشعارات ===== -->
+                    <li class="nav-item notification-badge">
+                        <a class="nav-link" href="/notifications">
+                            <i class="bi bi-bell"></i>
+                            <span class="badge-count" id="notifCount">0</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><span class="dropdown-item-text"><i class="bi bi-person"></i> {{ session.username }}</span></li>
+                    </li>
+
+                    <!-- ===== اللغة ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-globe2"></i> اللغة
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                            <li>
+                                <a class="dropdown-item" href="/set_lang/ar">
+                                    🇸🇦 العربية
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/set_lang/en">
+                                    🇬🇧 English
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- ===== المستخدم ===== -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                            <div class="user-avatar">
+                                {{ session.user_name[0] if session.user_name else 'U' }}
+                            </div>
+                            <span class="d-none d-lg-inline">{{ session.user_name }}</span>
+                            <span class="badge bg-light text-dark ms-1 d-none d-lg-inline">{{ session.user_role }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="min-width:200px;">
+                            <li class="px-3 py-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="user-avatar-sm">
+                                        {{ session.user_name[0] if session.user_name else 'U' }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ session.user_name }}</div>
+                                        <small class="text-muted">{{ session.user_role }}</small>
+                                    </div>
+                                </div>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/change_password"><i class="bi bi-key text-warning"></i> تغيير كلمة المرور</a></li>
-                            <li><a class="dropdown-item text-danger" href="/logout"><i class="bi bi-box-arrow-right"></i> تسجيل خروج</a></li>
+                            <li>
+                                <a class="dropdown-item" href="/change_password">
+                                    <i class="bi bi-key text-warning"></i> تغيير كلمة المرور
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="/logout">
+                                    <i class="bi bi-box-arrow-right"></i> تسجيل خروج
+                                </a>
+                            </li>
                         </ul>
                     </li>
                 </ul>
+
                 {% endif %}
             </div>
         </div>
@@ -212,9 +474,9 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- ===== التذييل ===== -->
-    <div class="footer text-center py-3" style="background: white; margin-top: 3rem; border-top: 1px solid #eee;">
-        <small class="text-muted">
+    <!-- ===== Footer ===== -->
+    <div class="footer text-center py-3">
+        <small>
             <i class="bi bi-building"></i> {{ settings.name if settings else t('app_name') }}
             {% if settings and settings.phone %} | <i class="bi bi-telephone"></i> {{ settings.phone }}{% endif %}
             {% if settings and settings.address %} | <i class="bi bi-geo-alt"></i> {{ settings.address }}{% endif %}
@@ -231,7 +493,7 @@
                 const badge = document.getElementById('notifCount');
                 if (data.count > 0) {
                     badge.textContent = data.count;
-                    badge.style.display = 'inline';
+                    badge.style.display = 'flex';
                 } else {
                     badge.style.display = 'none';
                 }
