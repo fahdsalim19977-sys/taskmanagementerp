@@ -55,6 +55,15 @@
                         <span class="info-label">القيمة</span>
                         <span class="info-value fw-bold text-success">{{ contract.contract_value }} ر.س</span>
                     </div>
+                    <div>
+                        <span class="info-label">حالة الدفع</span>
+                        <span class="badge 
+                            {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                            {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
+                            {% else %}bg-danger{% endif %}">
+                            {{ contract.payment_status }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -195,6 +204,7 @@
                         <th>تاريخ الاستحقاق</th>
                         <th>تاريخ الدفع</th>
                         <th>الحالة</th>
+                        <th>ملاحظات</th>
                         <th>إجراءات</th>
                     </tr>
                 </thead>
@@ -222,6 +232,15 @@
                             </span>
                         </td>
                         <td>
+                            {% if payment.notes %}
+                            <span title="{{ payment.notes }}" style="font-size:12px;">
+                                {{ payment.notes[:40] }}{% if payment.notes|length > 40 %}...{% endif %}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if payment.status != 'مدفوعة' %}
                             <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal{{ payment.id }}">
                                 <i class="bi bi-cash"></i> سداد
@@ -231,6 +250,58 @@
                             {% endif %}
                         </td>
                     </tr>
+
+                    <!-- ===== مودال سداد الدفعة ===== -->
+                    <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <form method="POST" action="/mark_payment_paid/{{ payment.id }}">
+                                    <div class="modal-header bg-success text-white">
+                                        <h5 class="modal-title"><i class="bi bi-cash"></i> سداد الدفعة</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">رقم الدفعة</label>
+                                                <input type="text" class="form-control" value="{{ payment.installment_number }}" disabled>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">قيمة الدفعة</label>
+                                                <input type="text" class="form-control" value="{{ payment.amount }} ر.س" disabled>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">المدفوع حالياً</label>
+                                                <input type="text" class="form-control" value="{{ payment.paid_amount or 0 }} ر.س" disabled>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">المتبقي</label>
+                                                <input type="text" class="form-control" value="{{ payment.amount - (payment.paid_amount or 0) }} ر.س" disabled>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">المبلغ المدفوع <span class="text-danger">*</span></label>
+                                                <input type="number" name="paid_amount" class="form-control" 
+                                                       value="{{ payment.amount - (payment.paid_amount or 0) }}" 
+                                                       step="0.01" max="{{ payment.amount - (payment.paid_amount or 0) }}" required>
+                                                <small class="text-muted">يجب أن لا يتجاوز المتبقي</small>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                                                <input type="date" name="payment_date" class="form-control" 
+                                                       value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-check-circle"></i> تأكيد السداد
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </tbody>
             </table>
@@ -320,7 +391,59 @@
     </div>
 </div>
 
-<!-- ===== مودال سداد الدفعة ===== -->
+<style>
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.info-grid .info-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-grid .info-value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+.table-modern {
+    font-size: 14px;
+}
+
+.table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+}
+
+.table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<!-- ===== مودالات سداد الدفعات ===== -->
 {% for payment in contract_payments %}
 {% if payment.status != 'مدفوعة' %}
 <div class="modal fade" id="paymentModal{{ payment.id }}" tabindex="-1">
@@ -375,56 +498,4 @@
 </div>
 {% endif %}
 {% endfor %}
-
-<style>
-.info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.info-grid .info-label {
-    display: block;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-grid .info-value {
-    display: block;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #1a1a2e;
-}
-
-.table-modern {
-    font-size: 14px;
-}
-
-.table-modern thead th {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-    border-bottom: 2px solid #e2e8f0;
-    padding: 12px 16px;
-}
-
-.table-modern tbody td {
-    padding: 12px 16px;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.table-modern tbody tr:hover {
-    background: #f8fafc;
-}
-
-@media (max-width: 768px) {
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
 {% endblock %}

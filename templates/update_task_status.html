@@ -30,11 +30,16 @@
                     </div>
                     
                     {% if task.contract_payment_id %}
-                    <div class="alert alert-info">
+                    <div class="alert alert-warning">
                         <i class="bi bi-link"></i>
                         هذا التدريب مرتبط بدفعة عقد (ID: {{ task.contract_payment_id }})
                         <br>
-                        <small>عند اختيار "مكتملة"، سيتم تفعيل الدفعة تلقائياً</small>
+                        <strong>عند اختيار "مكتملة":</strong>
+                        <ul class="mb-0 mt-1">
+                            <li>سيتم تحديث الدفعة إلى <span class="text-danger">متأخرة</span></li>
+                            <li>سيتم إضافة ملاحظة: "تم التدريب على: {{ task.title }}"</li>
+                            <li>سيتم تحديث تاريخ الاستحقاق إلى اليوم</li>
+                        </ul>
                     </div>
                     {% endif %}
                     
