@@ -136,7 +136,9 @@
                     <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house"></i> {{ t('dashboard') }}</a></li>
                     <li class="nav-item"><a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks"><i class="bi bi-list-task"></i> التدريبات</a></li>
                     <li class="nav-item"><a class="nav-link {% if request.path == '/clients' %}active{% endif %}" href="/clients"><i class="bi bi-people"></i> {{ t('clients') }}</a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.path == '/all_modules' %}active{% endif %}" href="/all_modules"><i class="bi bi-grid"></i> المديولات</a></li>
+                    
+                    <!-- ===== أنواع المديولات ===== -->
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/module_types' %}active{% endif %}" href="/module_types"><i class="bi bi-grid"></i> أنواع المديولات</a></li>
                     
                     <!-- ===== العقود وأنواع العقود ===== -->
                     <li class="nav-item">
