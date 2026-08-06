@@ -5,7 +5,6 @@ from config import Config
 from models import init_db, get_db
 from utils import get_company_settings, get_lang, t, log_activity
 from datetime import datetime
-from routes import trainers_bp
 
 # ===== إنشاء التطبيق =====
 app = Flask(__name__)
@@ -57,7 +56,6 @@ def index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    # ===== كود index من app.py القديم (انسخه من ملفك القديم) =====
     conn = get_db()
     
     # إحصائيات المهام
@@ -163,7 +161,9 @@ def index():
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
-                         
+
+
+# ===== البحث الشامل =====
 @app.route('/global_search')
 def global_search():
     """بحث شامل في جميع الجداول"""
@@ -257,12 +257,14 @@ def global_search():
     return render_template('global_search.html', 
                          results=results, 
                          query=query,
-                         total_results=total_results)                         
+                         total_results=total_results)
+
 
 # ===== Health Check =====
 @app.route('/health')
 def health():
     return jsonify({"status": "ok", "message": "Application is running"}), 200
+
 
 # ===== معالج الأخطاء =====
 @app.errorhandler(404)
@@ -270,20 +272,24 @@ def page_not_found(e):
     settings = get_company_settings()
     return render_template('404.html', settings=settings), 404
 
+
 @app.errorhandler(500)
 def internal_server_error(e):
     flash('❌ حدث خطأ في السيرفر. يرجى المحاولة مرة أخرى.', 'danger')
     return redirect(url_for('index'))
 
+
+# ===== مسارات اختبار =====
 @app.route('/trainers-test')
 def trainers_test():
     return "Trainers route is working! (test)"
 
+
 @app.route('/trainers-direct')
 def trainers_direct():
     from routes.trainers import trainers_bp
-    # هذا مجرد اختبار
     return "Direct import test"
+
 
 # ===== تشغيل التطبيق =====
 if __name__ == '__main__':
