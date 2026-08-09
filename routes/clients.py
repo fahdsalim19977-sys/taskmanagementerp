@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for, session, flash
 from models import get_db
 from routes import clients_bp
 from utils import get_trainers, check_role, log_activity
+from datetime import datetime  # ✅ أضف هذا
 
 @clients_bp.route('/clients')
 def clients():
@@ -131,3 +132,45 @@ def delete_client(client_id):
     flash('✅ تم حذف العميل بنجاح', 'success')
     log_activity(session['user_id'], 'حذف عميل', f'حذف عميل رقم {client_id}')
     return redirect(url_for('clients.clients'))
+
+
+# ===== مهام العميل =====
+@clients_bp.route('/client_tasks/<int:client_id>')
+def client_tasks(client_id):
+    """عرض مهام عميل معين"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # جلب بيانات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    # جلب مهام العميل
+    tasks = conn.execute('''
+        SELECT tasks.*, trainers.name as assigned_name
+        FROM tasks
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    # إحصائيات المهام
+    stats = {
+        'total': len(tasks),
+        'completed': len([t for t in tasks if t['status'] == 'مكتملة']),
+        'in_progress': len([t for t in tasks if t['status'] == 'قيد التنفيذ']),
+        'overdue': len([t for t in tasks if t['status'] == 'متأخرة']),
+        'not_started': len([t for t in tasks if t['status'] == 'لم تبدأ'])
+    }
+    
+    return render_template('client_tasks.html', 
+                         client=client, 
+                         tasks=tasks, 
+                         stats=stats,
+                         today=datetime.now().date())
