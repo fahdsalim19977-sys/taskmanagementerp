@@ -398,6 +398,38 @@ def global_search():
                          results=results, 
                          query=query,
                          total_results=total_results)
+                         
+# ===== API: جلب دفعات العميل =====
+@app.route('/api/client-payments/<int:client_id>')
+def get_client_payments(client_id):
+    """جلب دفعات العميل لتظهر في قائمة التدريبات"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = get_db()
+    payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE client_contracts.client_id = ?
+        ORDER BY contract_payments.due_date ASC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    payments_list = []
+    for p in payments:
+        payments_list.append({
+            'id': p['id'],
+            'contract_number': p['contract_number'],
+            'installment_number': p['installment_number'],
+            'amount': p['amount'],
+            'due_date': p['due_date'],
+            'status': p['status']
+        })
+    
+    return jsonify({'payments': payments_list})
+
 @app.route('/api/task-groups')
 def get_task_groups():
     """جلب مجموعات التدريبات حسب العميل"""
