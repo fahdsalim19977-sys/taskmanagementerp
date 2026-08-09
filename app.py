@@ -398,6 +398,26 @@ def global_search():
                          results=results, 
                          query=query,
                          total_results=total_results)
+@app.route('/api/task-groups')
+def get_task_groups():
+    """جلب مجموعات التدريبات حسب العميل"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    client_id = request.args.get('client_id')
+    if not client_id:
+        return jsonify({'groups': []})
+    
+    conn = get_db()
+    groups = conn.execute('''
+        SELECT DISTINCT task_group 
+        FROM tasks 
+        WHERE client_id = ? AND task_group IS NOT NULL AND task_group != ''
+        ORDER BY task_group
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    return jsonify({'groups': [g['task_group'] for g in groups]})                         
 
 
 # ===== Health Check =====
