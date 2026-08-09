@@ -2,51 +2,391 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-arrow-repeat"></i> تحديث حالة التدريب</h4>
+    <div class="col-lg-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-gradient-primary text-white rounded-top-4 py-3">
+                <h4 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i> تحديث حالة التدريب</h4>
             </div>
-            <div class="card-body">
-                <form method="POST" action="/update_task_status/{{ task.id }}">
+            <div class="card-body p-4">
+                <!-- ===== معلومات التدريب ===== -->
+                <div class="training-info mb-4 p-3 bg-light rounded-3">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold mb-1">{{ task.title }}</h5>
+                            <p class="text-muted mb-0 small">
+                                <i class="bi bi-person me-1"></i> العميل: {{ task.client_name or 'غير محدد' }}
+                            </p>
+                            <p class="text-muted mb-0 small">
+                                <i class="bi bi-calendar me-1"></i> تاريخ الاستحقاق: {{ task.due_date }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <span class="badge 
+                                {% if task.status == 'مكتملة' %}bg-success
+                                {% elif task.status == 'قيد التنفيذ' %}bg-warning text-dark
+                                {% elif task.status == 'متأخرة' %}bg-danger
+                                {% else %}bg-secondary{% endif %} fs-6 px-3 py-2">
+                                {{ task.status }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="/update_task_status/{{ task.id }}" id="updateStatusForm">
+                    <!-- ===== شريط التقدم ===== -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="fw-bold">نسبة الإنجاز</label>
+                            <span class="badge bg-primary fs-6" id="progressLabel">50%</span>
+                        </div>
+                        <div class="progress" style="height: 30px; border-radius: 15px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 id="progressBar"
+                                 style="width: 50%; border-radius: 15px; transition: width 0.3s ease;">
+                                <span class="fw-bold" id="progressText">50%</span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="completion_percentage" id="completion_percentage" value="{{ task.completion_percentage or 50 }}">
+                    </div>
+
+                    <!-- ===== أزرار النسبة السريعة ===== -->
+                    <div class="mb-4">
+                        <label class="fw-bold d-block mb-2">اختر نسبة الإنجاز</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-secondary perc-btn" data-value="0">
+                                <i class="bi bi-circle"></i> 0%
+                            </button>
+                            <button type="button" class="btn btn-outline-warning perc-btn" data-value="25">
+                                <i class="bi bi-quarter-circle"></i> 25%
+                            </button>
+                            <button type="button" class="btn btn-outline-info perc-btn" data-value="50">
+                                <i class="bi bi-half-circle"></i> 50%
+                            </button>
+                            <button type="button" class="btn btn-outline-primary perc-btn" data-value="75">
+                                <i class="bi bi-three-quarters-circle"></i> 75%
+                            </button>
+                            <button type="button" class="btn btn-outline-success perc-btn" data-value="100">
+                                <i class="bi bi-check-circle"></i> 100%
+                            </button>
+                        </div>
+                        <small class="text-muted">💡 اختر النسبة التي تعكس تقدم التدريب</small>
+                    </div>
+
+                    <!-- ===== الحالة ===== -->
                     <div class="mb-3">
-                        <label class="form-label">الحالة</label>
-                        <select name="status" class="form-select">
-                            <option value="لم تبدأ" {% if task.status == 'لم تبدأ' %}selected{% endif %}>لم تبدأ</option>
-                            <option value="قيد التنفيذ" {% if task.status == 'قيد التنفيذ' %}selected{% endif %}>قيد التنفيذ</option>
-                            <option value="مكتملة" {% if task.status == 'مكتملة' %}selected{% endif %}>مكتملة</option>
-                            <option value="متأخرة" {% if task.status == 'متأخرة' %}selected{% endif %}>متأخرة</option>
+                        <label class="fw-bold">حالة التدريب <span class="text-danger">*</span></label>
+                        <select name="status" class="form-select form-select-lg" required>
+                            <option value="لم تبدأ" {% if task.status == 'لم تبدأ' %}selected{% endif %}>
+                                ⏳ لم تبدأ
+                            </option>
+                            <option value="قيد التنفيذ" {% if task.status == 'قيد التنفيذ' %}selected{% endif %}>
+                                🔄 قيد التنفيذ
+                            </option>
+                            <option value="مراجعة" {% if task.status == 'مراجعة' %}selected{% endif %}>
+                                🔍 مراجعة
+                            </option>
+                            <option value="مكتملة" {% if task.status == 'مكتملة' %}selected{% endif %}>
+                                ✅ مكتملة
+                            </option>
+                            <option value="متأخرة" {% if task.status == 'متأخرة' %}selected{% endif %}>
+                                ⚠️ متأخرة
+                            </option>
                         </select>
                     </div>
+
+                    <!-- ===== تسجيل التقدم (Check-in) ===== -->
                     <div class="mb-3">
-                        <label class="form-label">نسبة الإنجاز</label>
-                        <input type="number" name="completion_percentage" class="form-control" 
-                               value="{{ task.completion_percentage }}" min="0" max="100">
+                        <label class="fw-bold">
+                            <i class="bi bi-chat-text me-1"></i> ملاحظة التقدم
+                            <span class="text-muted fw-normal small">(اختياري)</span>
+                        </label>
+                        <textarea name="progress_note" class="form-control" rows="2" 
+                                  placeholder="مثال: تم الانتهاء من تصميم الواجهة، جاري العمل على المنطق الخلفي..."></textarea>
                     </div>
+
+                    <!-- ===== تحديث تاريخ الاستحقاق ===== -->
+                    <div class="mb-4">
+                        <label class="fw-bold">
+                            <i class="bi bi-calendar-event me-1"></i> تاريخ الاستحقاق الجديد
+                            <span class="text-muted fw-normal small">(اختياري)</span>
+                        </label>
+                        <input type="date" name="new_due_date" class="form-control" 
+                               value="{{ task.due_date }}" 
+                               min="{{ task.due_date }}">
+                        <small class="text-muted">📌 يمكنك تعديل التاريخ إذا لزم الأمر</small>
+                    </div>
+
+                    <!-- ===== المدة الفعلية ===== -->
                     <div class="mb-3">
-                        <label class="form-label">المدة الفعلية (ساعات)</label>
-                        <input type="number" name="actual_duration" class="form-control" 
-                               value="{{ task.actual_duration or 0 }}" min="0" step="0.5">
+                        <label class="fw-bold">
+                            <i class="bi bi-clock me-1"></i> المدة الفعلية (ساعات)
+                        </label>
+                        <div class="input-group">
+                            <input type="number" name="actual_duration" class="form-control" 
+                                   value="{{ task.actual_duration or 0 }}" 
+                                   min="0" step="0.5" placeholder="0">
+                            <span class="input-group-text">ساعة</span>
+                        </div>
+                        <small class="text-muted">⏱️ الوقت الفعلي المستغرق في التدريب</small>
                     </div>
-                    
+
+                    <!-- ===== رابط الدفعة ===== -->
                     {% if task.contract_payment_id %}
-                    <div class="alert alert-warning">
-                        <i class="bi bi-link"></i>
-                        هذا التدريب مرتبط بدفعة عقد (ID: {{ task.contract_payment_id }})
-                        <br>
-                        <strong>عند اختيار "مكتملة":</strong>
-                        <ul class="mb-0 mt-1">
-                            <li>سيتم تحديث الدفعة إلى <span class="text-danger">متأخرة</span></li>
-                            <li>سيتم إضافة ملاحظة: "تم التدريب على: {{ task.title }}"</li>
-                            <li>سيتم تحديث تاريخ الاستحقاق إلى اليوم</li>
-                        </ul>
+                    <div class="alert alert-warning d-flex align-items-center">
+                        <i class="bi bi-link me-2 fs-5"></i>
+                        <div>
+                            <strong>مرتبط بدفعة عقد</strong>
+                            <br>
+                            <small>عند اختيار "مكتملة"، سيتم تفعيل الدفعة تلقائياً.</small>
+                        </div>
                     </div>
                     {% endif %}
-                    
-                    <button type="submit" class="btn btn-primary w-100">حفظ</button>
+
+                    <!-- ===== أزرار التحكم ===== -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary flex-grow-1 py-2">
+                            <i class="bi bi-save me-2"></i> حفظ التغييرات
+                        </button>
+                        <a href="{{ request.referrer or url_for('tasks.tasks') }}" class="btn btn-outline-secondary py-2">
+                            <i class="bi bi-arrow-right me-2"></i> رجوع
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// ============================================================
+// ==== التحكم في نسبة الإنجاز وشريط التقدم ====
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressLabel = document.getElementById('progressLabel');
+    const hiddenInput = document.getElementById('completion_percentage');
+    const percBtns = document.querySelectorAll('.perc-btn');
+    const statusSelect = document.querySelector('select[name="status"]');
+
+    // ===== تحديث واجهة النسبة =====
+    function updateProgress(value) {
+        value = Math.min(100, Math.max(0, parseInt(value) || 0));
+        progressBar.style.width = value + '%';
+        progressText.textContent = value + '%';
+        progressLabel.textContent = value + '%';
+        hiddenInput.value = value;
+
+        // تغيير لون الشريط حسب النسبة
+        if (value >= 100) {
+            progressBar.className = 'progress-bar progress-bar-striped bg-success';
+        } else if (value >= 75) {
+            progressBar.className = 'progress-bar progress-bar-striped bg-primary';
+        } else if (value >= 50) {
+            progressBar.className = 'progress-bar progress-bar-striped bg-info';
+        } else if (value >= 25) {
+            progressBar.className = 'progress-bar progress-bar-striped bg-warning';
+        } else {
+            progressBar.className = 'progress-bar progress-bar-striped bg-secondary';
+        }
+    }
+
+    // ===== تفعيل أزرار النسبة =====
+    percBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const val = this.dataset.value;
+            updateProgress(val);
+
+            // إزالة التحديد من الكل
+            percBtns.forEach(b => {
+                b.classList.remove('active', 'btn-primary', 'btn-warning', 'btn-info', 'btn-success', 'btn-secondary');
+                b.className = 'btn btn-outline-' + getButtonColor(parseInt(val));
+            });
+            // تفعيل الزر المضغوط
+            this.classList.remove('btn-outline-' + getButtonColor(parseInt(val)));
+            this.classList.add('active', 'btn-' + getButtonColor(parseInt(val)));
+        });
+    });
+
+    // ===== لون الزر حسب النسبة =====
+    function getButtonColor(value) {
+        if (value >= 100) return 'success';
+        if (value >= 75) return 'primary';
+        if (value >= 50) return 'info';
+        if (value >= 25) return 'warning';
+        return 'secondary';
+    }
+
+    // ===== تفعيل الزر الافتراضي =====
+    function activateDefaultButton() {
+        const defaultVal = parseInt(hiddenInput.value) || 50;
+        updateProgress(defaultVal);
+        percBtns.forEach(btn => {
+            if (parseInt(btn.dataset.value) === defaultVal) {
+                btn.classList.remove('btn-outline-' + getButtonColor(defaultVal));
+                btn.classList.add('active', 'btn-' + getButtonColor(defaultVal));
+            } else {
+                btn.className = 'btn btn-outline-' + getButtonColor(parseInt(btn.dataset.value));
+            }
+        });
+    }
+
+    // ===== ربط الحالة بالنسبة =====
+    statusSelect.addEventListener('change', function() {
+        const status = this.value;
+        let suggestedProgress = 0;
+
+        switch(status) {
+            case 'لم تبدأ': suggestedProgress = 0; break;
+            case 'قيد التنفيذ': suggestedProgress = 50; break;
+            case 'مراجعة': suggestedProgress = 75; break;
+            case 'مكتملة': suggestedProgress = 100; break;
+            case 'متأخرة': suggestedProgress = 25; break;
+            default: suggestedProgress = 50;
+        }
+
+        // تحديث النسبة بناءً على الحالة
+        updateProgress(suggestedProgress);
+        
+        // تحديث الأزرار
+        percBtns.forEach(btn => {
+            const val = parseInt(btn.dataset.value);
+            btn.className = 'btn btn-outline-' + getButtonColor(val);
+            if (val === suggestedProgress) {
+                btn.classList.remove('btn-outline-' + getButtonColor(val));
+                btn.classList.add('active', 'btn-' + getButtonColor(val));
+            }
+        });
+    });
+
+    // ===== التحقق من صحة النموذج =====
+    document.getElementById('updateStatusForm').addEventListener('submit', function(e) {
+        const percentage = parseInt(hiddenInput.value) || 0;
+        const status = statusSelect.value;
+
+        // إذا كانت النسبة 100%، تأكد من أن الحالة "مكتملة"
+        if (percentage >= 100 && status !== 'مكتملة') {
+            if (!confirm('⚠️ نسبة الإنجاز 100% لكن الحالة ليست "مكتملة". هل تريد المتابعة؟')) {
+                e.preventDefault();
+                return;
+            }
+        }
+
+        // إذا كانت الحالة "مكتملة"، تأكد من أن النسبة 100%
+        if (status === 'مكتملة' && percentage < 100) {
+            if (!confirm('⚠️ الحالة "مكتملة" لكن نسبة الإنجاز أقل من 100%. هل تريد المتابعة؟')) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
+    // ===== تهيئة الواجهة =====
+    activateDefaultButton();
+
+    // ===== إذا كان هناك ملاحظة سابقة، ضعها في الحقل =====
+    // (يمكن إضافة ملاحظة من قاعدة البيانات إذا وجدت)
+});
+</script>
+
+<style>
+/* ===== تنسيق البطاقة ===== */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+}
+
+/* ===== تنسيق الأزرار ===== */
+.perc-btn {
+    min-width: 80px;
+    font-weight: 600;
+    border-radius: 25px;
+    padding: 8px 16px;
+    transition: all 0.3s ease;
+}
+
+.perc-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.perc-btn.active {
+    color: white !important;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.perc-btn.active.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border-color: #28a745;
+}
+
+.perc-btn.active.btn-primary {
+    background: linear-gradient(135deg, #007bff, #6610f2);
+    border-color: #007bff;
+}
+
+.perc-btn.active.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #00bcd4);
+    border-color: #17a2b8;
+}
+
+.perc-btn.active.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    border-color: #ffc107;
+}
+
+.perc-btn.active.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    border-color: #6c757d;
+}
+
+/* ===== شريط التقدم ===== */
+.progress {
+    background: #e9ecef;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.progress-bar {
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ===== تنسيق المعلومات ===== */
+.training-info {
+    border-right: 5px solid #1a237e;
+    background: #f8f9fa;
+}
+
+/* ===== Select ===== */
+.form-select-lg {
+    font-size: 1.1rem;
+    padding: 12px 16px;
+}
+
+/* ===== Alert ===== */
+.alert-warning {
+    background: #fff3cd;
+    border-right: 4px solid #ffc107;
+    border-radius: 12px;
+}
+
+/* ===== التجاوب ===== */
+@media (max-width: 768px) {
+    .perc-btn {
+        min-width: 60px;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+    .training-info .col-md-4 {
+        text-align: start !important;
+        margin-top: 8px;
+    }
+}
+</style>
 {% endblock %}
