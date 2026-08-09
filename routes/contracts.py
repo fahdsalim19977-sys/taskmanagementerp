@@ -15,10 +15,15 @@ def contracts():
     
     # ===== الحصول على معاملات الفلترة والترقيم =====
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = request.args.get('per_page', 10, type=int)
     search = request.args.get('search', '').strip()
     status_filter = request.args.get('status', '')
     payment_filter = request.args.get('payment_status', '')
+    
+    # ===== تحديد عدد العناصر في الصفحة =====
+    if per_page == 0 or per_page == 999999:
+        per_page = 999999
+        page = 1
     
     conn = get_db()
     
@@ -78,14 +83,21 @@ def contracts():
     total = conn.execute(count_query, count_params).fetchone()['count']
     
     # ===== ترتيب وترقيم =====
-    query += ' ORDER BY client_contracts.created_at DESC LIMIT ? OFFSET ?'
-    offset = (page - 1) * per_page
-    params.extend([per_page, offset])
+    query += ' ORDER BY client_contracts.created_at DESC'
+    
+    if per_page != 999999:
+        query += ' LIMIT ? OFFSET ?'
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
     
     contracts_list = conn.execute(query, params).fetchall()
     conn.close()
     
-    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    # ===== حساب عدد الصفحات =====
+    if per_page == 999999:
+        total_pages = 1
+    else:
+        total_pages = math.ceil(total / per_page) if total > 0 else 1
     
     # ===== إحصائيات سريعة للفلترة =====
     conn = get_db()
@@ -100,12 +112,15 @@ def contracts():
     }
     conn.close()
     
+    per_page_options = [10, 25, 50, 100]
+    
     return render_template('contracts.html', 
                          contracts=contracts_list,
                          page=page,
                          total_pages=total_pages,
                          total=total,
                          per_page=per_page,
+                         per_page_options=per_page_options,
                          search=search,
                          status_filter=status_filter,
                          payment_filter=payment_filter,
