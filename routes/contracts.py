@@ -54,11 +54,28 @@ def contracts():
         params.append(payment_filter)
     
     # ===== إجمالي النتائج =====
-    count_query = query.replace(
-        'SELECT client_contracts.*, clients.name as client_name, clients.company_name, contract_types.name as contract_type_name, users.name as created_by_name',
-        'SELECT COUNT(*) as count'
-    )
-    total = conn.execute(count_query, params).fetchone()['count']
+    count_query = '''
+        SELECT COUNT(*) as count
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        LEFT JOIN contract_types ON client_contracts.contract_type_id = contract_types.id
+        JOIN users ON client_contracts.created_by = users.id
+        WHERE 1=1
+    '''
+    
+    count_params = []
+    if search:
+        count_query += ' AND (client_contracts.contract_number LIKE ? OR client_contracts.title LIKE ? OR clients.name LIKE ? OR clients.company_name LIKE ?)'
+        search_param = f'%{search}%'
+        count_params.extend([search_param, search_param, search_param, search_param])
+    if status_filter:
+        count_query += ' AND client_contracts.status = ?'
+        count_params.append(status_filter)
+    if payment_filter:
+        count_query += ' AND client_contracts.payment_status = ?'
+        count_params.append(payment_filter)
+    
+    total = conn.execute(count_query, count_params).fetchone()['count']
     
     # ===== ترتيب وترقيم =====
     query += ' ORDER BY client_contracts.created_at DESC LIMIT ? OFFSET ?'
