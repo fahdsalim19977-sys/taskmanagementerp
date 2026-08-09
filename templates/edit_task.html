@@ -32,9 +32,9 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="fw-bold">العميل <span class="text-danger">*</span></label>
-                            <select name="client_id" class="form-select form-select-lg" required>
+                            <select name="client_id" class="form-select form-select-lg" required id="clientSelect">
                                 {% for client in clients %}
-                                <option value="{{ client.id }}" {% if client.id == task.client_id %}selected{% endif %}>
+                                <option value="{{ client.id }}" {% if client.id == task.client_id %}selected{% endif %} data-client="{{ client.id }}">
                                     {{ client.name }}
                                 </option>
                                 {% endfor %}
@@ -63,7 +63,7 @@
                         <textarea name="description" class="form-control" rows="3">{{ task.description or '' }}</textarea>
                     </div>
 
-                    <!-- ===== التاريخ والأولوية ===== -->
+                    <!-- ===== التاريخ والأولوية والمدة ===== -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="fw-bold">تاريخ الاستحقاق <span class="text-danger">*</span></label>
@@ -94,15 +94,35 @@
                     </div>
 
                     <!-- ===== مجموعة التدريب ===== -->
-                    <div class="mb-3">
-                        <label class="fw-bold">مجموعة التدريب</label>
-                        <input type="text" name="task_group" class="form-control" 
-                               value="{{ task.task_group or '' }}" 
-                               placeholder="مثال: مشروع تطوير الموقع - المرحلة 1">
-                        <small class="text-muted">💡 يمكنك تجميع التدريبات المتشابهة تحت مجموعة واحدة</small>
+                    <div class="card border-0 mb-3" style="background: #f0f7ff;">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-folder me-2"></i> مجموعة التدريب</h6>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-7">
+                                    <label class="fw-bold">اسم المجموعة</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white"><i class="bi bi-folder-plus"></i></span>
+                                        <input type="text" name="task_group" class="form-control" 
+                                               id="taskGroupInput"
+                                               value="{{ task.task_group or '' }}" 
+                                               placeholder="مثال: مشروع تطوير الموقع - المرحلة 1">
+                                    </div>
+                                    <small class="text-muted">💡 أدخل اسم المجموعة لتجميع تدريبات هذا العميل</small>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="fw-bold d-block">&nbsp;</label>
+                                    <button type="button" class="btn btn-outline-success w-100" id="suggestGroupBtn">
+                                        <i class="bi bi-magic me-1"></i> اقتراح مجموعة
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="existingGroupsContainer" class="mt-3">
+                                <!-- سيتم ملؤها بالـ JavaScript -->
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- ===== نسبة الإنجاز (تحديث سريع) ===== -->
+                    <!-- ===== نسبة الإنجاز ===== -->
                     <div class="card bg-light border-0 mb-3">
                         <div class="card-body">
                             <h6 class="fw-bold mb-3"><i class="bi bi-graph-up-arrow me-2"></i> نسبة الإنجاز الحالية</h6>
@@ -128,16 +148,58 @@
                     </div>
 
                     <!-- ===== ربط الدفعة ===== -->
-                    {% if task.contract_payment_id %}
-                    <div class="alert alert-warning d-flex align-items-center">
-                        <i class="bi bi-link me-2 fs-5"></i>
-                        <div>
-                            <strong>مرتبط بدفعة عقد</strong>
-                            <br>
-                            <small>ID: {{ task.contract_payment_id }} - عند اكتمال التدريب سيتم تفعيل الدفعة تلقائياً.</small>
+                    <div class="card border-0 mb-3" style="background: #fefce8;">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-link me-2"></i> ربط بدفعة عقد</h6>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="fw-bold">اختر الدفعة المرتبطة</label>
+                                    <select name="contract_payment_id" class="form-select" id="paymentSelect">
+                                        <option value="">-- بدون ربط --</option>
+                                        {% for payment in available_payments %}
+                                        <option value="{{ payment.id }}" 
+                                            {% if payment.id == task.contract_payment_id %}selected{% endif %}
+                                            data-contract="{{ payment.contract_number }}"
+                                            data-amount="{{ payment.amount }}"
+                                            data-status="{{ payment.status }}">
+                                            {{ payment.contract_number }} - دفعة {{ payment.installment_number }} 
+                                            ({{ payment.amount }} ر.س) 
+                                            {% if payment.status == 'مستحقة' %}🟡 مستحقة{% endif %}
+                                            {% if payment.status == 'مدفوعة جزئيا' %}🟠 مدفوعة جزئياً{% endif %}
+                                            {% if payment.status == 'مدفوعة' %}✅ مدفوعة{% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold d-block">&nbsp;</label>
+                                    <button type="button" class="btn btn-outline-primary w-100" id="viewPaymentBtn">
+                                        <i class="bi bi-eye me-1"></i> عرض التفاصيل
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- ===== معلومات الدفعة ===== -->
+                            <div id="paymentInfo" class="mt-3 p-3 rounded-3" style="background: #f8f9fa; display: none;">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">رقم العقد</small>
+                                        <strong id="paymentContract">-</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">المبلغ</small>
+                                        <strong id="paymentAmount">-</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">الحالة</small>
+                                        <span id="paymentStatus" class="badge bg-secondary">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <small class="text-muted">💡 عند اكتمال التدريب، سيتم تحديث حالة الدفعة تلقائياً</small>
                         </div>
                     </div>
-                    {% endif %}
 
                     <!-- ===== أزرار التحكم ===== -->
                     <div class="d-flex gap-2 mt-4">
@@ -156,14 +218,145 @@
 
 <script>
 // ============================================================
-// ==== تحسينات النموذج ====
+// ==== التحكم في الدفعة المرتبطة ====
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentSelect = document.getElementById('paymentSelect');
+    const paymentInfo = document.getElementById('paymentInfo');
+    const paymentContract = document.getElementById('paymentContract');
+    const paymentAmount = document.getElementById('paymentAmount');
+    const paymentStatus = document.getElementById('paymentStatus');
+
+    // ===== عرض معلومات الدفعة عند الاختيار =====
+    paymentSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (this.value) {
+            paymentInfo.style.display = 'block';
+            paymentContract.textContent = selectedOption.dataset.contract || '-';
+            paymentAmount.textContent = selectedOption.dataset.amount || '0';
+            const status = selectedOption.dataset.status || '';
+            paymentStatus.textContent = status;
+            paymentStatus.className = 'badge ' + getStatusBadgeClass(status);
+        } else {
+            paymentInfo.style.display = 'none';
+        }
+    });
+
+    function getStatusBadgeClass(status) {
+        if (status === 'مدفوعة') return 'bg-success';
+        if (status === 'مستحقة') return 'bg-warning text-dark';
+        if (status === 'مدفوعة جزئيا') return 'bg-info';
+        return 'bg-secondary';
+    }
+
+    // ===== تشغيل العرض عند تحميل الصفحة =====
+    if (paymentSelect.value) {
+        paymentSelect.dispatchEvent(new Event('change'));
+    }
+
+    // ===== زر عرض التفاصيل =====
+    document.getElementById('viewPaymentBtn').addEventListener('click', function() {
+        if (paymentSelect.value) {
+            const option = paymentSelect.options[paymentSelect.selectedIndex];
+            const contractId = option.value;
+            window.open('/contract/' + contractId, '_blank');
+        } else {
+            alert('⚠️ لم يتم اختيار دفعة');
+        }
+    });
+});
+
+// ============================================================
+// ==== التحكم في مجموعة التدريبات ====
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSelect = document.getElementById('clientSelect');
+    const taskGroupInput = document.getElementById('taskGroupInput');
+    const suggestBtn = document.getElementById('suggestGroupBtn');
+    const container = document.getElementById('existingGroupsContainer');
+
+    // ===== اقتراح مجموعة =====
+    suggestBtn.addEventListener('click', function() {
+        const clientId = clientSelect.value;
+        const clientName = clientSelect.options[clientSelect.selectedIndex].text;
+        
+        if (!clientId) {
+            alert('⚠️ يرجى اختيار العميل أولاً');
+            return;
+        }
+
+        // اقتراح اسم مجموعة
+        const suggestion = 'مشروع ' + clientName + ' - ' + new Date().getFullYear();
+        taskGroupInput.value = suggestion;
+        taskGroupInput.focus();
+        taskGroupInput.select();
+
+        // تحديث الأزرار
+        updateGroupButtons();
+    });
+
+    // ===== إنشاء أزرار المجموعات الموجودة =====
+    function updateGroupButtons() {
+        // هذا الجزء يمكن تفعيله عند وجود مجموعات من قاعدة البيانات
+        // سيتم جلب المجموعات حسب العميل المختار
+        const clientId = clientSelect.value;
+        if (!clientId) return;
+
+        // هنا يمكن إضافة استدعاء AJAX لجلب المجموعات
+        fetch('/api/task-groups?client_id=' + clientId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.groups && data.groups.length > 0) {
+                    let html = '<div class="d-flex flex-wrap gap-2 mt-2">';
+                    data.groups.forEach(group => {
+                        html += `
+                            <button type="button" class="btn btn-sm btn-outline-secondary group-btn" 
+                                    data-group="${group}">
+                                <i class="bi bi-folder me-1"></i> ${group}
+                            </button>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+
+                    // إضافة حدث للنقر على المجموعة
+                    document.querySelectorAll('.group-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            taskGroupInput.value = this.dataset.group;
+                        });
+                    });
+                } else {
+                    container.innerHTML = '<small class="text-muted">لا توجد مجموعات سابقة لهذا العميل</small>';
+                }
+            })
+            .catch(() => {
+                // إذا فشل الـ API، نعرض رسالة بسيطة
+                container.innerHTML = '<small class="text-muted">(يمكنك كتابة اسم المجموعة يدوياً)</small>';
+            });
+    }
+
+    // ===== تحديث المجموعات عند تغيير العميل =====
+    clientSelect.addEventListener('change', function() {
+        updateGroupButtons();
+    });
+
+    // ===== تشغيل عند تحميل الصفحة =====
+    updateGroupButtons();
+
+    // ===== دمج المجموعة مع التدريب =====
+    // يتم إرسال اسم المجموعة مع النموذج تلقائياً
+});
+
+// ============================================================
+// ==== التحقق من صحة النموذج ====
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editTaskForm');
     const dueDateInput = document.querySelector('input[name="due_date"]');
 
-    // ===== التحقق من صحة التاريخ =====
     form.addEventListener('submit', function(e) {
         const dueDate = new Date(dueDateInput.value);
         const today = new Date();
@@ -175,19 +368,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         }
-    });
-
-    // ===== إضافة تأثيرات بصرية =====
-    const selects = document.querySelectorAll('select.form-select-lg');
-    selects.forEach(select => {
-        select.addEventListener('change', function() {
-            this.style.borderColor = '#2563EB';
-            this.style.boxShadow = '0 0 0 0.2rem rgba(37, 99, 235, 0.15)';
-            setTimeout(() => {
-                this.style.borderColor = '';
-                this.style.boxShadow = '';
-            }, 1000);
-        });
     });
 });
 </script>
@@ -253,6 +433,26 @@ document.addEventListener('DOMContentLoaded', function() {
 .btn-outline-secondary:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+
+/* ===== تنسيق البطاقات الداخلية ===== */
+.card {
+    border-radius: 12px;
+}
+
+/* ===== مجموعة التدريبات ===== */
+.group-btn {
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.group-btn:hover {
+    background: #2563EB;
+    color: white;
+    border-color: #2563EB;
+    transform: translateY(-2px);
 }
 
 /* ===== Alert ===== */
