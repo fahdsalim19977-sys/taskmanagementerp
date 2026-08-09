@@ -2,8 +2,8 @@
 from flask import render_template, request, redirect, url_for, session, flash
 from models import get_db
 from routes import clients_bp
-from utils import get_trainers, check_role, log_activity
-from datetime import datetime  # ✅ أضف هذا
+from utils import get_trainers, check_role, log_activity, get_company_settings
+from datetime import datetime
 
 @clients_bp.route('/clients')
 def clients():
@@ -173,4 +173,165 @@ def client_tasks(client_id):
                          client=client, 
                          tasks=tasks, 
                          stats=stats,
+                         today=datetime.now().date())
+
+
+# ===== طباعة مهام العميل =====
+@clients_bp.route('/print_client_tasks/<int:client_id>')
+def print_client_tasks(client_id):
+    """طباعة مهام عميل معين"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # جلب بيانات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    # جلب مهام العميل مع اسم المدرب
+    tasks = conn.execute('''
+        SELECT tasks.*, trainers.name as assigned_name
+        FROM tasks
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    # تصنيف المهام حسب الحالة
+    completed_tasks = [t for t in tasks if t['status'] == 'مكتملة']
+    in_progress_tasks = [t for t in tasks if t['status'] == 'قيد التنفيذ']
+    overdue_tasks = [t for t in tasks if t['status'] == 'متأخرة']
+    not_started_tasks = [t for t in tasks if t['status'] == 'لم تبدأ']
+    
+    # إعدادات الشركة
+    settings = get_company_settings()
+    
+    return render_template('print_client_tasks.html',
+                         client=client,
+                         tasks=tasks,
+                         completed_tasks=completed_tasks,
+                         in_progress_tasks=in_progress_tasks,
+                         overdue_tasks=overdue_tasks,
+                         not_started_tasks=not_started_tasks,
+                         settings=settings,
+                         today=datetime.now().date())
+
+
+# ===== مدفوعات العميل =====
+@clients_bp.route('/client_payments/<int:client_id>')
+def client_payments(client_id):
+    """عرض مدفوعات عميل معين"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # جلب بيانات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    # جلب مدفوعات العميل
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # إحصائيات المدفوعات
+    stats = {
+        'total_count': len(payments),
+        'total_paid': sum(p['amount'] for p in payments if p['status'] == 'مدفوع'),
+        'total_pending': sum(p['amount'] for p in payments if p['status'] == 'معلق'),
+        'total_overdue': sum(p['amount'] for p in payments if p['status'] == 'متأخر')
+    }
+    conn.close()
+    
+    return render_template('client_payments.html',
+                         client=client,
+                         payments=payments,
+                         stats=stats)
+
+
+# ===== تقرير شامل للعميل =====
+@clients_bp.route('/print_client_full_report/<int:client_id>')
+def print_client_full_report(client_id):
+    """تقرير شامل للعميل (مدفوعات + مهام + مديولات)"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # جلب بيانات العميل
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    # جلب المدفوعات
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               client_modules.name as module_name
+        FROM client_payments
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        WHERE client_payments.client_id = ?
+        ORDER BY client_payments.created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # إحصائيات المدفوعات
+    stats = {
+        'total_count': len(payments),
+        'total_paid': sum(p['amount'] for p in payments if p['status'] == 'مدفوع'),
+        'total_pending': sum(p['amount'] for p in payments if p['status'] == 'معلق'),
+        'total_overdue': sum(p['amount'] for p in payments if p['status'] == 'متأخر')
+    }
+    
+    # جلب المديولات
+    modules = conn.execute('''
+        SELECT * FROM client_modules 
+        WHERE client_id = ? 
+        ORDER BY created_at DESC
+    ''', (client_id,)).fetchall()
+    
+    # جلب دفعات العقود
+    contract_payments = conn.execute('''
+        SELECT contract_payments.*, 
+               client_contracts.contract_number
+        FROM contract_payments
+        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
+        WHERE client_contracts.client_id = ?
+        ORDER BY contract_payments.installment_number ASC
+    ''', (client_id,)).fetchall()
+    
+    # إحصائيات دفعات العقود
+    contract_stats = {
+        'total_paid': sum(p['paid_amount'] or 0 for p in contract_payments if p['status'] == 'مدفوعة'),
+        'total_due': sum(p['amount'] for p in contract_payments if p['status'] == 'مستحقة'),
+        'total_overdue': sum(p['amount'] for p in contract_payments if p['status'] == 'متأخرة')
+    }
+    
+    settings = get_company_settings()
+    conn.close()
+    
+    return render_template('print_client_full_report.html',
+                         client=client,
+                         payments=payments,
+                         stats=stats,
+                         modules=modules,
+                         contract_payments=contract_payments,
+                         contract_stats=contract_stats,
+                         settings=settings,
                          today=datetime.now().date())
