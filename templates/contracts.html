@@ -17,27 +17,74 @@
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="stat-card-mini bg-primary">
-            <div class="stat-value">{{ contracts|length }}</div>
+            <div class="stat-value">{{ stats.total }}</div>
             <div class="stat-label">إجمالي العقود</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stat-card-mini bg-success">
-            <div class="stat-value">{{ contracts|selectattr('status', 'equalto', 'نشط')|list|length }}</div>
+            <div class="stat-value">{{ stats.active }}</div>
             <div class="stat-label">نشط</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stat-card-mini bg-warning">
-            <div class="stat-value">{{ contracts|selectattr('status', 'equalto', 'معلق')|list|length }}</div>
+            <div class="stat-value">{{ stats.pending }}</div>
             <div class="stat-label">معلق</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card-mini bg-danger">
-            <div class="stat-value">{{ contracts|selectattr('status', 'equalto', 'منتهي')|list|length }}</div>
+        <div class="stat-card-mini bg-secondary">
+            <div class="stat-value">{{ stats.completed }}</div>
             <div class="stat-label">منتهي</div>
         </div>
+    </div>
+</div>
+
+<!-- ===== فلترة وبحث ===== -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="/contracts" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" 
+                           placeholder="بحث برقم العقد، العنوان، العميل..." 
+                           value="{{ search or '' }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">كل الحالات</option>
+                    <option value="نشط" {% if status_filter == 'نشط' %}selected{% endif %}>نشط</option>
+                    <option value="معلق" {% if status_filter == 'معلق' %}selected{% endif %}>معلق</option>
+                    <option value="منتهي" {% if status_filter == 'منتهي' %}selected{% endif %}>منتهي</option>
+                    <option value="ملغي" {% if status_filter == 'ملغي' %}selected{% endif %}>ملغي</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="payment_status" class="form-select">
+                    <option value="">كل حالات الدفع</option>
+                    <option value="مدفوع بالكامل" {% if payment_filter == 'مدفوع بالكامل' %}selected{% endif %}>مدفوع بالكامل</option>
+                    <option value="مدفوع جزئيا" {% if payment_filter == 'مدفوع جزئيا' %}selected{% endif %}>مدفوع جزئياً</option>
+                    <option value="غير مدفوع" {% if payment_filter == 'غير مدفوع' %}selected{% endif %}>غير مدفوع</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> بحث
+                </button>
+            </div>
+        </form>
+        {% if search or status_filter or payment_filter %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <a href="/contracts" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> إلغاء الفلترة
+                </a>
+            </small>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -57,13 +104,14 @@
                         <th>تاريخ البداية</th>
                         <th>تاريخ النهاية</th>
                         <th>الحالة</th>
+                        <th>حالة الدفع</th>
                         <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for contract in contracts %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td>{{ loop.index + ((page - 1) * per_page) }}</td>
                         <td>
                             <a href="/contract/{{ contract.id }}" class="fw-bold text-primary text-decoration-none">
                                 {{ contract.contract_number }}
@@ -89,6 +137,14 @@
                             </span>
                         </td>
                         <td>
+                            <span class="badge 
+                                {% if contract.payment_status == 'مدفوع بالكامل' %}bg-success
+                                {% elif contract.payment_status == 'مدفوع جزئيا' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ contract.payment_status }}
+                            </span>
+                        </td>
+                        <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="/contract/{{ contract.id }}" class="btn btn-outline-primary" title="تفاصيل">
                                     <i class="bi bi-eye"></i>
@@ -110,6 +166,45 @@
             </table>
         </div>
     </div>
+</div>
+
+<!-- ===== ترقيم الصفحات ===== -->
+{% if total_pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" aria-label="Previous">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}">{{ p }}</a>
+            </li>
+            {% elif p == 4 and page > 5 %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% elif p == total_pages - 3 and page < total_pages - 4 %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        
+        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" aria-label="Next">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<!-- ===== معلومات إضافية ===== -->
+<div class="text-muted text-center mt-2 small">
+    عرض {{ contracts|length }} من أصل {{ total }} عقد
+    {% if search %} - نتائج البحث عن: "{{ search }}"{% endif %}
 </div>
 
 <script>
