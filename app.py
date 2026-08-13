@@ -167,6 +167,102 @@ def index():
 # ===== المدربين - مسارات مباشرة =====
 # ============================================================
 
+# ============================================================
+# ===== Dashboard =====
+# ============================================================
+
+@app.route('/dashboard')
+def dashboard():
+    """لوحة التحكم الرئيسية"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    # ===== إحصائيات سريعة =====
+    stats = {
+        'clients': conn.execute('SELECT COUNT(*) as count FROM clients').fetchone()['count'],
+        'trainers': conn.execute('SELECT COUNT(*) as count FROM trainers').fetchone()['count'],
+        'tasks': conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count'],
+        'contracts': conn.execute('SELECT COUNT(*) as count FROM client_contracts').fetchone()['count'],
+        'payments': conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count'],
+        'meetings': conn.execute('SELECT COUNT(*) as count FROM meetings').fetchone()['count'],
+        'users': conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count'],
+        'modules': conn.execute('SELECT COUNT(*) as count FROM client_modules').fetchone()['count']
+    }
+    
+    # ===== المهام حسب الحالة =====
+    tasks_by_status = {
+        'completed': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count'],
+        'in_progress': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count'],
+        'overdue': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count'],
+        'not_started': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "لم تبدأ"').fetchone()['count']
+    }
+    
+    # ===== العقود حسب الحالة =====
+    contracts_by_status = {
+        'active': conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE status = "نشط"').fetchone()['count'],
+        'pending': conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE status = "معلق"').fetchone()['count'],
+        'completed': conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE status = "منتهي"').fetchone()['count']
+    }
+    
+    # ===== المدفوعات =====
+    payments_stats = {
+        'total': conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0,
+        'pending': conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "معلق"').fetchone()['total'] or 0,
+        'overdue': conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "متأخر"').fetchone()['total'] or 0
+    }
+    
+    # ===== آخر 5 عقود =====
+    recent_contracts = conn.execute('''
+        SELECT client_contracts.*, clients.name as client_name
+        FROM client_contracts
+        JOIN clients ON client_contracts.client_id = clients.id
+        ORDER BY client_contracts.created_at DESC LIMIT 5
+    ''').fetchall()
+    
+    # ===== آخر 5 مهام =====
+    recent_tasks = conn.execute('''
+        SELECT tasks.*, clients.name as client_name, trainers.name as trainer_name
+        FROM tasks
+        JOIN clients ON tasks.client_id = clients.id
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        ORDER BY tasks.created_at DESC LIMIT 5
+    ''').fetchall()
+    
+    # ===== آخر 5 أنشطة =====
+    recent_activities = conn.execute('''
+        SELECT activity_log.*, users.name as user_name
+        FROM activity_log
+        JOIN users ON activity_log.user_id = users.id
+        ORDER BY activity_log.created_at DESC LIMIT 5
+    ''').fetchall()
+    
+    # ===== توزيع العملاء حسب المدربين =====
+    trainer_distribution = conn.execute('''
+        SELECT trainers.name, COUNT(client_trainers.client_id) as count
+        FROM trainers
+        LEFT JOIN client_trainers ON trainers.id = client_trainers.trainer_id
+        GROUP BY trainers.id
+        ORDER BY count DESC
+        LIMIT 5
+    ''').fetchall()
+    
+    conn.close()
+    settings = get_company_settings()
+    
+    return render_template('dashboard.html',
+                         stats=stats,
+                         tasks_by_status=tasks_by_status,
+                         contracts_by_status=contracts_by_status,
+                         payments_stats=payments_stats,
+                         recent_contracts=recent_contracts,
+                         recent_tasks=recent_tasks,
+                         recent_activities=recent_activities,
+                         trainer_distribution=trainer_distribution,
+                         settings=settings,
+                         datetime=datetime)
+
 @app.route('/trainers')
 def trainers_page():
     if 'user_id' not in session:
