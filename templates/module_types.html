@@ -30,93 +30,178 @@
     </div>
 </div>
 
+<!-- ===== فلترة وبحث ===== -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="/module_types" class="row g-3">
+            <div class="col-md-7">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" 
+                           placeholder="بحث باسم المديول أو الوصف..." 
+                           value="{{ search or '' }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="per_page" class="form-select">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>
+                        عرض {{ opt }}
+                    </option>
+                    {% endfor %}
+                    <option value="999999" {% if per_page == 999999 %}selected{% endif %}>
+                        عرض الكل
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> بحث
+                </button>
+            </div>
+        </form>
+        {% if search %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <a href="/module_types" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> إلغاء البحث
+                </a>
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- ===== قائمة الأنواع ===== -->
 <div class="card">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-modern mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>الاسم</th>
-                        <th>الوصف</th>
-                        <th>السعر (ر.س)</th>
-                        <th>الحالة</th>
-                        <th>تاريخ الإضافة</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for type in types %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td><strong>{{ type.name }}</strong></td>
-                        <td>{{ type.description or '-' }}</td>
-                        <td><span class="fw-bold">{{ type.price }}</span></td>
-                        <td>
-                            {% if type.is_active %}
-                            <span class="badge bg-success">نشط</span>
-                            {% else %}
-                            <span class="badge bg-secondary">غير نشط</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ type.created_at[:10] }}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#editModuleTypeModal{{ type.id }}">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <form action="/delete_module_type/{{ type.id }}" method="POST" style="display:inline-block;">
-                                    <button class="btn btn-outline-danger" onclick="return confirm('تأكيد الحذف؟')">
-                                        <i class="bi bi-trash"></i>
+        <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead class="sticky-top bg-white">
+                        <tr>
+                            <th style="min-width: 50px;">#</th>
+                            <th style="min-width: 150px;">الاسم</th>
+                            <th style="min-width: 200px;">الوصف</th>
+                            <th style="min-width: 100px;">السعر (ر.س)</th>
+                            <th style="min-width: 80px;">الحالة</th>
+                            <th style="min-width: 110px;">تاريخ الإضافة</th>
+                            <th style="min-width: 140px;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for type in types %}
+                        <tr>
+                            <td>{{ loop.index + ((page - 1) * per_page) if per_page != 999999 else loop.index }}</td>
+                            <td><strong>{{ type.name }}</strong></td>
+                            <td>{{ type.description or '-' }}</td>
+                            <td><span class="fw-bold">{{ type.price }}</span></td>
+                            <td>
+                                {% if type.is_active %}
+                                <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                <span class="badge bg-secondary">غير نشط</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ type.created_at[:10] }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#editModuleTypeModal{{ type.id }}">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                                    <form action="/delete_module_type/{{ type.id }}" method="POST" style="display:inline-block;">
+                                        <button class="btn btn-outline-danger" onclick="return confirm('تأكيد الحذف؟')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
 
-                    <!-- ===== مودال تعديل ===== -->
-                    <div class="modal fade" id="editModuleTypeModal{{ type.id }}" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <form action="/edit_module_type/{{ type.id }}" method="POST">
-                                    <div class="modal-header bg-info text-white">
-                                        <h5 class="modal-title">تعديل نوع المديول</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
-                                            <input type="text" name="name" class="form-control" value="{{ type.name }}" required>
+                        <!-- ===== مودال تعديل ===== -->
+                        <div class="modal fade" id="editModuleTypeModal{{ type.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form action="/edit_module_type/{{ type.id }}" method="POST">
+                                        <div class="modal-header bg-info text-white">
+                                            <h5 class="modal-title">تعديل نوع المديول</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">الوصف</label>
-                                            <textarea name="description" class="form-control" rows="2">{{ type.description or '' }}</textarea>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                                <input type="text" name="name" class="form-control" value="{{ type.name }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">الوصف</label>
+                                                <textarea name="description" class="form-control" rows="2">{{ type.description or '' }}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">السعر (ر.س)</label>
+                                                <input type="number" name="price" class="form-control" value="{{ type.price }}" step="0.01">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">الحالة</label>
+                                                <select name="is_active" class="form-select">
+                                                    <option value="1" {% if type.is_active %}selected{% endif %}>نشط</option>
+                                                    <option value="0" {% if not type.is_active %}selected{% endif %}>غير نشط</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">السعر (ر.س)</label>
-                                            <input type="number" name="price" class="form-control" value="{{ type.price }}" step="0.01">
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                            <button type="submit" class="btn btn-primary">حفظ</button>
                                         </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">الحالة</label>
-                                            <select name="is_active" class="form-select">
-                                                <option value="1" {% if type.is_active %}selected{% endif %}>نشط</option>
-                                                <option value="0" {% if not type.is_active %}selected{% endif %}>غير نشط</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
-                                        <button type="submit" class="btn btn-primary">حفظ</button>
-                                    </div>
-                                </form>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- ===== ترقيم الصفحات ===== -->
+<div class="row mt-4 align-items-center">
+    <div class="col-md-6">
+        <div class="text-muted small">
+            عرض {{ types|length }} من أصل {{ total }} نوع
+            {% if search %} - نتائج البحث عن: "{{ search }}"{% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        {% if total_pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-end mb-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                    {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% elif p == 4 and page > 5 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% elif p == total_pages - 3 and page < total_pages - 4 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -159,42 +244,71 @@
     color: white;
     text-align: center;
 }
+.stat-card-mini .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card-mini .stat-label { font-size: 0.8rem; opacity: 0.8; }
 
-.stat-card-mini .stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
+.table-wrapper {
+    max-height: 600px;
+    overflow-y: auto;
 }
-
-.stat-card-mini .stat-label {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
-.table-modern {
+.table-wrapper .table-modern {
     font-size: 14px;
 }
-
-.table-modern thead th {
+.table-wrapper .table-modern thead th {
     background: #f8fafc;
     color: #475569;
     font-weight: 600;
     border-bottom: 2px solid #e2e8f0;
     padding: 12px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: inset 0 -2px 0 #e2e8f0;
 }
-
-.table-modern tbody td {
+.table-wrapper .table-modern tbody td {
     padding: 12px 16px;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
 }
-
-.table-modern tbody tr:hover {
+.table-wrapper .table-modern tbody tr:hover {
     background: #f8fafc;
 }
-
 .btn-group .btn {
     border-radius: 8px !important;
     margin: 0 2px;
+}
+.pagination {
+    gap: 2px;
+}
+.pagination .page-link {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    transition: all 0.2s ease;
+}
+.pagination .page-link:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+.pagination .page-item.active .page-link {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: white;
+}
+.table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 </style>
 {% endblock %}

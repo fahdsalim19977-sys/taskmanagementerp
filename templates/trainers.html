@@ -11,93 +11,167 @@
 <!-- ===== إحصائيات سريعة ===== -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body text-center">
-                <h6>إجمالي المدربين</h6>
-                <h3>{{ trainers|length }}</h3>
-            </div>
+        <div class="stat-card-mini bg-primary">
+            <div class="stat-value">{{ trainers|length }}</div>
+            <div class="stat-label">إجمالي المدربين</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <h6>نشطين</h6>
-                <h3>{{ trainers|selectattr('is_active', 'equalto', 1)|list|length }}</h3>
-            </div>
+        <div class="stat-card-mini bg-success">
+            <div class="stat-value">{{ trainers|selectattr('is_active', 'equalto', 1)|list|length }}</div>
+            <div class="stat-label">نشطين</div>
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card bg-info text-white">
-            <div class="card-body text-center">
-                <h6>إجمالي العملاء المرتبطين</h6>
-                <h3>{{ trainers|sum(attribute='client_count')|int }}</h3>
+        <div class="stat-card-mini bg-info">
+            <div class="stat-value">{{ trainers|sum(attribute='client_count')|int }}</div>
+            <div class="stat-label">إجمالي العملاء المرتبطين</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== فلترة وبحث ===== -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="/trainers" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" 
+                           placeholder="بحث باسم المدرب، التخصص، الهاتف..." 
+                           value="{{ search or '' }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="per_page" class="form-select">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>
+                        عرض {{ opt }}
+                    </option>
+                    {% endfor %}
+                    <option value="999999" {% if per_page == 999999 %}selected{% endif %}>
+                        عرض الكل
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> بحث
+                </button>
+            </div>
+        </form>
+        {% if search %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <a href="/trainers" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> إلغاء البحث
+                </a>
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ===== قائمة المدربين ===== -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead class="sticky-top bg-white">
+                        <tr>
+                            <th style="min-width: 50px;">#</th>
+                            <th style="min-width: 150px;">الاسم</th>
+                            <th style="min-width: 120px;">الهاتف</th>
+                            <th style="min-width: 150px;">البريد</th>
+                            <th style="min-width: 130px;">التخصص</th>
+                            <th style="min-width: 100px;">عدد العملاء</th>
+                            <th style="min-width: 80px;">الحالة</th>
+                            <th style="min-width: 160px;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trainer in trainers %}
+                        <tr>
+                            <td>{{ loop.index + ((page - 1) * per_page) if per_page != 999999 else loop.index }}</td>
+                            <td>
+                                <a href="/trainer/{{ trainer.id }}" class="fw-bold text-primary text-decoration-none">
+                                    {{ trainer.name }}
+                                </a>
+                            </td>
+                            <td>{{ trainer.phone or '-' }}</td>
+                            <td>{{ trainer.email or '-' }}</td>
+                            <td>{{ trainer.specialty or '-' }}</td>
+                            <td><span class="badge bg-primary">{{ trainer.client_count or 0 }}</span></td>
+                            <td>
+                                {% if trainer.is_active %}
+                                <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                <span class="badge bg-secondary">غير نشط</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/trainer/{{ trainer.id }}" class="btn btn-outline-primary" title="تفاصيل">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="/edit_trainer/{{ trainer.id }}" class="btn btn-outline-info" title="تعديل">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" onclick="deleteTrainer({{ trainer.id }})" title="حذف">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ===== قائمة المدربين ===== -->
-{% if trainers %}
-<div class="table-responsive">
-    <table class="table table-hover table-striped">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>الاسم</th>
-                <th>الهاتف</th>
-                <th>البريد</th>
-                <th>التخصص</th>
-                <th>عدد العملاء</th>
-                <th>الحالة</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for trainer in trainers %}
-            <tr>
-                <td>{{ trainer.id }}</td>
-                <td>
-                    <a href="/trainer/{{ trainer.id }}" class="text-decoration-none fw-bold text-primary">
-                        {{ trainer.name }}
+<!-- ===== ترقيم الصفحات ===== -->
+<div class="row mt-4 align-items-center">
+    <div class="col-md-6">
+        <div class="text-muted small">
+            عرض {{ trainers|length }} من أصل {{ total }} مدرب
+            {% if search %} - نتائج البحث عن: "{{ search }}"{% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        {% if total_pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-end mb-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&raquo;</span>
                     </a>
-                </td>
-                <td>{{ trainer.phone or '-' }}</td>
-                <td>{{ trainer.email or '-' }}</td>
-                <td>{{ trainer.specialty or '-' }}</td>
-                <td>
-                    <span class="badge bg-primary">{{ trainer.client_count or 0 }}</span>
-                </td>
-                <td>
-                    {% if trainer.is_active %}
-                    <span class="badge bg-success">نشط</span>
-                    {% else %}
-                    <span class="badge bg-secondary">غير نشط</span>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                    {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% elif p == 4 and page > 5 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% elif p == total_pages - 3 and page < total_pages - 4 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
                     {% endif %}
-                </td>
-                <td>
-                    <a href="/trainer/{{ trainer.id }}" class="btn btn-sm btn-primary" title="تفاصيل">
-                        <i class="bi bi-eye"></i>
+                {% endfor %}
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&laquo;</span>
                     </a>
-                    <a href="/edit_trainer/{{ trainer.id }}" class="btn btn-sm btn-info" title="تعديل">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    <button class="btn btn-sm btn-danger" onclick="deleteTrainer({{ trainer.id }})" title="حذف">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
 </div>
-{% else %}
-<div class="alert alert-info text-center">
-    <i class="bi bi-person-badge" style="font-size:48px;display:block;"></i>
-    <h4>لا يوجد مدربين</h4>
-    <p>قم بإضافة مدرب جديد</p>
-    <a href="/add_trainer" class="btn btn-primary mt-2">➕ إضافة مدرب</a>
-</div>
-{% endif %}
 
 <script>
 function deleteTrainer(trainerId) {
@@ -110,4 +184,79 @@ function deleteTrainer(trainerId) {
     }
 }
 </script>
+
+<style>
+.stat-card-mini {
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    text-align: center;
+}
+.stat-card-mini .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card-mini .stat-label { font-size: 0.8rem; opacity: 0.8; }
+
+.table-wrapper {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.table-wrapper .table-modern {
+    font-size: 14px;
+}
+.table-wrapper .table-modern thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 12px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: inset 0 -2px 0 #e2e8f0;
+}
+.table-wrapper .table-modern tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.table-wrapper .table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+.btn-group .btn {
+    border-radius: 8px !important;
+    margin: 0 2px;
+}
+.pagination {
+    gap: 2px;
+}
+.pagination .page-link {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    transition: all 0.2s ease;
+}
+.pagination .page-link:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+.pagination .page-item.active .page-link {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: white;
+}
+.table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+</style>
 {% endblock %}
