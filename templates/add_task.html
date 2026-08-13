@@ -2,112 +2,172 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> {% if get_lang() == 'en' %}Add New Training{% else %}إضافة تدريب جديد{% endif %}</h4>
+    <div class="col-lg-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-gradient-primary text-white rounded-top-4 py-3">
+                <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i> إضافة تدريب جديد</h4>
             </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Client{% else %}العميل{% endif %} <span class="text-danger">*</span></label>
-                            <select name="client_id" class="form-select" required>
-                                <option value="">{% if get_lang() == 'en' %}Select Client{% else %}اختر العميل{% endif %}</option>
+            <div class="card-body p-4">
+                <form method="POST" id="addTaskForm">
+                    
+                    <!-- ===== معلومات التدريب ===== -->
+                    <div class="section-title">
+                        <i class="bi bi-info-circle me-2"></i> معلومات التدريب
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">العميل <span class="text-danger">*</span></label>
+                            <select name="client_id" class="form-select form-select-lg" required>
+                                <option value="">-- اختر العميل --</option>
                                 {% for client in clients %}
                                 <option value="{{ client.id }}">{{ client.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Trainer Responsible{% else %}المدرب المسؤول{% endif %} <span class="text-danger">*</span></label>
-                            <select name="assigned_to" class="form-select" required>
-                                <option value="">{% if get_lang() == 'en' %}Select Trainer{% else %}اختر المدرب{% endif %}</option>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">المدرب المسؤول <span class="text-danger">*</span></label>
+                            <select name="assigned_to" class="form-select form-select-lg" required>
+                                <option value="">-- اختر المدرب --</option>
                                 {% for trainer in trainers %}
                                 <option value="{{ trainer.id }}">{{ trainer.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">{% if get_lang() == 'en' %}Training Title{% else %}عنوان التدريب{% endif %} <span class="text-danger">*</span></label>
-                        <input type="text" name="title" class="form-control" required placeholder="{% if get_lang() == 'en' %}Enter training title{% else %}أدخل عنوان التدريب{% endif %}">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">{% if get_lang() == 'en' %}Description{% else %}الوصف{% endif %}</label>
-                        <textarea name="description" class="form-control" rows="3" placeholder="{% if get_lang() == 'en' %}Training description...{% else %}وصف التدريب...{% endif %}"></textarea>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Training Date{% else %}تاريخ التدريب{% endif %} <span class="text-danger">*</span></label>
-                            <input type="date" name="due_date" class="form-control" required>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">عنوان التدريب <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control form-control-lg" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Priority{% else %}الأولوية{% endif %}</label>
-                            <select name="priority" class="form-select">
-                                <option value="منخفضة">🟢 {% if get_lang() == 'en' %}Low{% else %}منخفضة{% endif %}</option>
-                                <option value="متوسطة" selected>🟡 {% if get_lang() == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
-                                <option value="عالية">🔴 {% if get_lang() == 'en' %}High{% else %}عالية{% endif %}</option>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">الوصف</label>
+                            <textarea name="description" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">تاريخ التدريب <span class="text-danger">*</span></label>
+                            <input type="date" name="due_date" class="form-control form-control-lg" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">الأولوية</label>
+                            <select name="priority" class="form-select form-select-lg">
+                                <option value="منخفضة">🟢 منخفضة</option>
+                                <option value="متوسطة" selected>🟡 متوسطة</option>
+                                <option value="عالية">🔴 عالية</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Meeting{% else %}موعد{% endif %}</label>
-                            <select name="meeting_id" class="form-select">
-                                <option value="">{% if get_lang() == 'en' %}No Meeting{% else %}بدون موعد{% endif %}</option>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">الموعد</label>
+                            <select name="meeting_id" class="form-select form-select-lg">
+                                <option value="">بدون موعد</option>
                                 {% for meeting in meetings %}
                                 <option value="{{ meeting.id }}">{{ meeting.title }} - {{ meeting.client_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{% if get_lang() == 'en' %}Training Group{% else %}مجموعة التدريب{% endif %}</label>
-                            <input type="text" name="task_group" class="form-control" placeholder="{% if get_lang() == 'en' %}Group name (optional){% else %}اسم المجموعة (اختياري){% endif %}">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">مجموعة التدريب</label>
+                            <input type="text" name="task_group" class="form-control form-control-lg" placeholder="اسم المجموعة (اختياري)">
                         </div>
                     </div>
 
+                    <hr>
+
                     <!-- ===== ربط الدفعة ===== -->
-                    <div class="card mt-3 mb-3 border border-info">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0"><i class="bi bi-link"></i> ربط بدفعة عقد</h5>
-                        </div>
+                    <div class="section-title">
+                        <i class="bi bi-link me-2"></i> ربط بدفعة عقد
+                    </div>
+                    <div class="card border-0 mb-4" style="background: #fefce8;">
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label">اختر الدفعة المرتبطة بالتدريب</label>
-                                <select name="contract_payment_id" class="form-select">
+                                <label class="form-label fw-bold">اختر الدفعة المرتبطة بالتدريب</label>
+                                <select name="contract_payment_id" class="form-select form-select-lg">
                                     <option value="">-- بدون ربط --</option>
                                     {% for payment in available_payments %}
                                     <option value="{{ payment.id }}">
-                                        {{ payment.contract_number }} - دفعة {{ payment.installment_number }} ({{ payment.amount }} ر.س)
-                                        {% if payment.status == 'مستحقة' %}- مستحقة{% endif %}
-                                        {% if payment.status == 'مدفوعة جزئيا' %}- مدفوعة جزئياً{% endif %}
+                                        {{ payment.contract_number }} - دفعة {{ payment.installment_number }} 
+                                        ({{ payment.amount }} ر.س)
+                                        {% if payment.status == 'مستحقة' %}🟡 مستحقة{% endif %}
+                                        {% if payment.status == 'مدفوعة جزئيا' %}🟠 مدفوعة جزئياً{% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <small class="text-muted">
-                                    💡 عند اكتمال هذا التدريب، سيتم تفعيل الدفعة المختارة تلقائياً
-                                </small>
+                                <small class="text-muted">💡 عند اكتمال هذا التدريب، سيتم تفعيل الدفعة المختارة تلقائياً</small>
                             </div>
-                            {% if not available_payments %}
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle"></i>
-                                لا توجد دفعات متاحة للربط. قم بإضافة عقود ودفعات أولاً.
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
-                    
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bi bi-check-circle"></i> {% if get_lang() == 'en' %}Add Training{% else %}إضافة تدريب{% endif %}
-                    </button>
+
+                    <!-- ===== أزرار التحكم ===== -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success flex-grow-1 py-2">
+                            <i class="bi bi-check-circle me-2"></i> إضافة التدريب
+                        </button>
+                        <a href="/tasks" class="btn btn-outline-secondary py-2">
+                            <i class="bi bi-arrow-right me-2"></i> رجوع
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// إضافة تحقق من التاريخ
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('addTaskForm');
+    const dueDateInput = document.querySelector('input[name="due_date"]');
+    form.addEventListener('submit', function(e) {
+        const dueDate = new Date(dueDateInput.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dueDate < today) {
+            if (!confirm('⚠️ التاريخ المحدد قد مضى. هل أنت متأكد من أنك تريد المتابعة؟')) {
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+}
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a237e;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.form-control-lg, .form-select-lg {
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+.form-control-lg:focus, .form-select-lg:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
+.btn-outline-secondary {
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+.btn-outline-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+</style>
 {% endblock %}

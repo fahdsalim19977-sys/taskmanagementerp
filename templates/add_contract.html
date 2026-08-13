@@ -3,17 +3,21 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> إضافة عقد جديد</h4>
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-gradient-primary text-white rounded-top-4 py-3">
+                <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i> إضافة عقد جديد</h4>
             </div>
-            <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data" id="addContractForm">
+                    
                     <!-- ===== معلومات أساسية ===== -->
-                    <div class="row g-3">
+                    <div class="section-title">
+                        <i class="bi bi-info-circle me-2"></i> معلومات العقد
+                    </div>
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label">العميل <span class="text-danger">*</span></label>
-                            <select name="client_id" class="form-select" required>
+                            <label class="form-label fw-bold">العميل <span class="text-danger">*</span></label>
+                            <select name="client_id" class="form-select form-select-lg" required>
                                 <option value="">-- اختر العميل --</option>
                                 {% for client in clients %}
                                 <option value="{{ client.id }}">{{ client.name }} ({{ client.company_name or 'بدون شركة' }})</option>
@@ -21,8 +25,8 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">نوع العقد</label>
-                            <select name="contract_type_id" class="form-select">
+                            <label class="form-label fw-bold">نوع العقد</label>
+                            <select name="contract_type_id" class="form-select form-select-lg">
                                 <option value="">-- اختر نوع العقد --</option>
                                 {% for type in contract_types %}
                                 <option value="{{ type.id }}">{{ type.name }}</option>
@@ -30,32 +34,32 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">رقم العقد <span class="text-danger">*</span></label>
-                            <input type="text" name="contract_number" class="form-control" required placeholder="مثال: CONT-001">
+                            <label class="form-label fw-bold">رقم العقد <span class="text-danger">*</span></label>
+                            <input type="text" name="contract_number" class="form-control form-control-lg" required placeholder="مثال: CONT-001">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">عنوان العقد <span class="text-danger">*</span></label>
-                            <input type="text" name="title" class="form-control" required>
+                            <label class="form-label fw-bold">عنوان العقد <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control form-control-lg" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">الوصف</label>
+                            <label class="form-label fw-bold">الوصف</label>
                             <textarea name="description" class="form-control" rows="2"></textarea>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
-                            <input type="date" name="start_date" class="form-control" required>
+                            <label class="form-label fw-bold">تاريخ البداية <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date" class="form-control form-control-lg" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
-                            <input type="date" name="end_date" class="form-control" required>
+                            <label class="form-label fw-bold">تاريخ النهاية <span class="text-danger">*</span></label>
+                            <input type="date" name="end_date" class="form-control form-control-lg" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">قيمة العقد (ر.س)</label>
-                            <input type="number" name="contract_value" class="form-control" value="0" step="0.01">
+                            <label class="form-label fw-bold">قيمة العقد (ر.س)</label>
+                            <input type="number" name="contract_value" class="form-control form-control-lg" value="0" step="0.01">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">الحالة</label>
-                            <select name="status" class="form-select">
+                            <label class="form-label fw-bold">الحالة</label>
+                            <select name="status" class="form-select form-select-lg">
                                 <option value="نشط">نشط</option>
                                 <option value="معلق">معلق</option>
                                 <option value="منتهي">منتهي</option>
@@ -63,7 +67,7 @@
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">ملاحظات</label>
+                            <label class="form-label fw-bold">ملاحظات</label>
                             <textarea name="notes" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
@@ -71,58 +75,62 @@
                     <hr>
 
                     <!-- ===== المديولات المرتبطة ===== -->
-                    <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-grid text-info"></i> المديولات المرتبطة</label>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" 
-                                    type="button" id="moduleDropdown" 
-                                    data-bs-toggle="dropdown" aria-expanded="false"
-                                    style="border-radius: 12px; padding: 10px 16px; min-height: 48px; background: white;">
-                                <span id="selectedModulesText" style="color: #6c757d;">اختر المديولات</span>
-                            </button>
-                            <ul class="dropdown-menu w-100 p-2" aria-labelledby="moduleDropdown" 
-                                style="max-height: 200px; overflow-y: auto; border-radius: 12px; border: 2px solid #e0e0e0;">
-                                {% if module_types %}
-                                    {% for module in module_types %}
-                                    <li>
-                                        <div class="form-check">
-                                            <input class="form-check-input module-checkbox" type="checkbox" 
-                                                   name="module_ids" value="{{ module.id }}" 
-                                                   id="module{{ module.id }}"
-                                                   onchange="updateModuleSelection()">
-                                            <label class="form-check-label" for="module{{ module.id }}">
-                                                {{ module.name }}
-                                                {% if module.price > 0 %}
-                                                <span class="badge bg-success ms-1">{{ module.price }} ر.س</span>
-                                                {% endif %}
-                                            </label>
-                                        </div>
-                                    </li>
-                                    {% endfor %}
-                                {% else %}
-                                    <li class="text-muted text-center">⚠️ لا توجد أنواع مديولات</li>
-                                {% endif %}
-                            </ul>
+                    <div class="section-title">
+                        <i class="bi bi-grid me-2"></i> المديولات المرتبطة
+                    </div>
+                    <div class="card border-0 mb-4" style="background: #f0f7ff;">
+                        <div class="card-body">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" 
+                                        type="button" id="moduleDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="border-radius: 12px; padding: 12px 16px;">
+                                    <span id="selectedModulesText" style="color: #6c757d;">اختر المديولات</span>
+                                </button>
+                                <ul class="dropdown-menu w-100 p-2" aria-labelledby="moduleDropdown" 
+                                    style="max-height: 200px; overflow-y: auto; border-radius: 12px;">
+                                    {% if module_types %}
+                                        {% for module in module_types %}
+                                        <li>
+                                            <div class="form-check">
+                                                <input class="form-check-input module-checkbox" type="checkbox" 
+                                                       name="module_ids" value="{{ module.id }}" 
+                                                       id="module{{ module.id }}"
+                                                       onchange="updateModuleSelection()">
+                                                <label class="form-check-label" for="module{{ module.id }}">
+                                                    {{ module.name }}
+                                                    {% if module.price > 0 %}
+                                                    <span class="badge bg-success ms-1">{{ module.price }} ر.س</span>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="text-muted text-center">⚠️ لا توجد أنواع مديولات</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            <small class="text-muted">💡 اختر مديول واحد أو أكثر من القائمة</small>
                         </div>
-                        <small class="text-muted">💡 اختر مديول واحد أو أكثر من القائمة</small>
                     </div>
 
                     <hr>
 
                     <!-- ===== جدولة الدفعات ===== -->
-                    <div class="card bg-light border-0 mb-3">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="bi bi-calendar-event"></i> جدولة الدفعات</h5>
-                        </div>
+                    <div class="section-title">
+                        <i class="bi bi-calendar-event me-2"></i> جدولة الدفعات
+                    </div>
+                    <div class="card border-0 mb-4" style="background: #fefce8;">
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">المبلغ الإجمالي للعقد (ر.س)</label>
-                                    <input type="number" name="total_amount" id="totalAmount" class="form-control" value="0" step="0.01" onchange="updateInstallments()">
+                                    <label class="form-label fw-bold">المبلغ الإجمالي للعقد (ر.س)</label>
+                                    <input type="number" name="total_amount" id="totalAmount" class="form-control form-control-lg" value="0" step="0.01" onchange="updateInstallments()">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">عدد الدفعات</label>
-                                    <input type="number" name="installment_count" id="installmentCount" class="form-control" value="1" min="1" max="12" onchange="updateInstallments()">
+                                    <label class="form-label fw-bold">عدد الدفعات</label>
+                                    <input type="number" name="installment_count" id="installmentCount" class="form-control form-control-lg" value="1" min="1" max="12" onchange="updateInstallments()">
                                 </div>
                             </div>
                             <div class="mt-3" id="installmentsContainer">
@@ -157,29 +165,37 @@
                         </div>
                     </div>
 
+                    <hr>
+
                     <!-- ===== المرفقات ===== -->
-                    <div class="card bg-light border-0 mb-3">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="bi bi-paperclip"></i> المرفقات</h5>
-                        </div>
+                    <div class="section-title">
+                        <i class="bi bi-paperclip me-2"></i> المرفقات
+                    </div>
+                    <div class="card border-0 mb-4" style="background: #f0f7ff;">
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">اختر ملفات</label>
-                                    <input type="file" name="attachments" class="form-control" multiple>
+                                    <label class="form-label fw-bold">اختر ملفات</label>
+                                    <input type="file" name="attachments" class="form-control form-control-lg" multiple>
                                     <small class="text-muted">يمكنك اختيار أكثر من ملف</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">وصف الملفات (اختياري)</label>
-                                    <input type="text" name="attachment_description" class="form-control" placeholder="مثال: مستندات العقد">
+                                    <label class="form-label fw-bold">وصف الملفات (اختياري)</label>
+                                    <input type="text" name="attachment_description" class="form-control form-control-lg" placeholder="مثال: مستندات العقد">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100 py-2">
-                        <i class="bi bi-check-circle"></i> إضافة العقد
-                    </button>
+                    <!-- ===== أزرار التحكم ===== -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success flex-grow-1 py-2">
+                            <i class="bi bi-check-circle me-2"></i> إضافة العقد
+                        </button>
+                        <a href="/contracts" class="btn btn-outline-secondary py-2">
+                            <i class="bi bi-arrow-right me-2"></i> رجوع
+                        </a>
+                    </div>
                 </form>
             </div>
         </div>
@@ -190,7 +206,6 @@
 function updateModuleSelection() {
     var checkboxes = document.querySelectorAll('.module-checkbox:checked');
     var textElement = document.getElementById('selectedModulesText');
-    
     if (checkboxes.length === 0) {
         textElement.textContent = 'اختر المديولات';
         textElement.style.color = '#6c757d';
@@ -212,14 +227,12 @@ function updateInstallments() {
     const tbody = document.getElementById('installmentsBody');
     const baseDate = new Date();
     baseDate.setMonth(baseDate.getMonth() + 1);
-
     let html = '';
     for (let i = 1; i <= count; i++) {
         const amount = (totalAmount / count).toFixed(2);
         const dueDate = new Date(baseDate);
         dueDate.setMonth(dueDate.getMonth() + (i - 1));
         const dateStr = dueDate.toISOString().split('T')[0];
-
         html += `
             <tr>
                 <td>${i}</td>
@@ -245,39 +258,45 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+}
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a237e;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.form-control-lg, .form-select-lg {
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+.form-control-lg:focus, .form-select-lg:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
 .btn-outline-secondary {
-    border: 2px solid #e0e0e0 !important;
-    transition: all 0.3s ease !important;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
 }
 .btn-outline-secondary:hover {
-    border-color: #2563EB !important;
-    background: #f8f9fa !important;
-}
-.dropdown-menu {
-    padding: 8px !important;
-}
-.dropdown-menu .form-check {
-    padding: 6px 8px !important;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
-}
-.dropdown-menu .form-check:hover {
-    background: #f0f2f5 !important;
-}
-.dropdown-menu .form-check-input:checked {
-    background-color: #2563EB !important;
-    border-color: #2563EB !important;
-}
-.dropdown-menu::-webkit-scrollbar {
-    width: 6px;
-}
-.dropdown-menu::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-.dropdown-menu::-webkit-scrollbar-thumb {
-    background: #2563EB;
-    border-radius: 10px;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
 }
 </style>
 {% endblock %}
