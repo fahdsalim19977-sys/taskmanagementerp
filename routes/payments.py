@@ -1,53 +1,84 @@
 # routes/payments.py
-from flask import render_template, request, redirect, url_for, session, flash
+from flask import render_template, request, redirect, url_for, session, flash, send_file
+from datetime import datetime
 from models import get_db
 from routes import payments_bp
 from utils import log_activity
+import math
+import pandas as pd
+from io import BytesIO
 
 @payments_bp.route('/all_payments')
 def all_payments():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    search_term = request.args.get('q', '').strip()
+    # ===== خيارات العرض والترقيم =====
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '')
+    
+    if per_page == 0 or per_page == 999999:
+        per_page = 999999
+        page = 1
+    
     conn = get_db()
     
-    if search_term:
-        payments = conn.execute('''
-            SELECT client_payments.*, 
-                   clients.name as client_name, 
-                   clients.company_name,
-                   client_modules.name as module_name,
-                   users.name as created_by_name,
-                   GROUP_CONCAT(trainers.name, ', ') as trainer_names
-            FROM client_payments
-            LEFT JOIN clients ON client_payments.client_id = clients.id
-            LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
-            LEFT JOIN users ON client_payments.created_by = users.id
-            LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
-            LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
-            WHERE clients.name LIKE ? OR clients.company_name LIKE ?
-            GROUP BY client_payments.id
-            ORDER BY client_payments.created_at DESC
-        ''', (f'%{search_term}%', f'%{search_term}%')).fetchall()
-    else:
-        payments = conn.execute('''
-            SELECT client_payments.*, 
-                   clients.name as client_name, 
-                   clients.company_name,
-                   client_modules.name as module_name,
-                   users.name as created_by_name,
-                   GROUP_CONCAT(trainers.name, ', ') as trainer_names
-            FROM client_payments
-            LEFT JOIN clients ON client_payments.client_id = clients.id
-            LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
-            LEFT JOIN users ON client_payments.created_by = users.id
-            LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
-            LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
-            GROUP BY client_payments.id
-            ORDER BY client_payments.created_at DESC
-        ''').fetchall()
+    # ===== بناء الاستعلام =====
+    query = '''
+        SELECT client_payments.*, 
+               clients.name as client_name, 
+               clients.company_name,
+               client_modules.name as module_name,
+               users.name as created_by_name
+        FROM client_payments
+        LEFT JOIN clients ON client_payments.client_id = clients.id
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE 1=1
+    '''
+    params = []
     
+    if search:
+        query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR client_payments.invoice_number LIKE ?)'
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    if status_filter:
+        query += ' AND client_payments.status = ?'
+        params.append(status_filter)
+    
+    query += ' ORDER BY client_payments.created_at DESC'
+    
+    # ===== إجمالي النتائج =====
+    count_query = '''
+        SELECT COUNT(*) as count
+        FROM client_payments
+        LEFT JOIN clients ON client_payments.client_id = clients.id
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        LEFT JOIN users ON client_payments.created_by = users.id
+        WHERE 1=1
+    '''
+    count_params = []
+    if search:
+        count_query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR client_payments.invoice_number LIKE ?)'
+        count_params.extend([search_param, search_param, search_param])
+    if status_filter:
+        count_query += ' AND client_payments.status = ?'
+        count_params.append(status_filter)
+    
+    total = conn.execute(count_query, count_params).fetchone()['count']
+    
+    # ===== ترقيم =====
+    if per_page != 999999:
+        query += ' LIMIT ? OFFSET ?'
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+    
+    payments = conn.execute(query, params).fetchall()
+    
+    # ===== إحصائيات =====
     stats = conn.execute('''
         SELECT 
             COUNT(*) as total_count,
@@ -58,10 +89,65 @@ def all_payments():
     ''').fetchone()
     conn.close()
     
+    total_pages = math.ceil(total / per_page) if per_page != 999999 and total > 0 else 1
+    per_page_options = [10, 25, 50, 100]
+    
     return render_template('all_payments.html', 
                          payments=payments, 
                          stats=stats,
-                         search_term=search_term)
+                         page=page,
+                         total_pages=total_pages,
+                         total=total,
+                         per_page=per_page,
+                         per_page_options=per_page_options,
+                         search=search,
+                         status_filter=status_filter)
+
+
+@payments_bp.route('/export_all_payments_excel')
+def export_all_payments_excel():
+    """تصدير جميع المدفوعات إلى Excel"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    payments = conn.execute('''
+        SELECT client_payments.*, 
+               clients.name as client_name, 
+               clients.company_name,
+               client_modules.name as module_name
+        FROM client_payments
+        LEFT JOIN clients ON client_payments.client_id = clients.id
+        LEFT JOIN client_modules ON client_payments.module_id = client_modules.id
+        ORDER BY client_payments.created_at DESC
+    ''').fetchall()
+    conn.close()
+    
+    data = []
+    for p in payments:
+        data.append({
+            'العميل': p['client_name'],
+            'الشركة': p['company_name'] or '',
+            'المبلغ': p['amount'],
+            'تاريخ الدفع': p['payment_date'],
+            'تاريخ الاستحقاق': p['due_date'] or '',
+            'طريقة الدفع': p['payment_method'],
+            'الحالة': p['status'],
+            'رقم الفاتورة': p['invoice_number'] or '',
+            'الملاحظات': p['notes'] or ''
+        })
+    
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='المدفوعات')
+    output.seek(0)
+    
+    return send_file(output, 
+                     download_name=f'مدفوعات_{datetime.now().strftime("%Y%m%d")}.xlsx',
+                     as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 
 @payments_bp.route('/add_payment_global', methods=['GET', 'POST'])
 def add_payment_global():
@@ -119,6 +205,7 @@ def add_payment_global():
     conn.close()
     return render_template('add_payment_global.html', clients=clients, modules=modules)
 
+
 @payments_bp.route('/edit_payment/<int:payment_id>', methods=['GET', 'POST'])
 def edit_payment(payment_id):
     if 'user_id' not in session:
@@ -158,6 +245,7 @@ def edit_payment(payment_id):
     conn.close()
     return render_template('edit_payment.html', payment=payment)
 
+
 @payments_bp.route('/delete_payment/<int:payment_id>', methods=['POST'])
 def delete_payment(payment_id):
     if 'user_id' not in session:
@@ -178,6 +266,7 @@ def delete_payment(payment_id):
     log_activity(session['user_id'], 'حذف دفعة', f'حذف دفعة {payment_id}')
     return redirect(url_for('payments_bp.all_payments'))
 
+
 @payments_bp.route('/client_payments/<int:client_id>')
 def client_payments(client_id):
     if 'user_id' not in session:
@@ -188,7 +277,7 @@ def client_payments(client_id):
     if not client:
         flash('❌ العميل غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     payments = conn.execute('''
         SELECT client_payments.*, 
