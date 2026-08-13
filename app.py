@@ -300,7 +300,88 @@ def delete_trainer_page(trainer_id):
     conn.close()
     
     flash('تم حذف المدرب بنجاح', 'success')
-    return redirect(url_for('trainers_page'))                        
+    return redirect(url_for('trainers_page'))
+# ============================================================
+# ===== أنواع العقود - مسارات مباشرة =====
+# ============================================================
+
+@app.route('/contract_types')
+def contract_types_page():
+    """عرض أنواع العقود"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    types = conn.execute('SELECT * FROM contract_types ORDER BY name').fetchall()
+    conn.close()
+    return render_template('contract_types.html', types=types)
+
+
+@app.route('/add_contract_type', methods=['POST'])
+def add_contract_type():
+    """إضافة نوع عقد جديد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    
+    if not name:
+        flash('❌ اسم نوع العقد مطلوب', 'danger')
+        return redirect(url_for('contract_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO contract_types (name, description)
+        VALUES (?, ?)
+    ''', (name, description))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم إضافة نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))
+
+
+@app.route('/edit_contract_type/<int:type_id>', methods=['POST'])
+def edit_contract_type(type_id):
+    """تعديل نوع عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    is_active = 1 if request.form.get('is_active') else 0
+    
+    if not name:
+        flash('❌ اسم نوع العقد مطلوب', 'danger')
+        return redirect(url_for('contract_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE contract_types 
+        SET name = ?, description = ?, is_active = ?
+        WHERE id = ?
+    ''', (name, description, is_active, type_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))
+
+
+@app.route('/delete_contract_type/<int:type_id>', methods=['POST'])
+def delete_contract_type(type_id):
+    """حذف نوع عقد"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    conn.execute('DELETE FROM contract_types WHERE id = ?', (type_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف نوع العقد بنجاح', 'success')
+    return redirect(url_for('contract_types_page'))                            
 
 
 # ===== البحث الشامل =====
