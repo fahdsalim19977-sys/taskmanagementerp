@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for, session, flash
 from models import get_db
 from routes import modules_bp
 from utils import check_role, log_activity
+import math
 
 @modules_bp.route('/module_types')
 def module_types():
@@ -10,10 +11,58 @@ def module_types():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    # ===== خيارات العرض والترقيم =====
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '').strip()
+    
+    if per_page == 0 or per_page == 999999:
+        per_page = 999999
+        page = 1
+    
     conn = get_db()
-    types = conn.execute('SELECT * FROM module_types ORDER BY name').fetchall()
+    
+    # ===== بناء الاستعلام =====
+    query = 'SELECT * FROM module_types WHERE 1=1'
+    params = []
+    
+    if search:
+        query += ' AND (name LIKE ? OR description LIKE ?)'
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param])
+    
+    query += ' ORDER BY name'
+    
+    # ===== إجمالي النتائج =====
+    count_query = 'SELECT COUNT(*) as count FROM module_types WHERE 1=1'
+    count_params = []
+    if search:
+        count_query += ' AND (name LIKE ? OR description LIKE ?)'
+        count_params.extend([search_param, search_param])
+    
+    total = conn.execute(count_query, count_params).fetchone()['count']
+    
+    # ===== ترقيم =====
+    if per_page != 999999:
+        query += ' LIMIT ? OFFSET ?'
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+    
+    types = conn.execute(query, params).fetchall()
     conn.close()
-    return render_template('module_types.html', types=types)
+    
+    total_pages = math.ceil(total / per_page) if per_page != 999999 and total > 0 else 1
+    per_page_options = [10, 25, 50, 100]
+    
+    return render_template('module_types.html', 
+                         types=types,
+                         page=page,
+                         total_pages=total_pages,
+                         total=total,
+                         per_page=per_page,
+                         per_page_options=per_page_options,
+                         search=search)
+
 
 @modules_bp.route('/add_module_type', methods=['POST'])
 def add_module_type():
@@ -27,7 +76,7 @@ def add_module_type():
     
     if not name:
         flash('❌ اسم المديول مطلوب', 'danger')
-        return redirect(url_for('modules_bp.module_types'))
+        return redirect(url_for('modules.module_types'))
     
     conn = get_db()
     conn.execute('''
@@ -39,7 +88,8 @@ def add_module_type():
     
     flash('✅ تم إضافة نوع المديول بنجاح', 'success')
     log_activity(session['user_id'], 'إضافة نوع مديول', f'أضاف {name}')
-    return redirect(url_for('modules_bp.module_types'))
+    return redirect(url_for('modules.module_types'))
+
 
 @modules_bp.route('/edit_module_type/<int:type_id>', methods=['POST'])
 def edit_module_type(type_id):
@@ -62,7 +112,8 @@ def edit_module_type(type_id):
     
     flash('✅ تم تحديث نوع المديول بنجاح', 'success')
     log_activity(session['user_id'], 'تحديث نوع مديول', f'حدث {name}')
-    return redirect(url_for('modules_bp.module_types'))
+    return redirect(url_for('modules.module_types'))
+
 
 @modules_bp.route('/delete_module_type/<int:type_id>', methods=['POST'])
 def delete_module_type(type_id):
@@ -77,7 +128,8 @@ def delete_module_type(type_id):
     
     flash('✅ تم حذف نوع المديول بنجاح', 'success')
     log_activity(session['user_id'], 'حذف نوع مديول', f'حذف نوع {type_id}')
-    return redirect(url_for('modules_bp.module_types'))
+    return redirect(url_for('modules.module_types'))
+
 
 @modules_bp.route('/client_modules/<int:client_id>')
 def client_modules(client_id):
@@ -90,7 +142,7 @@ def client_modules(client_id):
     if not client:
         flash('❌ العميل غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     modules = conn.execute('''
         SELECT * FROM client_modules 
@@ -100,6 +152,7 @@ def client_modules(client_id):
     conn.close()
     
     return render_template('client_modules.html', client=client, modules=modules)
+
 
 @modules_bp.route('/add_module/<int:client_id>', methods=['GET', 'POST'])
 def add_module(client_id):
@@ -112,7 +165,7 @@ def add_module(client_id):
     if not client:
         flash('❌ العميل غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('clients_bp.clients'))
+        return redirect(url_for('clients.clients'))
     
     if request.method == 'POST':
         name = request.form['name']
@@ -131,10 +184,11 @@ def add_module(client_id):
         
         flash('✅ تم إضافة المديول بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة مديول', f'أضاف {name} للعميل {client["name"]}')
-        return redirect(url_for('modules_bp.client_modules', client_id=client_id))
+        return redirect(url_for('modules.client_modules', client_id=client_id))
     
     conn.close()
     return render_template('add_module.html', client=client)
+
 
 @modules_bp.route('/edit_module/<int:module_id>', methods=['GET', 'POST'])
 def edit_module(module_id):
@@ -147,7 +201,7 @@ def edit_module(module_id):
     if not module:
         flash('❌ المديول غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('modules_bp.all_modules'))
+        return redirect(url_for('modules.all_modules'))
     
     if request.method == 'POST':
         name = request.form['name']
@@ -168,10 +222,11 @@ def edit_module(module_id):
         
         flash('✅ تم تحديث المديول بنجاح', 'success')
         log_activity(session['user_id'], 'تحديث مديول', f'حدث {name}')
-        return redirect(url_for('modules_bp.client_modules', client_id=module['client_id']))
+        return redirect(url_for('modules.client_modules', client_id=module['client_id']))
     
     conn.close()
     return render_template('edit_module.html', module=module)
+
 
 @modules_bp.route('/delete_module/<int:module_id>', methods=['POST'])
 def delete_module(module_id):
@@ -184,7 +239,7 @@ def delete_module(module_id):
     if not module:
         flash('❌ المديول غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('modules_bp.all_modules'))
+        return redirect(url_for('modules.all_modules'))
     
     client_id = module['client_id']
     conn.execute('DELETE FROM client_modules WHERE id = ?', (module_id,))
@@ -193,7 +248,8 @@ def delete_module(module_id):
     
     flash('✅ تم حذف المديول بنجاح', 'success')
     log_activity(session['user_id'], 'حذف مديول', f'حذف {module["name"]}')
-    return redirect(url_for('modules_bp.client_modules', client_id=client_id))
+    return redirect(url_for('modules.client_modules', client_id=client_id))
+
 
 @modules_bp.route('/add_module_global', methods=['GET', 'POST'])
 def add_module_global():
@@ -222,10 +278,11 @@ def add_module_global():
         
         flash('✅ تم إضافة المديول بنجاح', 'success')
         log_activity(session['user_id'], 'إضافة مديول', f'أضاف {name}')
-        return redirect(url_for('modules_bp.all_modules'))
+        return redirect(url_for('modules.all_modules'))
     
     conn.close()
     return render_template('add_module_global.html', clients=clients)
+
 
 @modules_bp.route('/all_modules')
 def all_modules():

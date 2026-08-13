@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for, session, flash, s
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
+import math
 from models import get_db
 from routes import tasks_bp
 from utils import log_activity, check_role
@@ -12,29 +13,101 @@ def tasks():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    # ===== خيارات العرض والترقيم =====
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '')
+    
+    if per_page == 0 or per_page == 999999:
+        per_page = 999999
+        page = 1
+    
     conn = get_db()
     user_role = session['user_role']
     
-    if user_role == 'موظف':
-        task_list = conn.execute('''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
-            FROM tasks 
-            JOIN clients ON tasks.client_id = clients.id 
-            JOIN trainers ON tasks.assigned_to = trainers.id 
-            WHERE tasks.assigned_to = ?
-            ORDER BY tasks.due_date ASC
-        ''', (session['user_id'],)).fetchall()
-    else:
-        task_list = conn.execute('''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
-            FROM tasks 
-            JOIN clients ON tasks.client_id = clients.id 
-            JOIN trainers ON tasks.assigned_to = trainers.id 
-            ORDER BY tasks.due_date ASC
-        ''').fetchall()
+    # ===== بناء الاستعلام =====
+    query = '''
+        SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN trainers ON tasks.assigned_to = trainers.id 
+        WHERE 1=1
+    '''
+    params = []
     
+    if user_role == 'موظف':
+        query += ' AND tasks.assigned_to = ?'
+        params.append(session['user_id'])
+    
+    if search:
+        query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR tasks.title LIKE ?)'
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    if status_filter:
+        query += ' AND tasks.status = ?'
+        params.append(status_filter)
+    
+    query += ' ORDER BY tasks.due_date ASC'
+    
+    # ===== إجمالي النتائج =====
+    count_query = '''
+        SELECT COUNT(*) as count
+        FROM tasks 
+        JOIN clients ON tasks.client_id = clients.id 
+        JOIN trainers ON tasks.assigned_to = trainers.id 
+        WHERE 1=1
+    '''
+    count_params = []
+    
+    if user_role == 'موظف':
+        count_query += ' AND tasks.assigned_to = ?'
+        count_params.append(session['user_id'])
+    
+    if search:
+        count_query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR tasks.title LIKE ?)'
+        count_params.extend([search_param, search_param, search_param])
+    
+    if status_filter:
+        count_query += ' AND tasks.status = ?'
+        count_params.append(status_filter)
+    
+    total = conn.execute(count_query, count_params).fetchone()['count']
+    
+    # ===== ترقيم =====
+    if per_page != 999999:
+        query += ' LIMIT ? OFFSET ?'
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+    
+    task_list = conn.execute(query, params).fetchall()
     conn.close()
-    return render_template('tasks.html', tasks=task_list, today=datetime.now().date())
+    
+    total_pages = math.ceil(total / per_page) if per_page != 999999 and total > 0 else 1
+    per_page_options = [10, 25, 50, 100]
+    
+    # ===== إحصائيات =====
+    conn = get_db()
+    stats = {
+        'total': conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count'],
+        'completed': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count'],
+        'in_progress': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count'],
+        'overdue': conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "متأخرة"').fetchone()['count']
+    }
+    conn.close()
+    
+    return render_template('tasks.html', 
+                         tasks=task_list,
+                         page=page,
+                         total_pages=total_pages,
+                         total=total,
+                         per_page=per_page,
+                         per_page_options=per_page_options,
+                         search=search,
+                         status_filter=status_filter,
+                         stats=stats,
+                         today=datetime.now().date())
 
 
 @tasks_bp.route('/add_task', methods=['GET', 'POST'])

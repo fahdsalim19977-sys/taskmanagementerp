@@ -4,24 +4,77 @@ from models import get_db
 from routes import clients_bp
 from utils import get_trainers, check_role, log_activity, get_company_settings
 from datetime import datetime
+import math
 
 @clients_bp.route('/clients')
 def clients():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
+    # ===== خيارات العرض والترقيم =====
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '').strip()
+    
+    if per_page == 0 or per_page == 999999:
+        per_page = 999999
+        page = 1
+    
     conn = get_db()
-    clients_list = conn.execute('''
+    
+    # ===== بناء الاستعلام =====
+    query = '''
         SELECT clients.*, 
                GROUP_CONCAT(trainers.name, ', ') as trainer_names
         FROM clients
         LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
         LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
-        GROUP BY clients.id
-        ORDER BY clients.name
-    ''').fetchall()
+        WHERE 1=1
+    '''
+    params = []
+    
+    if search:
+        query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR clients.phone LIKE ?)'
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    query += ' GROUP BY clients.id ORDER BY clients.name'
+    
+    # ===== إجمالي النتائج =====
+    count_query = '''
+        SELECT COUNT(DISTINCT clients.id) as count
+        FROM clients
+        LEFT JOIN client_trainers ON clients.id = client_trainers.client_id
+        LEFT JOIN trainers ON client_trainers.trainer_id = trainers.id
+        WHERE 1=1
+    '''
+    count_params = []
+    if search:
+        count_query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR clients.phone LIKE ?)'
+        count_params.extend([search_param, search_param, search_param])
+    
+    total = conn.execute(count_query, count_params).fetchone()['count']
+    
+    # ===== ترقيم =====
+    if per_page != 999999:
+        query += ' LIMIT ? OFFSET ?'
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+    
+    clients_list = conn.execute(query, params).fetchall()
     conn.close()
-    return render_template('clients.html', clients=clients_list)
+    
+    total_pages = math.ceil(total / per_page) if per_page != 999999 and total > 0 else 1
+    per_page_options = [10, 25, 50, 100]
+    
+    return render_template('clients.html', 
+                         clients=clients_list,
+                         page=page,
+                         total_pages=total_pages,
+                         total=total,
+                         per_page=per_page,
+                         per_page_options=per_page_options,
+                         search=search)
 
 
 @clients_bp.route('/add_client', methods=['GET', 'POST'])
