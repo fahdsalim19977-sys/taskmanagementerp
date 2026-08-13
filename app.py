@@ -1,12 +1,12 @@
 # app.py
 import os
+import math
 from flask import Flask, render_template, redirect, url_for, session, flash, jsonify, request
 from config import Config
 from models import init_db, get_db
 from utils import get_company_settings, get_lang, t, log_activity
 from datetime import datetime
-import math  # ✅ أضف هذا
-from flask import Flask, render_template, redirect, url_for, session, flash, jsonify, request
+from routes import trainers_bp
 
 # ===== إنشاء التطبيق =====
 app = Flask(__name__)
@@ -52,7 +52,9 @@ def utility_processor():
         'settings': settings
     }
 
+# ============================================================
 # ===== الصفحة الرئيسية =====
+# ============================================================
 @app.route('/')
 def index():
     if 'user_id' not in session:
@@ -60,7 +62,6 @@ def index():
     
     conn = get_db()
     
-    # إحصائيات المهام
     total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
     completed_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
     overdue_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
@@ -71,7 +72,6 @@ def index():
     total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
     total_payments = conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count'] or 0
     
-    # إحصائيات العقود
     total_contracts = conn.execute('SELECT COUNT(*) as count FROM client_contracts').fetchone()['count'] or 0
     contracts_paid_full = conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = "مدفوع بالكامل"').fetchone()['count'] or 0
     contracts_partial = conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = "مدفوع جزئيا"').fetchone()['count'] or 0
@@ -80,7 +80,6 @@ def index():
     contracts_paid_percent = round((contracts_paid_full / total_contracts * 100) if total_contracts > 0 else 0, 1)
     contracts_partial_due = conn.execute('SELECT SUM(total_amount - paid_amount) as total FROM client_contracts WHERE payment_status = "مدفوع جزئيا"').fetchone()['total'] or 0
     
-    # آخر 5 عقود
     recent_contracts = conn.execute('''
         SELECT client_contracts.*, clients.name as client_name
         FROM client_contracts
@@ -88,7 +87,6 @@ def index():
         ORDER BY client_contracts.created_at DESC LIMIT 5
     ''').fetchall()
     
-    # الدفعات المستحقة هذا الشهر
     current_month = datetime.now().strftime('%Y-%m')
     due_this_month = conn.execute('''
         SELECT contract_payments.*, client_contracts.contract_number,
@@ -101,7 +99,6 @@ def index():
         ORDER BY contract_payments.due_date ASC
     ''', (current_month,)).fetchall()
     
-    # الدفعات المتأخرة
     overdue_payments = conn.execute('''
         SELECT contract_payments.*, client_contracts.contract_number,
                clients.name as client_name
@@ -119,7 +116,6 @@ def index():
         AND strftime('%Y-%m', due_date) = ?
     ''', (current_month,)).fetchone()['total'] or 0
     
-    # المهام المتأخرة
     overdue_list = conn.execute('''
         SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
         FROM tasks 
@@ -163,9 +159,7 @@ def index():
                          overdue_list=overdue_list,
                          recent_activity=recent_activity,
                          settings=settings)
-# ============================================================
-# ===== المدربين - مسارات مباشرة =====
-# ============================================================
+
 
 # ============================================================
 # ===== Dashboard =====
@@ -263,12 +257,16 @@ def dashboard():
                          settings=settings,
                          datetime=datetime)
 
+
+# ============================================================
+# ===== المدربين - مسارات مباشرة =====
+# ============================================================
+
 @app.route('/trainers')
 def trainers_page():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    # ===== خيارات العرض والترقيم =====
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     search = request.args.get('search', '').strip()
@@ -279,7 +277,6 @@ def trainers_page():
     
     conn = get_db()
     
-    # ===== بناء الاستعلام =====
     query = '''
         SELECT t.*, COUNT(ct.client_id) as client_count 
         FROM trainers t
@@ -295,7 +292,6 @@ def trainers_page():
     
     query += ' GROUP BY t.id ORDER BY t.name'
     
-    # ===== إجمالي النتائج =====
     count_query = '''
         SELECT COUNT(DISTINCT t.id) as count
         FROM trainers t
@@ -309,7 +305,6 @@ def trainers_page():
     
     total = conn.execute(count_query, count_params).fetchone()['count']
     
-    # ===== ترقيم =====
     if per_page != 999999:
         query += ' LIMIT ? OFFSET ?'
         offset = (page - 1) * per_page
@@ -449,13 +444,55 @@ def delete_trainer_page(trainer_id):
     
     flash('تم حذف المدرب بنجاح', 'success')
     return redirect(url_for('trainers_page'))
+
+
 # ============================================================
-# ===== أنواع العقود - مسارات مباشرة =====
+# ===== مهام العميل - مسار مباشر =====
+# ============================================================
+
+@app.route('/client_tasks/<int:client_id>')
+def client_tasks_page(client_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    
+    client = conn.execute('SELECT * FROM clients WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        flash('❌ العميل غير موجود', 'danger')
+        return redirect(url_for('clients.clients'))
+    
+    tasks = conn.execute('''
+        SELECT tasks.*, trainers.name as assigned_name
+        FROM tasks
+        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
+        WHERE tasks.client_id = ?
+        ORDER BY tasks.due_date ASC
+    ''', (client_id,)).fetchall()
+    conn.close()
+    
+    stats = {
+        'total': len(tasks),
+        'completed': len([t for t in tasks if t['status'] == 'مكتملة']),
+        'in_progress': len([t for t in tasks if t['status'] == 'قيد التنفيذ']),
+        'overdue': len([t for t in tasks if t['status'] == 'متأخرة']),
+        'not_started': len([t for t in tasks if t['status'] == 'لم تبدأ'])
+    }
+    
+    return render_template('client_tasks.html', 
+                         client=client, 
+                         tasks=tasks, 
+                         stats=stats,
+                         today=datetime.now().date())
+
+
+# ============================================================
+# ===== أنواع العقود والموديولات - مسارات مباشرة =====
 # ============================================================
 
 @app.route('/contract_types')
 def contract_types_page():
-    """عرض أنواع العقود"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -467,7 +504,6 @@ def contract_types_page():
 
 @app.route('/add_contract_type', methods=['POST'])
 def add_contract_type():
-    """إضافة نوع عقد جديد"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -492,7 +528,6 @@ def add_contract_type():
 
 @app.route('/edit_contract_type/<int:type_id>', methods=['POST'])
 def edit_contract_type(type_id):
-    """تعديل نوع عقد"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -519,7 +554,6 @@ def edit_contract_type(type_id):
 
 @app.route('/delete_contract_type/<int:type_id>', methods=['POST'])
 def delete_contract_type(type_id):
-    """حذف نوع عقد"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -529,13 +563,92 @@ def delete_contract_type(type_id):
     conn.close()
     
     flash('✅ تم حذف نوع العقد بنجاح', 'success')
-    return redirect(url_for('contract_types_page'))                            
+    return redirect(url_for('contract_types_page'))
 
 
+@app.route('/module_types')
+def module_types_page():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    types = conn.execute('SELECT * FROM module_types ORDER BY name').fetchall()
+    conn.close()
+    return render_template('module_types.html', types=types)
+
+
+@app.route('/add_module_type', methods=['POST'])
+def add_module_type():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
+    
+    if not name:
+        flash('❌ اسم المديول مطلوب', 'danger')
+        return redirect(url_for('module_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        INSERT INTO module_types (name, description, price)
+        VALUES (?, ?, ?)
+    ''', (name, description, price))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم إضافة نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+@app.route('/edit_module_type/<int:type_id>', methods=['POST'])
+def edit_module_type(type_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '')
+    price = request.form.get('price', 0)
+    is_active = 1 if request.form.get('is_active') else 0
+    
+    if not name:
+        flash('❌ اسم المديول مطلوب', 'danger')
+        return redirect(url_for('module_types_page'))
+    
+    conn = get_db()
+    conn.execute('''
+        UPDATE module_types 
+        SET name = ?, description = ?, price = ?, is_active = ?
+        WHERE id = ?
+    ''', (name, description, price, is_active, type_id))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم تحديث نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+@app.route('/delete_module_type/<int:type_id>', methods=['POST'])
+def delete_module_type(type_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    conn = get_db()
+    conn.execute('DELETE FROM module_types WHERE id = ?', (type_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('✅ تم حذف نوع المديول بنجاح', 'success')
+    return redirect(url_for('module_types_page'))
+
+
+# ============================================================
 # ===== البحث الشامل =====
+# ============================================================
+
 @app.route('/global_search')
 def global_search():
-    """بحث شامل في جميع الجداول"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -555,7 +668,6 @@ def global_search():
     
     search_term = f'%{query}%'
     
-    # ===== البحث في العملاء =====
     clients = conn.execute('''
         SELECT id, name, company_name, phone, email, 'client' as type
         FROM clients
@@ -564,7 +676,6 @@ def global_search():
     ''', (search_term, search_term, search_term, search_term)).fetchall()
     results['clients'] = clients
     
-    # ===== البحث في العقود =====
     contracts = conn.execute('''
         SELECT client_contracts.id, client_contracts.contract_number, client_contracts.title,
                clients.name as client_name, clients.company_name,
@@ -579,7 +690,6 @@ def global_search():
     ''', (search_term, search_term, search_term, search_term)).fetchall()
     results['contracts'] = contracts
     
-    # ===== البحث في المدفوعات =====
     payments = conn.execute('''
         SELECT client_payments.id, client_payments.amount, client_payments.payment_date,
                clients.name as client_name, clients.company_name,
@@ -593,7 +703,6 @@ def global_search():
     ''', (search_term, search_term, search_term)).fetchall()
     results['payments'] = payments
     
-    # ===== البحث في التدريبات =====
     tasks = conn.execute('''
         SELECT tasks.id, tasks.title, tasks.status, tasks.due_date,
                clients.name as client_name, clients.company_name,
@@ -610,7 +719,6 @@ def global_search():
     ''', (search_term, search_term, search_term, search_term)).fetchall()
     results['tasks'] = tasks
     
-    # ===== البحث في المدربين =====
     trainers = conn.execute('''
         SELECT id, name, phone, email, specialty, 'trainer' as type
         FROM trainers
@@ -627,67 +735,21 @@ def global_search():
                          results=results, 
                          query=query,
                          total_results=total_results)
-                         
-# ===== API: جلب دفعات العميل =====
-@app.route('/api/client-payments/<int:client_id>')
-def get_client_payments(client_id):
-    """جلب دفعات العميل لتظهر في قائمة التدريبات"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    conn = get_db()
-    payments = conn.execute('''
-        SELECT contract_payments.*, 
-               client_contracts.contract_number
-        FROM contract_payments
-        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
-        WHERE client_contracts.client_id = ?
-        ORDER BY contract_payments.due_date ASC
-    ''', (client_id,)).fetchall()
-    conn.close()
-    
-    payments_list = []
-    for p in payments:
-        payments_list.append({
-            'id': p['id'],
-            'contract_number': p['contract_number'],
-            'installment_number': p['installment_number'],
-            'amount': p['amount'],
-            'due_date': p['due_date'],
-            'status': p['status']
-        })
-    
-    return jsonify({'payments': payments_list})
-
-@app.route('/api/task-groups')
-def get_task_groups():
-    """جلب مجموعات التدريبات حسب العميل"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    client_id = request.args.get('client_id')
-    if not client_id:
-        return jsonify({'groups': []})
-    
-    conn = get_db()
-    groups = conn.execute('''
-        SELECT DISTINCT task_group 
-        FROM tasks 
-        WHERE client_id = ? AND task_group IS NOT NULL AND task_group != ''
-        ORDER BY task_group
-    ''', (client_id,)).fetchall()
-    conn.close()
-    
-    return jsonify({'groups': [g['task_group'] for g in groups]})                         
 
 
+# ============================================================
 # ===== Health Check =====
+# ============================================================
+
 @app.route('/health')
 def health():
     return jsonify({"status": "ok", "message": "Application is running"}), 200
 
 
+# ============================================================
 # ===== معالج الأخطاء =====
+# ============================================================
+
 @app.errorhandler(404)
 def page_not_found(e):
     settings = get_company_settings()
@@ -700,22 +762,25 @@ def internal_server_error(e):
     return redirect(url_for('index'))
 
 
-# ===== Debug: عرض كل المسارات المسجلة =====
-@app.route('/show-routes')
-def show_routes():
-    routes = []
-    for rule in app.url_map.iter_rules():
-        routes.append(f"{rule.endpoint}: {rule.rule}")
-    return "<br>".join(sorted(routes))
+# ============================================================
+# ===== مسارات اختبار =====
+# ============================================================
+
+@app.route('/trainers-test')
+def trainers_test():
+    return "Trainers route is working! (test)"
 
 
-# ===== مسار اختبار =====
-@app.route('/test')
-def test():
-    return "✅ التطبيق شغال!"
+@app.route('/trainers-direct')
+def trainers_direct():
+    from routes.trainers import trainers_bp
+    return "Direct import test"
 
 
+# ============================================================
 # ===== تشغيل التطبيق =====
+# ============================================================
+
 if __name__ == '__main__':
     print("🚀 جاري تشغيل السيرفر...")
     print("📍 افتح المتصفح على: http://127.0.0.1:5000")
