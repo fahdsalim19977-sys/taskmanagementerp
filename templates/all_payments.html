@@ -2,17 +2,17 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-    <h2><i class="bi bi-coin text-primary"></i> المدفوعات</h2>
+    <h2><i class="bi bi-coin text-primary"></i> مدفوعات العملاء</h2>
     <div>
-        <a href="/add_payment_global" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> إضافة دفعة
-        </a>
-        <a href="/export_all_payments_excel" class="btn btn-success">
-            <i class="bi bi-file-excel"></i> Excel
-        </a>
         <button onclick="window.print()" class="btn btn-outline-secondary">
             <i class="bi bi-printer"></i> طباعة
         </button>
+        <a href="/export_all_payments_excel" class="btn btn-success">
+            <i class="bi bi-file-excel"></i> تصدير Excel
+        </a>
+        <a href="/add_payment_global" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> إضافة دفعة
+        </a>
     </div>
 </div>
 
@@ -44,30 +44,49 @@
     </div>
 </div>
 
-<!-- ===== بحث ===== -->
+<!-- ===== فلترة وبحث ===== -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="/all_payments" class="row g-3">
-            <div class="col-md-10">
+            <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="q" class="form-control border-start-0" 
-                           placeholder="ابحث باسم العميل أو الشركة..." 
-                           value="{{ search_term or '' }}">
+                    <input type="text" name="search" class="form-control border-start-0" 
+                           placeholder="بحث باسم العميل أو الشركة..." 
+                           value="{{ search or '' }}">
                 </div>
             </div>
             <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">كل الحالات</option>
+                    <option value="مدفوع" {% if status_filter == 'مدفوع' %}selected{% endif %}>مدفوع</option>
+                    <option value="معلق" {% if status_filter == 'معلق' %}selected{% endif %}>معلق</option>
+                    <option value="متأخر" {% if status_filter == 'متأخر' %}selected{% endif %}>متأخر</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="per_page" class="form-select">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>
+                        عرض {{ opt }}
+                    </option>
+                    {% endfor %}
+                    <option value="999999" {% if per_page == 999999 %}selected{% endif %}>
+                        عرض الكل
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-4">
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> بحث
                 </button>
             </div>
         </form>
-        {% if search_term %}
+        {% if search or status_filter %}
         <div class="mt-2">
             <small class="text-muted">
-                نتائج البحث عن: <strong>"{{ search_term }}"</strong>
-                <a href="/all_payments" class="btn btn-sm btn-outline-secondary ms-2">
-                    <i class="bi bi-x-circle"></i> إلغاء
+                <a href="/all_payments" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> إلغاء الفلترة
                 </a>
             </small>
         </div>
@@ -78,66 +97,111 @@
 <!-- ===== قائمة المدفوعات ===== -->
 <div class="card">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-modern mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>العميل</th>
-                        <th>الشركة</th>
-                        <th>المبلغ</th>
-                        <th>تاريخ الدفع</th>
-                        <th>تاريخ الاستحقاق</th>
-                        <th>الحالة</th>
-                        <th>رقم الفاتورة</th>
-                        <th>ملاحظات</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payment in payments %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>
-                            <a href="/client_payments/{{ payment.client_id }}" class="fw-bold text-primary text-decoration-none">
-                                {{ payment.client_name }}
-                            </a>
-                        </td>
-                        <td>{{ payment.company_name or '-' }}</td>
-                        <td><span class="fw-bold">{{ payment.amount }} ر.س</span></td>
-                        <td>{{ payment.payment_date }}</td>
-                        <td>{{ payment.due_date or '-' }}</td>
-                        <td>
-                            <span class="badge 
-                                {% if payment.status == 'مدفوع' %}bg-success
-                                {% elif payment.status == 'معلق' %}bg-warning text-dark
-                                {% else %}bg-danger{% endif %}">
-                                {{ payment.status }}
-                            </span>
-                        </td>
-                        <td>{{ payment.invoice_number or '-' }}</td>
-                        <td>
-                            {% if payment.notes %}
-                            <span title="{{ payment.notes }}">{{ payment.notes[:30] }}{% if payment.notes|length > 30 %}...{% endif %}</span>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="/edit_payment/{{ payment.id }}" class="btn btn-outline-info">
-                                    <i class="bi bi-pencil"></i>
+        <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead class="sticky-top bg-white">
+                        <tr>
+                            <th style="min-width: 50px;">#</th>
+                            <th style="min-width: 130px;">العميل</th>
+                            <th style="min-width: 130px;">الشركة</th>
+                            <th style="min-width: 100px;">المبلغ</th>
+                            <th style="min-width: 110px;">تاريخ الدفع</th>
+                            <th style="min-width: 110px;">تاريخ الاستحقاق</th>
+                            <th style="min-width: 100px;">طريقة الدفع</th>
+                            <th style="min-width: 80px;">الحالة</th>
+                            <th style="min-width: 100px;">رقم الفاتورة</th>
+                            <th style="min-width: 120px;">الملاحظات</th>
+                            <th style="min-width: 140px;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ loop.index + ((page - 1) * per_page) if per_page != 999999 else loop.index }}</td>
+                            <td>
+                                <a href="/client_payments/{{ payment.client_id }}" class="fw-bold text-primary text-decoration-none">
+                                    {{ payment.client_name }}
                                 </a>
-                                <button class="btn btn-outline-danger" onclick="deletePayment({{ payment.id }})">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td>{{ payment.company_name or '-' }}</td>
+                            <td><span class="fw-bold">{{ payment.amount }} ر.س</span></td>
+                            <td>{{ payment.payment_date }}</td>
+                            <td>{{ payment.due_date or '-' }}</td>
+                            <td>{{ payment.payment_method }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'مدفوع' %}bg-success
+                                    {% elif payment.status == 'معلق' %}bg-warning text-dark
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ payment.status }}
+                                </span>
+                            </td>
+                            <td>{{ payment.invoice_number or '-' }}</td>
+                            <td>
+                                {% if payment.notes %}
+                                <span title="{{ payment.notes }}">{{ payment.notes[:30] }}{% if payment.notes|length > 30 %}...{% endif %}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/edit_payment/{{ payment.id }}" class="btn btn-outline-info" title="تعديل">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" onclick="deletePayment({{ payment.id }})" title="حذف">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- ===== ترقيم الصفحات ===== -->
+<div class="row mt-4 align-items-center">
+    <div class="col-md-6">
+        <div class="text-muted small">
+            عرض {{ payments|length }} من أصل {{ total }} دفعة
+            {% if search %} - نتائج البحث عن: "{{ search }}"{% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        {% if total_pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-end mb-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                    {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% elif p == 4 and page > 5 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% elif p == total_pages - 3 and page < total_pages - 4 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 
@@ -162,20 +226,79 @@ function deletePayment(paymentId) {
 }
 .stat-card-mini .stat-value { font-size: 1.8rem; font-weight: 700; }
 .stat-card-mini .stat-label { font-size: 0.8rem; opacity: 0.8; }
-.table-modern { font-size: 14px; }
-.table-modern thead th {
+
+.table-wrapper {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.table-wrapper .table-modern {
+    font-size: 14px;
+}
+.table-wrapper .table-modern thead th {
     background: #f8fafc;
     color: #475569;
     font-weight: 600;
     border-bottom: 2px solid #e2e8f0;
     padding: 12px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: inset 0 -2px 0 #e2e8f0;
 }
-.table-modern tbody td {
+.table-wrapper .table-modern tbody td {
     padding: 12px 16px;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
 }
-.table-modern tbody tr:hover { background: #f8fafc; }
-.btn-group .btn { border-radius: 8px !important; margin: 0 2px; }
+.table-wrapper .table-modern tbody tr:hover {
+    background: #f8fafc;
+}
+
+.btn-group .btn {
+    border-radius: 8px !important;
+    margin: 0 2px;
+}
+
+.pagination {
+    gap: 2px;
+}
+.pagination .page-link {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    transition: all 0.2s ease;
+}
+.pagination .page-link:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+.pagination .page-item.active .page-link {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: white;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+@media print {
+    .btn, .navbar, .footer, .no-print { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    body { background: white !important; }
+    .table-wrapper { max-height: none !important; overflow: visible !important; }
+}
 </style>
 {% endblock %}
