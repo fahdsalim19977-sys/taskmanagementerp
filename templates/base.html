@@ -413,7 +413,7 @@
     </nav>
 
     <!-- ============================================================ -->
-    <!-- ===== الشريط السفلي (Main Navigation) ===== -->
+    <!-- ===== الشريط السفلي (Main Navigation) - الشكل المطلوب ===== -->
     <!-- ============================================================ -->
     {% if session.user_id %}
     <nav class="navbar navbar-expand-lg main-nav">
@@ -452,13 +452,6 @@
                         </ul>
                     </li>
 
-                    <!-- ===== التدريبات ===== -->
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks">
-                            <i class="bi bi-list-task"></i> التدريبات
-                        </a>
-                    </li>
-
                     <!-- ===== العقود ===== -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -483,10 +476,10 @@
                         </ul>
                     </li>
 
-                    <!-- ===== المالية ===== -->
+                    <!-- ===== المدفوعات ===== -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-coin"></i> المالية
+                            <i class="bi bi-coin"></i> المدفوعات
                         </a>
                         <ul class="dropdown-menu shadow-lg border-0">
                             <li>
@@ -500,6 +493,13 @@
                                 </a>
                             </li>
                         </ul>
+                    </li>
+
+                    <!-- ===== التدريبات ===== -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/tasks' %}active{% endif %}" href="/tasks">
+                            <i class="bi bi-list-task"></i> التدريبات
+                        </a>
                     </li>
 
                     <!-- ===== المواعيد ===== -->
