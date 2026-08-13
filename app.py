@@ -55,119 +55,12 @@ def utility_processor():
 # ============================================================
 # ===== الصفحة الرئيسية =====
 # ============================================================
+# ============================================================
+# ===== الصفحة الرئيسية / Dashboard =====
+# ============================================================
+
 @app.route('/')
 def index():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    conn = get_db()
-    
-    total_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks').fetchone()['count']
-    completed_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "مكتملة"').fetchone()['count']
-    overdue_tasks = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE due_date < date("now") AND status != "مكتملة"').fetchone()['count']
-    in_progress = conn.execute('SELECT COUNT(*) as count FROM tasks WHERE status = "قيد التنفيذ"').fetchone()['count']
-    total_clients = conn.execute('SELECT COUNT(*) as count FROM clients').fetchone()['count']
-    total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-    upcoming_meetings = conn.execute('SELECT COUNT(*) as count FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول"').fetchone()['count']
-    total_revenue = conn.execute('SELECT SUM(amount) as total FROM client_payments WHERE status = "مدفوع"').fetchone()['total'] or 0
-    total_payments = conn.execute('SELECT COUNT(*) as count FROM client_payments').fetchone()['count'] or 0
-    
-    total_contracts = conn.execute('SELECT COUNT(*) as count FROM client_contracts').fetchone()['count'] or 0
-    contracts_paid_full = conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = "مدفوع بالكامل"').fetchone()['count'] or 0
-    contracts_partial = conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = "مدفوع جزئيا"').fetchone()['count'] or 0
-    contracts_unpaid = conn.execute('SELECT COUNT(*) as count FROM client_contracts WHERE payment_status = "غير مدفوع"').fetchone()['count'] or 0
-    contracts_unpaid_amount = conn.execute('SELECT SUM(total_amount - paid_amount) as total FROM client_contracts WHERE payment_status != "مدفوع بالكامل"').fetchone()['total'] or 0
-    contracts_paid_percent = round((contracts_paid_full / total_contracts * 100) if total_contracts > 0 else 0, 1)
-    contracts_partial_due = conn.execute('SELECT SUM(total_amount - paid_amount) as total FROM client_contracts WHERE payment_status = "مدفوع جزئيا"').fetchone()['total'] or 0
-    
-    recent_contracts = conn.execute('''
-        SELECT client_contracts.*, clients.name as client_name
-        FROM client_contracts
-        JOIN clients ON client_contracts.client_id = clients.id
-        ORDER BY client_contracts.created_at DESC LIMIT 5
-    ''').fetchall()
-    
-    current_month = datetime.now().strftime('%Y-%m')
-    due_this_month = conn.execute('''
-        SELECT contract_payments.*, client_contracts.contract_number,
-               clients.name as client_name
-        FROM contract_payments
-        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
-        JOIN clients ON client_contracts.client_id = clients.id
-        WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
-        AND strftime('%Y-%m', contract_payments.due_date) = ?
-        ORDER BY contract_payments.due_date ASC
-    ''', (current_month,)).fetchall()
-    
-    overdue_payments = conn.execute('''
-        SELECT contract_payments.*, client_contracts.contract_number,
-               clients.name as client_name
-        FROM contract_payments
-        JOIN client_contracts ON contract_payments.contract_id = client_contracts.id
-        JOIN clients ON client_contracts.client_id = clients.id
-        WHERE contract_payments.status IN ('مستحقة', 'مدفوعة جزئيا')
-        AND contract_payments.due_date < date('now')
-        ORDER BY contract_payments.due_date ASC
-    ''').fetchall()
-    
-    total_due_this_month = conn.execute('''
-        SELECT SUM(amount - paid_amount) as total FROM contract_payments
-        WHERE status IN ('مستحقة', 'مدفوعة جزئيا')
-        AND strftime('%Y-%m', due_date) = ?
-    ''', (current_month,)).fetchone()['total'] or 0
-    
-    overdue_list = conn.execute('''
-        SELECT tasks.*, clients.name as client_name, users.name as assigned_name 
-        FROM tasks 
-        JOIN clients ON tasks.client_id = clients.id 
-        JOIN users ON tasks.assigned_to = users.id 
-        WHERE due_date < date("now") AND status != "مكتملة"
-        ORDER BY due_date ASC LIMIT 10
-    ''').fetchall()
-    
-    recent_activity = conn.execute('''
-        SELECT activity_log.*, users.name as user_name 
-        FROM activity_log 
-        JOIN users ON activity_log.user_id = users.id 
-        ORDER BY activity_log.created_at DESC LIMIT 10
-    ''').fetchall()
-    conn.close()
-    settings = get_company_settings()
-    
-    return render_template('index.html', 
-                         total_tasks=total_tasks,
-                         completed_tasks=completed_tasks,
-                         overdue_tasks=overdue_tasks,
-                         in_progress=in_progress,
-                         total_clients=total_clients,
-                         total_users=total_users,
-                         upcoming_meetings=upcoming_meetings,
-                         total_revenue=total_revenue,
-                         total_payments=total_payments,
-                         total_contracts=total_contracts,
-                         contracts_paid_full=contracts_paid_full,
-                         contracts_partial=contracts_partial,
-                         contracts_unpaid=contracts_unpaid,
-                         contracts_unpaid_amount=contracts_unpaid_amount,
-                         contracts_paid_percent=contracts_paid_percent,
-                         contracts_partial_due=contracts_partial_due,
-                         recent_contracts=recent_contracts,
-                         due_this_month=due_this_month,
-                         overdue_payments=overdue_payments,
-                         total_due_this_month=total_due_this_month,
-                         current_month=current_month,
-                         overdue_list=overdue_list,
-                         recent_activity=recent_activity,
-                         settings=settings)
-
-
-# ============================================================
-# ===== Dashboard =====
-# ============================================================
-
-@app.route('/dashboard')
-def dashboard():
-    """لوحة التحكم الرئيسية"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
@@ -256,7 +149,6 @@ def dashboard():
                          trainer_distribution=trainer_distribution,
                          settings=settings,
                          datetime=datetime)
-
 
 # ============================================================
 # ===== المدربين - مسارات مباشرة =====
