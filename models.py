@@ -14,10 +14,8 @@ if not os.path.exists('/app/data'):
 
 def get_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    # استخدام isolation_level=None لتجنب القفل التلقائي
     conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level=None)
     conn.row_factory = sqlite3.Row
-    # ===== تحسين الأداء =====
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('PRAGMA synchronous=NORMAL')
     conn.execute('PRAGMA cache_size=10000')
@@ -29,10 +27,76 @@ def hash_password(password):
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
-
 def verify_password(password, hashed):
     """التحقق من كلمة المرور"""
     return hashlib.sha256(password.encode()).hexdigest() == hashed
+
+def get_user_permissions(user_id):
+    """جلب جميع صلاحيات المستخدم (من دوره + صلاحياته الخاصة)"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # صلاحيات من الدور
+    cursor.execute("""
+        SELECT DISTINCT p.name
+        FROM permissions p
+        JOIN role_permissions rp ON p.id = rp.permission_id
+        JOIN users u ON u.id = ?
+        WHERE u.id = ?
+    """, (user_id, user_id))
+    
+    permissions = {row[0] for row in cursor.fetchall()}
+    
+    # صلاحيات إضافية من user_permissions
+    cursor.execute("""
+        SELECT p.name
+        FROM permissions p
+        JOIN user_permissions up ON p.id = up.permission_id
+        WHERE up.user_id = ?
+    """, (user_id,))
+    
+    for row in cursor.fetchall():
+        permissions.add(row[0])
+    
+    conn.close()
+    return permissions
+
+def has_permission(user_id, permission_name):
+    """التحقق من وجود صلاحية معينة للمستخدم"""
+    permissions = get_user_permissions(user_id)
+    return permission_name in permissions
+
+def add_permission_to_user(user_id, permission_name):
+    """إضافة صلاحية معينة للمستخدم"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM permissions WHERE name = ?", (permission_name,))
+    perm = cursor.fetchone()
+    if perm:
+        cursor.execute("""
+            INSERT OR IGNORE INTO user_permissions (user_id, permission_id)
+            VALUES (?, ?)
+        """, (user_id, perm[0]))
+        conn.commit()
+    
+    conn.close()
+
+def remove_permission_from_user(user_id, permission_name):
+    """إزالة صلاحية معينة من المستخدم"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM permissions WHERE name = ?", (permission_name,))
+    perm = cursor.fetchone()
+    if perm:
+        cursor.execute("""
+            DELETE FROM user_permissions
+            WHERE user_id = ? AND permission_id = ?
+        """, (user_id, perm[0]))
+        conn.commit()
+    
+    conn.close()
 
 def init_db():
     conn = get_db()
@@ -108,10 +172,12 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_id INTEGER NOT NULL,
-            trainers_id INTEGER NOT NULL,
+            created_by INTEGER,
+            assigned_user_id INTEGER,
+            trainer_id INTEGER,
             title TEXT NOT NULL,
             description TEXT,
-            status TEXT CHECK(status IN ('لم تبدأ', 'قيد التنفيذ', 'مكتملة', 'متأخرة')) DEFAULT 'لم تبدأ',
+            status TEXT CHECK(status IN ('لم تبدأ', 'قيد التنفيذ', 'مراجعة', 'مكتملة', 'متأخرة')) DEFAULT 'لم تبدأ',
             priority TEXT CHECK(priority IN ('منخفضة', 'متوسطة', 'عالية')) DEFAULT 'متوسطة',
             due_date DATE NOT NULL,
             completion_percentage INTEGER DEFAULT 0,
@@ -123,7 +189,9 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (client_id) REFERENCES clients(id),
-            FOREIGN KEY (assigned_to) REFERENCES users(id),
+            FOREIGN KEY (created_by) REFERENCES users(id),
+            FOREIGN KEY (assigned_user_id) REFERENCES users(id),
+            FOREIGN KEY (trainer_id) REFERENCES trainers(id),
             FOREIGN KEY (meeting_id) REFERENCES meetings(id),
             FOREIGN KEY (contract_payment_id) REFERENCES contract_payments(id)
         )
@@ -196,7 +264,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول أنواع المديولات =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS module_types (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,7 +275,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول ربط العقود بالمديولات =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contract_modules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -282,7 +348,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول أنواع العقود =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contract_types (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -293,7 +358,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول العقود =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS client_contracts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -320,7 +384,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول دفعات العقود =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contract_payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -338,7 +401,6 @@ def init_db():
         )
     """)
     
-    # ===== جدول مرفقات العقود =====
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contract_attachments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,25 +417,176 @@ def init_db():
         )
     """)
     
-    # ===== إضافة عمود contract_payment_id إذا لم يكن موجوداً =====
+    # ===== جدول الصلاحيات =====
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            resource TEXT NOT NULL,
+            action TEXT NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            description TEXT,
+            is_default INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS role_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role_id INTEGER NOT NULL,
+            permission_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+            FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+            UNIQUE(role_id, permission_id)
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            permission_id INTEGER NOT NULL,
+            granted_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+            FOREIGN KEY (granted_by) REFERENCES users(id),
+            UNIQUE(user_id, permission_id)
+        )
+    """)
+    
+    # ===== ترقية جدول tasks =====
+    try:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN created_by INTEGER")
+        print("✅ تم إضافة عمود created_by")
+    except sqlite3.OperationalError:
+        print("ℹ️ عمود created_by موجود مسبقاً")
+    
+    try:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN assigned_user_id INTEGER")
+        print("✅ تم إضافة عمود assigned_user_id")
+    except sqlite3.OperationalError:
+        print("ℹ️ عمود assigned_user_id موجود مسبقاً")
+    
+    try:
+        cursor.execute("ALTER TABLE tasks RENAME COLUMN assigned_to TO trainer_id")
+        print("✅ تم تغيير اسم العمود إلى trainer_id")
+    except sqlite3.OperationalError:
+        print("ℹ️ عمود trainer_id موجود مسبقاً")
+    
     try:
         cursor.execute("ALTER TABLE tasks ADD COLUMN contract_payment_id INTEGER")
         print("✅ تم إضافة عمود contract_payment_id إلى جدول tasks")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e):
-            print("ℹ️ عمود contract_payment_id موجود مسبقاً في جدول tasks")
-        else:
-            print(f"❌ خطأ: {e}")
+    except sqlite3.OperationalError:
+        print("ℹ️ عمود contract_payment_id موجود مسبقاً")
     
-    # ===== إضافة عمود favicon_path إذا لم يكن موجوداً =====
     try:
         cursor.execute("ALTER TABLE company_settings ADD COLUMN favicon_path TEXT")
         print("✅ تم إضافة عمود favicon_path")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e):
-            print("ℹ️ عمود favicon_path موجود مسبقاً")
-        else:
-            print(f"❌ خطأ: {e}")
+    except sqlite3.OperationalError:
+        print("ℹ️ عمود favicon_path موجود مسبقاً")
+    
+    # ===== الصلاحيات الافتراضية =====
+    default_permissions = [
+        ('tasks.view', 'tasks', 'view', 'عرض المهام'),
+        ('tasks.create', 'tasks', 'create', 'إنشاء مهام'),
+        ('tasks.edit', 'tasks', 'edit', 'تعديل المهام'),
+        ('tasks.delete', 'tasks', 'delete', 'حذف المهام'),
+        ('tasks.assign', 'tasks', 'assign', 'تعيين المهام'),
+        ('clients.view', 'clients', 'view', 'عرض العملاء'),
+        ('clients.create', 'clients', 'create', 'إنشاء عملاء'),
+        ('clients.edit', 'clients', 'edit', 'تعديل العملاء'),
+        ('clients.delete', 'clients', 'delete', 'حذف العملاء'),
+        ('contracts.view', 'contracts', 'view', 'عرض العقود'),
+        ('contracts.create', 'contracts', 'create', 'إنشاء عقود'),
+        ('contracts.edit', 'contracts', 'edit', 'تعديل العقود'),
+        ('payments.view', 'payments', 'view', 'عرض المدفوعات'),
+        ('payments.create', 'payments', 'create', 'إنشاء مدفوعات'),
+        ('payments.edit', 'payments', 'edit', 'تعديل المدفوعات'),
+        ('reports.view', 'reports', 'view', 'عرض التقارير'),
+        ('reports.export', 'reports', 'export', 'تصدير التقارير'),
+        ('users.view', 'users', 'view', 'عرض المستخدمين'),
+        ('users.create', 'users', 'create', 'إنشاء مستخدمين'),
+        ('users.edit', 'users', 'edit', 'تعديل المستخدمين'),
+        ('users.delete', 'users', 'delete', 'حذف المستخدمين'),
+    ]
+    
+    for perm_name, resource, action, description in default_permissions:
+        cursor.execute("""
+            INSERT OR IGNORE INTO permissions (name, resource, action, description)
+            VALUES (?, ?, ?, ?)
+        """, (perm_name, resource, action, description))
+    
+    # ===== الأدوار الافتراضية =====
+    default_roles = [
+        ('مدير', 'مدير النظام - لديه جميع الصلاحيات', 0),
+        ('موظف', 'موظف عادي - صلاحيات محدودة', 1),
+        ('مراقب', 'مشاهد - صلاحيات عرض فقط', 0),
+    ]
+    
+    for role_name, description, is_default in default_roles:
+        cursor.execute("""
+            INSERT OR IGNORE INTO roles (name, description, is_default)
+            VALUES (?, ?, ?)
+        """, (role_name, description, is_default))
+    
+    # ===== ربط الأدوار بالصلاحيات =====
+    roles_map = {}
+    cursor.execute("SELECT id, name FROM roles")
+    for row in cursor.fetchall():
+        roles_map[row[1]] = row[0]
+    
+    perms_map = {}
+    cursor.execute("SELECT id, name FROM permissions")
+    for row in cursor.fetchall():
+        perms_map[row[1]] = row[0]
+    
+    # صلاحيات المدير
+    if 'مدير' in roles_map:
+        for perm_id in perms_map.values():
+            cursor.execute("""
+                INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                VALUES (?, ?)
+            """, (roles_map['مدير'], perm_id))
+    
+    # صلاحيات الموظف
+    if 'موظف' in roles_map:
+        employee_perms = [
+            'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign',
+            'clients.view', 'clients.create', 'clients.edit',
+            'contracts.view', 'contracts.create',
+            'payments.view', 'payments.create',
+            'reports.view'
+        ]
+        for perm_name in employee_perms:
+            if perm_name in perms_map:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                    VALUES (?, ?)
+                """, (roles_map['موظف'], perms_map[perm_name]))
+    
+    # صلاحيات المراقب
+    if 'مراقب' in roles_map:
+        viewer_perms = [
+            'tasks.view', 'clients.view', 'contracts.view',
+            'payments.view', 'reports.view', 'users.view'
+        ]
+        for perm_name in viewer_perms:
+            if perm_name in perms_map:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                    VALUES (?, ?)
+                """, (roles_map['مراقب'], perms_map[perm_name]))
     
     # ===== البيانات الافتراضية =====
     cursor.execute("SELECT * FROM company_settings")
@@ -406,7 +619,7 @@ def init_db():
             ('viewer1', 'خالد مراقب', 'khalid@company.com', ?, 'مراقب')
         """, (hash_password('1234'), hash_password('1234')))
     
-    # ===== المدربين الافتراضيين (مع is_active = 1) =====
+    # ===== المدربين الافتراضيين =====
     cursor.execute("SELECT COUNT(*) as count FROM trainers")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
