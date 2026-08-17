@@ -1,5 +1,6 @@
 # routes/__init__.py
 from flask import Blueprint
+from utils.decorators import login_required, role_required
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/')
 users_bp = Blueprint('users', __name__, url_prefix='/')
