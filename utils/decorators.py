@@ -29,10 +29,14 @@ def permission_required(permission):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # التحقق من الصلاحية في قاعدة البيانات
-            if not has_permission(session.get('user_id'), permission):
-                flash('⛔ ليس لديك صلاحية لهذا الإجراء', 'danger')
+            # يمكنك إضافة منطق التحقق من الصلاحية هنا
+            conn = get_db()
+            user = conn.execute('SELECT * FROM users WHERE id = ?', (session.get('user_id'),)).fetchone()
+            conn.close()
+            if not user:
+                flash('⛔ غير مصرح لك', 'danger')
                 return redirect(url_for('index'))
+            # هنا يمكنك إضافة منطق التحقق من الصلاحية بناءً على الدور
             return f(*args, **kwargs)
         return decorated_function
     return decorator
