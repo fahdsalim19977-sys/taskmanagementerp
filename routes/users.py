@@ -82,10 +82,34 @@ def user_permissions(user_id):
     
     # جلب جميع الصلاحيات
     all_permissions = conn.execute('SELECT * FROM permissions ORDER BY resource, action').fetchall()
-    conn.close()
     
-    # جلب صلاحيات المستخدم الحالية
+    # جلب صلاحيات المستخدم الكلية (من الدور + الإضافية)
     user_perms = get_user_permissions(user_id)
+    
+    # جلب صلاحيات الدور فقط
+    role_perms = set()
+    cursor = conn.execute("""
+        SELECT p.name 
+        FROM permissions p
+        JOIN role_permissions rp ON p.id = rp.permission_id
+        JOIN users u ON u.id = ?
+        WHERE u.role_id = rp.role_id
+    """, (user_id,))
+    for row in cursor.fetchall():
+        role_perms.add(row[0])
+    
+    # جلب الصلاحيات الإضافية فقط (من user_permissions)
+    extra_perms = set()
+    cursor = conn.execute("""
+        SELECT p.name 
+        FROM permissions p
+        JOIN user_permissions up ON p.id = up.permission_id
+        WHERE up.user_id = ?
+    """, (user_id,))
+    for row in cursor.fetchall():
+        extra_perms.add(row[0])
+    
+    conn.close()
     
     # تنظيم الصلاحيات حسب المصدر
     grouped_permissions = {}
@@ -93,12 +117,19 @@ def user_permissions(user_id):
         resource = perm['resource']
         if resource not in grouped_permissions:
             grouped_permissions[resource] = []
+        
+        is_role = perm['name'] in role_perms
+        is_extra = perm['name'] in extra_perms
+        is_active = perm['name'] in user_perms
+        
         grouped_permissions[resource].append({
             'id': perm['id'],
             'name': perm['name'],
             'action': perm['action'],
             'description': perm['description'],
-            'has_permission': perm['name'] in user_perms
+            'has_permission': is_active,
+            'from_role': is_role,
+            'from_extra': is_extra
         })
     
     return render_template('user_permissions.html', 
