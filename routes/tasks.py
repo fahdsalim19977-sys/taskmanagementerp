@@ -7,8 +7,10 @@ import math
 from models import get_db
 from routes import tasks_bp
 from utils import log_activity, check_role
+from utils.decorators import login_required, role_required
 
 @tasks_bp.route('/tasks')
+@login_required
 def tasks():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -111,6 +113,8 @@ def tasks():
 
 
 @tasks_bp.route('/add_task', methods=['GET', 'POST'])
+@login_required
+@role_required(['مدير', 'موظف'])
 def add_task():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

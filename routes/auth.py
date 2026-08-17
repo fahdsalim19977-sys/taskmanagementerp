@@ -3,6 +3,7 @@ from flask import render_template, request, redirect, url_for, session, flash
 from models import get_db, hash_password
 from routes import auth_bp
 from utils import get_company_settings, log_activity
+from models import verify_password
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -12,26 +13,16 @@ def login():
         
         conn = get_db()
         user = conn.execute('''
-            SELECT * FROM users 
-            WHERE username = ? AND password = ? AND is_active = 1
-        ''', (username, hash_password(password))).fetchone()
+            SELECT * FROM users WHERE username = ? AND is_active = 1
+        ''', (username,)).fetchone()
         conn.close()
         
-        if user:
+        if user and verify_password(password, user['password']):
+            # تسجيل الدخول ناجح
             session['user_id'] = user['id']
             session['user_name'] = user['name']
             session['user_role'] = user['role']
-            session['username'] = user['username']
-            session.permanent = True
-            
-            flash(f'مرحباً {user["name"]}! 👋', 'success')
-            
-            if user['role'] == 'مدير':
-                return redirect(url_for('index'))
-            elif user['role'] == 'موظف':
-                return redirect(url_for('tasks_bp.tasks'))
-            else:
-                return redirect(url_for('clients_bp.clients'))
+            # ...
         else:
             flash('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
     
