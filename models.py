@@ -3,6 +3,7 @@ import os
 import sqlite3
 from datetime import datetime
 import hashlib
+import bcrypt
 
 # ===== استخدام Persistent Storage =====
 DB_PATH = '/app/data/tasks.db'
@@ -24,7 +25,14 @@ def get_db():
     return conn
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    """تشفير كلمة المرور باستخدام bcrypt"""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+
+def verify_password(password, hashed):
+    """التحقق من كلمة المرور"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 def init_db():
     conn = get_db()
@@ -100,7 +108,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_id INTEGER NOT NULL,
-            assigned_to INTEGER NOT NULL,
+            trainers_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
             status TEXT CHECK(status IN ('لم تبدأ', 'قيد التنفيذ', 'مكتملة', 'متأخرة')) DEFAULT 'لم تبدأ',
