@@ -1,10 +1,17 @@
 # utils/__init__.py
 """
 الحزمة المساعدة (Utilities) للتطبيق
-تحتوي على دوال مساعدة وأدوات مشتركة
 """
 
-from .decorators import login_required, role_required, permission_required
-from .helpers import get_company_settings, get_trainers, get_lang, t, log_activity, check_role
+# استيراد الدوال من utils.py (الموجود داخل نفس المجلد)
+from .utils import (
+    log_activity,
+    check_role,
+    get_company_settings,
+    get_trainers,
+    get_lang,
+    t
+)
 
-# هذا الملف يجعل مجلد utils Package معترف به في Python
+# استيراد الديكورات من decorators.py
+from .decorators import login_required, role_required, permission_required
