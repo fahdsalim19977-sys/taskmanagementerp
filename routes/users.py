@@ -86,14 +86,15 @@ def user_permissions(user_id):
     # جلب صلاحيات المستخدم الكلية (من الدور + الإضافية)
     user_perms = get_user_permissions(user_id)
     
-    # جلب صلاحيات الدور فقط
+    # جلب صلاحيات الدور فقط (باستخدام role النصي)
     role_perms = set()
     cursor = conn.execute("""
         SELECT p.name 
         FROM permissions p
         JOIN role_permissions rp ON p.id = rp.permission_id
-        JOIN users u ON u.id = ?
-        WHERE u.role_id = rp.role_id
+        JOIN roles r ON r.id = rp.role_id
+        JOIN users u ON u.role = r.name
+        WHERE u.id = ?
     """, (user_id,))
     for row in cursor.fetchall():
         role_perms.add(row[0])
