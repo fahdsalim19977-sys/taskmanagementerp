@@ -78,7 +78,7 @@ def user_permissions(user_id):
     if not user:
         flash('❌ المستخدم غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('users_bp.users'))
+        return redirect(url_for('users.user_permissions', user_id=user_id))
     
     # جلب جميع الصلاحيات
     all_permissions = conn.execute('SELECT * FROM permissions ORDER BY resource, action').fetchall()
@@ -118,7 +118,7 @@ def toggle_permission(user_id, permission_id):
     if not permission:
         flash('❌ الصلاحية غير موجودة', 'danger')
         conn.close()
-        return redirect(url_for('users_bp.user_permissions', user_id=user_id))
+        return redirect(url_for('users.user_permissions', user_id=user_id))
     
     # التحقق من وجود الصلاحية
     if has_permission(user_id, permission['name']):
@@ -129,4 +129,4 @@ def toggle_permission(user_id, permission_id):
         flash('✅ تم إضافة الصلاحية', 'success')
     
     conn.close()
-    return redirect(url_for('users_bp.user_permissions', user_id=user_id))
+    return redirect(url_for('users.user_permissions', user_id=user_id))
