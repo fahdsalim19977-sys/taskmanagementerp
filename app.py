@@ -110,12 +110,15 @@ def index():
     
     # ===== آخر 5 مهام =====
     recent_tasks = conn.execute('''
-        SELECT tasks.*, clients.name as client_name, trainers.name as trainer_name
-        FROM tasks
-        JOIN clients ON tasks.client_id = clients.id
-        LEFT JOIN trainers ON tasks.assigned_to = trainers.id
-        ORDER BY tasks.created_at DESC LIMIT 5
-    ''').fetchall()
+    SELECT tasks.*, clients.name as client_name, 
+           trainers.name as trainer_name,
+           users.name as assigned_user_name
+    FROM tasks
+    JOIN clients ON tasks.client_id = clients.id
+    LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+    LEFT JOIN users ON tasks.assigned_user_id = users.id
+    ORDER BY tasks.created_at DESC LIMIT 5
+''').fetchall()
     
     # ===== آخر 5 أنشطة =====
     recent_activities = conn.execute('''
