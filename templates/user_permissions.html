@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-shield-lock"></i> صلاحيات المستخدم</h2>
+    <div>
+        <span class="badge bg-primary fs-6 px-3 py-2">{{ user.name }}</span>
+        <a href="/users" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> رجوع
+        </a>
+    </div>
+</div>
+
+<!-- ===== معلومات المستخدم ===== -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <small class="text-muted d-block">اسم المستخدم</small>
+                <strong>{{ user.username }}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">الاسم الكامل</small>
+                <strong>{{ user.name }}</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">الدور</small>
+                <span class="badge {% if user.role == 'مدير' %}bg-danger{% elif user.role == 'موظف' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                    {{ user.role }}
+                </span>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">الحالة</small>
+                {% if user.is_active %}
+                <span class="badge bg-success">نشط</span>
+                {% else %}
+                <span class="badge bg-secondary">غير نشط</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== الصلاحيات ===== -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-list-check"></i> الصلاحيات</h5>
+    </div>
+    <div class="card-body">
+        {% for resource, perms in grouped_permissions.items() %}
+        <div class="mb-4">
+            <h6 class="fw-bold text-primary border-bottom pb-2">
+                <i class="bi bi-folder"></i> {{ resource|capitalize }}
+            </h6>
+            <div class="row g-2">
+                {% for perm in perms %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="permission-item {% if perm.has_permission %}active{% endif %}">
+                        <form action="/toggle_permission/{{ user.id }}/{{ perm.id }}" method="POST" class="d-flex align-items-center gap-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       {% if perm.has_permission %}checked{% endif %}
+                                       onchange="this.form.submit()"
+                                       id="perm_{{ perm.id }}">
+                                <label class="form-check-label" for="perm_{{ perm.id }}">
+                                    <span class="badge {% if perm.has_permission %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ perm.action }}
+                                    </span>
+                                </label>
+                            </div>
+                            <small class="text-muted">{{ perm.description }}</small>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ===== ملخص الصلاحيات ===== -->
+<div class="card mt-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-shield-check"></i> ملخص الصلاحيات</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h6 class="text-muted">إجمالي الصلاحيات</h6>
+                <h3 class="fw-bold">
+                    {% set total = 0 %}
+                    {% for perms in grouped_permissions.values() %}
+                        {% set total = total + perms|length %}
+                    {% endfor %}
+                    {{ total }}
+                </h3>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">الصلاحيات الممنوحة</h6>
+                <h3 class="fw-bold text-success">
+                    {% set count = 0 %}
+                    {% for perms in grouped_permissions.values() %}
+                        {% for perm in perms %}
+                            {% if perm.has_permission %}{% set count = count + 1 %}{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {{ count }}
+                </h3>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">الصلاحيات المفقودة</h6>
+                <h3 class="fw-bold text-danger">
+                    {% set total = 0 %}
+                    {% for perms in grouped_permissions.values() %}
+                        {% set total = total + perms|length %}
+                    {% endfor %}
+                    {{ total - count }}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.permission-item {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    background: white;
+}
+.permission-item:hover {
+    border-color: #2563EB;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+.permission-item.active {
+    border-color: #22c55e;
+    background: #f0fdf4;
+}
+.form-switch .form-check-input {
+    width: 40px;
+    height: 20px;
+    cursor: pointer;
+}
+.form-switch .form-check-input:checked {
+    background-color: #22c55e;
+    border-color: #22c55e;
+}
+</style>
+{% endblock %}

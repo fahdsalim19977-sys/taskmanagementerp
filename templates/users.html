@@ -18,6 +18,7 @@
                 <th>{{ t('status') }}</th>
                 <th>{{ t('created_at') }}</th>
                 <th>{{ t('edit') }}</th>
+                <th>الصلاحيات</th>
             </tr>
         </thead>
         <tbody>
@@ -52,6 +53,11 @@
                     {% else %}
                     <span class="text-muted">-</span>
                     {% endif %}
+                </td>
+                <td>
+                    <a href="/user_permissions/{{ user.id }}" class="btn btn-sm btn-primary" title="إدارة الصلاحيات">
+                        <i class="bi bi-shield-lock"></i>
+                    </a>
                 </td>
             </tr>
             {% endfor %}
