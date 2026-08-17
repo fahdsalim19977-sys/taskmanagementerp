@@ -31,8 +31,13 @@ def hash_password(password):
 
 
 def verify_password(password, hashed):
-    """التحقق من كلمة المرور"""
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    """التحقق من كلمة المرور (يدعم SHA-256 و bcrypt)"""
+    # إذا كانت مشفرة بـ bcrypt (تبدأ بـ $2b$)
+    if hashed.startswith('$2b$'):
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    else:
+        # إذا كانت SHA-256 (الصيغة القديمة)
+        return hashlib.sha256(password.encode()).hexdigest() == hashed
 
 def init_db():
     conn = get_db()
