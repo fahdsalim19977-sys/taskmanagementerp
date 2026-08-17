@@ -37,7 +37,7 @@ def add_user():
         except sqlite3.IntegrityError:
             flash('❌ اسم المستخدم أو البريد موجود مسبقاً', 'danger')
         conn.close()
-        return redirect(url_for('users_bp.users'))
+        return redirect(url_for('users.users'))
     return render_template('add_user.html')
 
 
@@ -47,22 +47,22 @@ def delete_user(user_id):
         return redirect(url_for('auth.login'))
     if session['user_role'] != 'مدير':
         flash('⛔ غير مصرح لك', 'danger')
-        return redirect(url_for('users_bp.users'))
+        return redirect(url_for('users.users'))
     if user_id == session['user_id']:
         flash('❌ لا يمكنك حذف حسابك الخاص', 'danger')
-        return redirect(url_for('users_bp.users'))
+        return redirect(url_for('users.users'))
     conn = get_db()
     user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
     if not user:
         flash('❌ المستخدم غير موجود', 'danger')
         conn.close()
-        return redirect(url_for('users_bp.users'))
+        return redirect(url_for('users.users'))
     conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()
     flash('✅ تم حذف المستخدم بنجاح', 'success')
     log_activity(session['user_id'], 'حذف مستخدم', f'حذف {user["username"]}')
-    return redirect(url_for('users_bp.users'))
+    return redirect(url_for('users.users'))
 
 
 # ===== إدارة صلاحيات المستخدم =====
