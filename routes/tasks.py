@@ -7,10 +7,11 @@ import math
 from models import get_db
 from routes import tasks_bp
 from utils import log_activity, check_role
-from utils.decorators import login_required, role_required
+from utils.decorators import login_required, role_required, permission_required
 
 @tasks_bp.route('/tasks')
 @login_required
+@permission_required('tasks.view')
 def tasks():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -30,17 +31,19 @@ def tasks():
     
     # ===== بناء الاستعلام =====
     query = '''
-        SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
+        SELECT tasks.*, clients.name as client_name, clients.company_name, 
+               trainers.name as trainer_name, users.name as assigned_user_name
         FROM tasks 
         JOIN clients ON tasks.client_id = clients.id 
-        JOIN trainers ON tasks.assigned_to = trainers.id 
+        LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+        LEFT JOIN users ON tasks.assigned_user_id = users.id
         WHERE 1=1
     '''
     params = []
     
     if user_role == 'موظف':
-        query += ' AND tasks.assigned_to = ?'
-        params.append(session['user_id'])
+        query += ' AND (tasks.created_by = ? OR tasks.assigned_user_id = ?)'
+        params.extend([session['user_id'], session['user_id']])
     
     if search:
         query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR tasks.title LIKE ?)'
@@ -58,14 +61,15 @@ def tasks():
         SELECT COUNT(*) as count
         FROM tasks 
         JOIN clients ON tasks.client_id = clients.id 
-        JOIN trainers ON tasks.assigned_to = trainers.id 
+        LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+        LEFT JOIN users ON tasks.assigned_user_id = users.id
         WHERE 1=1
     '''
     count_params = []
     
     if user_role == 'موظف':
-        count_query += ' AND tasks.assigned_to = ?'
-        count_params.append(session['user_id'])
+        count_query += ' AND (tasks.created_by = ? OR tasks.assigned_user_id = ?)'
+        count_params.extend([session['user_id'], session['user_id']])
     
     if search:
         count_query += ' AND (clients.name LIKE ? OR clients.company_name LIKE ? OR tasks.title LIKE ?)'
@@ -114,7 +118,7 @@ def tasks():
 
 @tasks_bp.route('/add_task', methods=['GET', 'POST'])
 @login_required
-@role_required(['مدير', 'موظف'])
+@permission_required('tasks.create')
 def add_task():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -125,9 +129,9 @@ def add_task():
     conn = get_db()
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
+    users = conn.execute('SELECT id, name FROM users WHERE is_active = 1 ORDER BY name').fetchall()
     meetings = conn.execute('SELECT id, title, client_id FROM meetings WHERE date(meeting_date) >= date("now") AND status = "مجدول" ORDER BY meeting_date ASC').fetchall()
     
-    # جلب جميع الدفعات
     available_payments = conn.execute('''
         SELECT contract_payments.*, 
                client_contracts.contract_number,
@@ -140,7 +144,8 @@ def add_task():
     
     if request.method == 'POST':
         client_id = request.form['client_id']
-        assigned_to = request.form['assigned_to']
+        assigned_user_id = request.form.get('assigned_user_id')
+        trainer_id = request.form.get('trainer_id')
         title = request.form['title']
         description = request.form.get('description', '')
         due_date = request.form['due_date']
@@ -150,23 +155,22 @@ def add_task():
         task_group = request.form.get('task_group', '')
         contract_payment_id = request.form.get('contract_payment_id') or None
         
-        print(f"📝 إضافة تدريب جديد: {title}")
-        print(f"   مرتبط بدفعة: {contract_payment_id}")
-        
         conn = get_db()
         cursor = conn.execute('''
-            INSERT INTO tasks (client_id, assigned_to, title, description, due_date, priority, 
-                             estimated_duration, meeting_id, task_group, contract_payment_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (client_id, assigned_to, title, description, due_date, priority, 
-              estimated_duration, meeting_id, task_group, contract_payment_id))
+            INSERT INTO tasks (client_id, created_by, assigned_user_id, trainer_id, title, description, 
+                             due_date, priority, estimated_duration, meeting_id, task_group, contract_payment_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (client_id, session['user_id'], assigned_user_id, trainer_id, title, description, 
+              due_date, priority, estimated_duration, meeting_id, task_group, contract_payment_id))
         task_id = cursor.lastrowid
         conn.commit()
         
-        message = f'📋 تم تكليفك بمهمة جديدة: {title}'
-        conn.execute('INSERT INTO notifications (user_id, task_id, message) VALUES (?, ?, ?)', 
-                    (assigned_to, task_id, message))
-        conn.commit()
+        if assigned_user_id:
+            message = f'📋 تم تكليفك بمهمة جديدة: {title}'
+            conn.execute('INSERT INTO notifications (user_id, task_id, message) VALUES (?, ?, ?)', 
+                        (assigned_user_id, task_id, message))
+            conn.commit()
+        
         conn.close()
         
         flash('✅ تم إضافة التدريب بنجاح', 'success')
@@ -175,12 +179,15 @@ def add_task():
     
     return render_template('add_task.html', 
                          clients=clients, 
-                         trainers=trainers, 
+                         trainers=trainers,
+                         users=users,
                          meetings=meetings,
                          available_payments=available_payments)
 
 
 @tasks_bp.route('/task/<int:task_id>')
+@login_required
+@permission_required('tasks.view')
 def task_details(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -193,11 +200,14 @@ def task_details(task_id):
                clients.email as client_email,
                clients.address as client_address,
                clients.company_name as client_company,
-               trainers.name as assigned_name,
-               trainers.email as assigned_email
+               trainers.name as trainer_name,
+               trainers.email as trainer_email,
+               users.name as assigned_user_name,
+               users.email as assigned_user_email
         FROM tasks 
         JOIN clients ON tasks.client_id = clients.id 
-        JOIN trainers ON tasks.assigned_to = trainers.id 
+        LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+        LEFT JOIN users ON tasks.assigned_user_id = users.id
         WHERE tasks.id = ?
     ''', (task_id,)).fetchone()
     
@@ -218,6 +228,8 @@ def task_details(task_id):
 
 
 @tasks_bp.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('tasks.edit')
 def edit_task(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -240,15 +252,11 @@ def edit_task(task_id):
         flash('⛔ ليس لديك صلاحية لتعديل التدريبات', 'danger')
         conn.close()
         return redirect(url_for('tasks.tasks'))
-    if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
-        flash('⛔ يمكنك تعديل تدريباتك فقط', 'danger')
-        conn.close()
-        return redirect(url_for('tasks.tasks'))
     
     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
     trainers = conn.execute('SELECT id, name FROM trainers WHERE is_active = 1 ORDER BY name').fetchall()
+    users = conn.execute('SELECT id, name FROM users WHERE is_active = 1 ORDER BY name').fetchall()
     
-    # جلب جميع الدفعات
     available_payments = conn.execute('''
         SELECT contract_payments.*, 
                client_contracts.contract_number,
@@ -260,7 +268,8 @@ def edit_task(task_id):
     
     if request.method == 'POST':
         client_id = request.form['client_id']
-        assigned_to = request.form['assigned_to']
+        assigned_user_id = request.form.get('assigned_user_id')
+        trainer_id = request.form.get('trainer_id')
         title = request.form['title']
         description = request.form.get('description', '')
         due_date = request.form['due_date']
@@ -272,7 +281,8 @@ def edit_task(task_id):
         conn.execute('''
             UPDATE tasks SET 
                 client_id = ?,
-                assigned_to = ?,
+                assigned_user_id = ?,
+                trainer_id = ?,
                 title = ?,
                 description = ?,
                 due_date = ?,
@@ -282,7 +292,7 @@ def edit_task(task_id):
                 contract_payment_id = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        ''', (client_id, assigned_to, title, description, due_date, priority, 
+        ''', (client_id, assigned_user_id, trainer_id, title, description, due_date, priority, 
               estimated_duration, task_group, contract_payment_id, task_id))
         conn.commit()
         conn.close()
@@ -296,10 +306,13 @@ def edit_task(task_id):
                          task=task, 
                          clients=clients, 
                          trainers=trainers,
+                         users=users,
                          available_payments=available_payments)
 
 
 @tasks_bp.route('/update_task_status/<int:task_id>', methods=['POST'])
+@login_required
+@permission_required('tasks.edit')
 def update_task_status(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -395,7 +408,6 @@ def update_task_status(task_id):
                     
                     flash(f'✅ تم تفعيل الدفعة رقم {payment["installment_number"]} للعقد (متأخرة)', 'warning')
                     
-                    # ===== تسجيل النشاط مع تجاهل الأخطاء =====
                     try:
                         log_activity(session['user_id'], 'تفعيل دفعة من تدريب', 
                                    f'تم تفعيل دفعة {payment_id} من تدريب {task["title"]} (متأخرة)')
@@ -444,6 +456,8 @@ def update_task_status(task_id):
 
 
 @tasks_bp.route('/update_task_status_form/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('tasks.edit')
 def update_task_status_form(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -463,6 +477,8 @@ def update_task_status_form(task_id):
 
 
 @tasks_bp.route('/add_note/<int:task_id>', methods=['POST'])
+@login_required
+@permission_required('tasks.edit')
 def add_note(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -496,6 +512,8 @@ def add_note(task_id):
 
 
 @tasks_bp.route('/add_note_form/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('tasks.edit')
 def add_note_form(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -531,6 +549,8 @@ def add_note_form(task_id):
 
 
 @tasks_bp.route('/delete_task/<int:task_id>', methods=['POST'])
+@login_required
+@permission_required('tasks.delete')
 def delete_task(task_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -547,10 +567,6 @@ def delete_task(task_id):
         flash('⛔ ليس لديك صلاحية لحذف التدريبات', 'danger')
         conn.close()
         return redirect(url_for('tasks.tasks'))
-    if user_role == 'موظف' and task['assigned_to'] != session['user_id']:
-        flash('⛔ يمكنك حذف تدريباتك فقط', 'danger')
-        conn.close()
-        return redirect(url_for('tasks.tasks'))
     
     conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
     conn.commit()
@@ -562,6 +578,8 @@ def delete_task(task_id):
 
 
 @tasks_bp.route('/tasks/search')
+@login_required
+@permission_required('tasks.view')
 def search_tasks():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -572,20 +590,24 @@ def search_tasks():
     
     if user_role == 'موظف':
         query = '''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
+            SELECT tasks.*, clients.name as client_name, clients.company_name, 
+                   trainers.name as trainer_name, users.name as assigned_user_name
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN trainers ON tasks.assigned_to = trainers.id 
-            WHERE tasks.assigned_to = ? AND clients.name LIKE ?
+            LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+            LEFT JOIN users ON tasks.assigned_user_id = users.id
+            WHERE (tasks.created_by = ? OR tasks.assigned_user_id = ?) AND clients.name LIKE ?
             ORDER BY tasks.due_date ASC
         '''
-        params = (session['user_id'], f'%{search_term}%')
+        params = (session['user_id'], session['user_id'], f'%{search_term}%')
     else:
         query = '''
-            SELECT tasks.*, clients.name as client_name, clients.company_name, trainers.name as assigned_name 
+            SELECT tasks.*, clients.name as client_name, clients.company_name,
+                   trainers.name as trainer_name, users.name as assigned_user_name
             FROM tasks 
             JOIN clients ON tasks.client_id = clients.id 
-            JOIN trainers ON tasks.assigned_to = trainers.id 
+            LEFT JOIN trainers ON tasks.trainer_id = trainers.id
+            LEFT JOIN users ON tasks.assigned_user_id = users.id
             WHERE clients.name LIKE ?
             ORDER BY tasks.due_date ASC
         '''
@@ -597,6 +619,8 @@ def search_tasks():
 
 
 @tasks_bp.route('/group_tasks', methods=['POST'])
+@login_required
+@permission_required('tasks.edit')
 def group_tasks():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
