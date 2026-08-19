@@ -37,3 +37,26 @@ def login():
     
     settings = get_company_settings()
     return render_template('login.html', settings=settings)
+
+
+# ===== تسجيل الخروج =====
+@auth_bp.route('/logout')
+def logout():
+    try:
+        if 'user_id' in session:
+            log_activity(session['user_id'], 'تسجيل خروج', '')
+        session.clear()
+        flash('✅ تم تسجيل الخروج بنجاح', 'success')
+        return redirect(url_for('auth.login'))
+    except Exception as e:
+        print(f"Error in logout: {str(e)}")
+        session.clear()
+        return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/set_lang/<lang>')
+def set_lang(lang):
+    if lang in ['ar', 'en']:
+        session['lang'] = lang
+        flash(f'✅ تم تغيير اللغة إلى {lang}', 'success')
+    return redirect(request.referrer or url_for('index'))
