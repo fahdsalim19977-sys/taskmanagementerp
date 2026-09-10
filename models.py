@@ -1,4 +1,4 @@
-﻿# models.py
+# models.py
 import os
 import sqlite3
 from datetime import datetime
@@ -13,7 +13,11 @@ if not os.path.exists('/app/data'):
     DB_PATH = 'tasks.db'
 
 def get_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    # ✅ التعديل: لو DB_PATH فيه مسار، اعمل المجلد. لو لأ، اتخطى الخطوة
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    
     conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA journal_mode=WAL')
@@ -29,6 +33,12 @@ def hash_password(password):
 
 def verify_password(password, hashed):
     """التحقق من كلمة المرور"""
+    # ✅ التعديل: دعم bcrypt + sha256 معاً
+    if hashed.startswith('$2b$') or hashed.startswith('$2a$'):
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        except Exception:
+            return False
     return hashlib.sha256(password.encode()).hexdigest() == hashed
 
 def get_user_permissions(user_id):
@@ -36,7 +46,6 @@ def get_user_permissions(user_id):
     conn = get_db()
     cursor = conn.cursor()
     
-    # صلاحيات من الدور
     cursor.execute("""
         SELECT DISTINCT p.name
         FROM permissions p
@@ -47,7 +56,6 @@ def get_user_permissions(user_id):
     
     permissions = {row[0] for row in cursor.fetchall()}
     
-    # صلاحيات إضافية من user_permissions
     cursor.execute("""
         SELECT p.name
         FROM permissions p
@@ -659,5 +667,6 @@ def init_db():
     print(f"✅ تم تهيئة قاعدة البيانات في: {DB_PATH}")
     conn.close()
 
-# ===== استدعاء التهيئة =====
-init_db()
+# ⚠️ ملاحظة: تم إزالة استدعاء init_db() من هنا
+# لأنها تُستدعى أصلاً في app.py
+# ده يمنع تشغيل init_db() مرتين
